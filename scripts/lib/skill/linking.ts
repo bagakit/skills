@@ -24,6 +24,17 @@ export type LinkOptions = Readonly<{
   force: boolean;
 }>;
 
+export type LinkDestinationsOptions = Readonly<{
+  repoRoot: string;
+  destDirs: string[];
+  force: boolean;
+}>;
+
+export type LinkDestinationResult = Readonly<{
+  destDir: string;
+  results: LinkResult[];
+}>;
+
 function destinationCollisionError(skills: SkillSource[]): Error {
   const grouped = new Map<string, string[]>();
   for (const skill of skills) {
@@ -132,10 +143,7 @@ function planLinkOperations(skills: SkillSource[], options: LinkOptions): Planne
   return plan;
 }
 
-export function linkSkills(skills: SkillSource[], options: LinkOptions): LinkResult[] {
-  const plan = planLinkOperations(skills, options);
-  mkdirSync(options.destDir, { recursive: true });
-
+function applyLinkPlan(plan: PlannedLink[], repoRoot: string): LinkResult[] {
   const results: LinkResult[] = [];
   for (const item of plan) {
     if (item.action === "replace") {
@@ -148,10 +156,41 @@ export function linkSkills(skills: SkillSource[], options: LinkOptions): LinkRes
     results.push({
       skill: item.skill,
       status: item.action === "unchanged" ? "unchanged" : "linked",
-      destinationPath: displayPath(options.repoRoot, item.linkPath),
+      destinationPath: displayPath(repoRoot, item.linkPath),
       sourcePath: item.skill.relativeDir,
     });
   }
 
   return results;
+}
+
+export function linkSkillsToDestinations(
+  skills: SkillSource[],
+  options: LinkDestinationsOptions,
+): LinkDestinationResult[] {
+  const destDirs = [...new Set(options.destDirs.map((destDir) => path.resolve(destDir)))];
+  const plannedDestinations = destDirs.map((destDir) => ({
+    destDir,
+    plan: planLinkOperations(skills, {
+      repoRoot: options.repoRoot,
+      destDir,
+      force: options.force,
+    }),
+  }));
+
+  return plannedDestinations.map(({ destDir, plan }) => {
+    mkdirSync(destDir, { recursive: true });
+    return {
+      destDir,
+      results: applyLinkPlan(plan, options.repoRoot),
+    };
+  });
+}
+
+export function linkSkills(skills: SkillSource[], options: LinkOptions): LinkResult[] {
+  return linkSkillsToDestinations(skills, {
+    repoRoot: options.repoRoot,
+    destDirs: [options.destDir],
+    force: options.force,
+  })[0]?.results ?? [];
 }

@@ -33,8 +33,19 @@ export function defaultGlobalSkillsDir(): string {
   return path.join(agentsHome, "skills");
 }
 
+export function defaultGlobalClaudeSkillsDir(): string {
+  const claudeConfigDir = process.env.CLAUDE_CONFIG_DIR
+    ? expandHome(process.env.CLAUDE_CONFIG_DIR)
+    : path.join(os.homedir(), ".claude");
+  return path.join(claudeConfigDir, "skills");
+}
+
 export function defaultRepoLocalCodexSkillsDir(consumerRepoRoot: string): string {
   return path.join(consumerRepoRoot, ".codex", "skills");
+}
+
+export function defaultRepoLocalClaudeSkillsDir(consumerRepoRoot: string): string {
+  return path.join(consumerRepoRoot, ".claude", "skills");
 }
 
 export function defaultDistDir(repoRoot: string): string {

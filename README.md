@@ -219,7 +219,8 @@ If you are not sure, choose repo-local install.
 
 ### Repo-Local Install
 
-Install into one consumer repo under `.codex/skills/`.
+Install into one consumer repo under both `.codex/skills/` and
+`.claude/skills/`.
 
 Run this from the consumer repo:
 
@@ -228,7 +229,7 @@ bash <bagakit-skills-clone>/scripts/skill.sh install --scope repo-local
 ```
 
 With no selector, this installs every discovered installable skill source into
-`.codex/skills/<skill-id>`.
+both `.codex/skills/<skill-id>` and `.claude/skills/<skill-id>`.
 
 To install one family instead:
 
@@ -253,8 +254,10 @@ bash <bagakit-skills-clone>/scripts/skill.sh install \
 
 ### Global Install
 
-Install into the global Agent pickup directory, usually `$AGENTS_HOME/skills`
-or `~/.agents/skills`.
+Install into both global pickup directories by default:
+
+- Agent: `$AGENTS_HOME/skills` or `~/.agents/skills`
+- Claude: `$CLAUDE_CONFIG_DIR/skills` or `~/.claude/skills`
 
 Use this when one local clone should feed many repos.
 
@@ -273,7 +276,9 @@ make install-repo REPO=<consumer-repo>
 make update-repo REPO=<consumer-repo>
 ```
 
-`install-*` creates missing links and leaves correct links unchanged.
+`install-*` creates missing links in both default destinations for the selected
+scope and leaves correct links unchanged. All destinations are checked for
+protected conflicts before any link is written.
 `update-*` passes `--force` to refresh stale or conflicting links. Use
 `make install-status` to inspect, and `make install-check` when stale, missing,
 or conflicting installs should fail the command.

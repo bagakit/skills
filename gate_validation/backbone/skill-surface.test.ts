@@ -261,14 +261,19 @@ test("install resolves repo-local scope from the current working directory", () 
       readlinkSync(path.join(consumerRepo, ".codex", "skills", "alpha")),
       path.join(repoRoot, "skills", "harness", "alpha"),
     );
+    assert.equal(
+      readlinkSync(path.join(consumerRepo, ".claude", "skills", "alpha")),
+      path.join(repoRoot, "skills", "harness", "alpha"),
+    );
     assert.equal(existsSync(path.join(consumerRepo, ".codex", "skills", "beta")), false);
+    assert.equal(existsSync(path.join(consumerRepo, ".claude", "skills", "beta")), false);
   } finally {
     rmSync(repoRoot, { recursive: true, force: true });
     rmSync(consumerRepo, { recursive: true, force: true });
   }
 });
 
-test("install with no selector installs every discovered installable skill source", () => {
+test("install with no selector or scope installs every skill into the default Codex and Claude roots", () => {
   const repoRoot = makeTempRepo();
   const consumerRepo = makeTempRepo();
   mkdirSync(path.join(repoRoot, "skills"), { recursive: true });
@@ -277,7 +282,7 @@ test("install with no selector installs every discovered installable skill sourc
   writeSkill(repoRoot, "paperwork", "beta");
 
   try {
-    const result = runCli(["install", "--root", repoRoot, "--scope", "repo-local"], {
+    const result = runCli(["install", "--root", repoRoot], {
       cwd: consumerRepo,
     });
     assert.equal(result.status, 0, result.stderr);
@@ -287,6 +292,14 @@ test("install with no selector installs every discovered installable skill sourc
     );
     assert.equal(
       readlinkSync(path.join(consumerRepo, ".codex", "skills", "beta")),
+      path.join(repoRoot, "skills", "paperwork", "beta"),
+    );
+    assert.equal(
+      readlinkSync(path.join(consumerRepo, ".claude", "skills", "alpha")),
+      path.join(repoRoot, "skills", "harness", "alpha"),
+    );
+    assert.equal(
+      readlinkSync(path.join(consumerRepo, ".claude", "skills", "beta")),
       path.join(repoRoot, "skills", "paperwork", "beta"),
     );
   } finally {
@@ -300,10 +313,12 @@ test("install resolves explicit repo-local targets and global scope", () => {
   const consumerRepo = makeTempRepo();
   const anotherRepo = makeTempRepo();
   const agentsHome = makeTempRepo();
+  const claudeConfigDir = makeTempRepo();
   mkdirSync(path.join(repoRoot, "skills"), { recursive: true });
   mkdirSync(consumerRepo, { recursive: true });
   mkdirSync(anotherRepo, { recursive: true });
   mkdirSync(agentsHome, { recursive: true });
+  mkdirSync(claudeConfigDir, { recursive: true });
   writeSkill(repoRoot, "harness", "alpha");
   writeSkill(repoRoot, "paperwork", "beta");
 
@@ -317,16 +332,33 @@ test("install resolves explicit repo-local targets and global scope", () => {
       readlinkSync(path.join(anotherRepo, ".codex", "skills", "beta")),
       path.join(repoRoot, "skills", "paperwork", "beta"),
     );
+    assert.equal(
+      readlinkSync(path.join(anotherRepo, ".claude", "skills", "beta")),
+      path.join(repoRoot, "skills", "paperwork", "beta"),
+    );
 
-    const globalRun = runCli(["install", "--root", repoRoot, "--selector", "harness/alpha", "--scope", "global"], {
-      cwd: consumerRepo,
-      env: {
-        ...process.env,
-        AGENTS_HOME: agentsHome,
+    const globalRun = runCli(
+      ["install", "--root", repoRoot, "--selector", "harness/alpha", "--scope", "global", "--json"],
+      {
+        cwd: consumerRepo,
+        env: {
+          ...process.env,
+          AGENTS_HOME: agentsHome,
+          CLAUDE_CONFIG_DIR: claudeConfigDir,
+        },
       },
-    });
+    );
     assert.equal(globalRun.status, 0, globalRun.stderr);
+    const globalInstall = JSON.parse(globalRun.stdout);
+    assert.deepEqual(
+      globalInstall.installs.map((install: { host: string }) => install.host),
+      ["agents", "claude"],
+    );
     assert.equal(readlinkSync(path.join(agentsHome, "skills", "alpha")), path.join(repoRoot, "skills", "harness", "alpha"));
+    assert.equal(
+      readlinkSync(path.join(claudeConfigDir, "skills", "alpha")),
+      path.join(repoRoot, "skills", "harness", "alpha"),
+    );
 
     const invalidGlobalRun = runCli(
       ["install", "--root", repoRoot, "--selector", "alpha", "--scope", "global", "--repo", anotherRepo],
@@ -335,6 +367,7 @@ test("install resolves explicit repo-local targets and global scope", () => {
         env: {
           ...process.env,
           AGENTS_HOME: agentsHome,
+          CLAUDE_CONFIG_DIR: claudeConfigDir,
         },
       },
     );
@@ -345,6 +378,39 @@ test("install resolves explicit repo-local targets and global scope", () => {
     rmSync(consumerRepo, { recursive: true, force: true });
     rmSync(anotherRepo, { recursive: true, force: true });
     rmSync(agentsHome, { recursive: true, force: true });
+    rmSync(claudeConfigDir, { recursive: true, force: true });
+  }
+});
+
+test("multi-target install reports conflicts before writing any destination", () => {
+  const repoRoot = makeTempRepo();
+  const consumerRepo = makeTempRepo();
+  const agentsHome = makeTempRepo();
+  const claudeConfigDir = makeTempRepo();
+  mkdirSync(path.join(repoRoot, "skills"), { recursive: true });
+  mkdirSync(consumerRepo, { recursive: true });
+  mkdirSync(path.join(claudeConfigDir, "skills"), { recursive: true });
+  writeSkill(repoRoot, "harness", "alpha");
+  writeFileSync(path.join(claudeConfigDir, "skills", "alpha"), "occupied");
+
+  try {
+    const result = runCli(["install", "--root", repoRoot, "--selector", "alpha", "--scope", "global"], {
+      cwd: consumerRepo,
+      env: {
+        ...process.env,
+        AGENTS_HOME: agentsHome,
+        CLAUDE_CONFIG_DIR: claudeConfigDir,
+      },
+    });
+    assert.equal(result.status, 1);
+    assert.ok(result.stderr.includes("is not a symbolic link; refusing to replace it"));
+    assert.equal(existsSync(path.join(agentsHome, "skills", "alpha")), false);
+    assert.equal(readFileSync(path.join(claudeConfigDir, "skills", "alpha"), "utf8"), "occupied");
+  } finally {
+    rmSync(repoRoot, { recursive: true, force: true });
+    rmSync(consumerRepo, { recursive: true, force: true });
+    rmSync(agentsHome, { recursive: true, force: true });
+    rmSync(claudeConfigDir, { recursive: true, force: true });
   }
 });
 
@@ -352,14 +418,21 @@ test("install-status compares canonical skill sources with flat install roots", 
   const repoRoot = makeTempRepo();
   const consumerRepo = makeTempRepo();
   const agentsHome = makeTempRepo();
+  const claudeConfigDir = makeTempRepo();
   const staleTarget = makeTempRepo();
   mkdirSync(path.join(repoRoot, "skills"), { recursive: true });
   mkdirSync(path.join(agentsHome, "skills"), { recursive: true });
+  mkdirSync(path.join(claudeConfigDir, "skills"), { recursive: true });
   mkdirSync(consumerRepo, { recursive: true });
   mkdirSync(staleTarget, { recursive: true });
   writeSkill(repoRoot, "harness", "alpha");
   writeSkill(repoRoot, "paperwork", "beta");
   symlinkSync(path.join(repoRoot, "skills", "harness", "alpha"), path.join(agentsHome, "skills", "alpha"), "dir");
+  symlinkSync(
+    path.join(repoRoot, "skills", "harness", "alpha"),
+    path.join(claudeConfigDir, "skills", "alpha"),
+    "dir",
+  );
   symlinkSync(staleTarget, path.join(agentsHome, "skills", "beta"), "dir");
 
   try {
@@ -368,16 +441,24 @@ test("install-status compares canonical skill sources with flat install roots", 
       env: {
         ...process.env,
         AGENTS_HOME: agentsHome,
+        CLAUDE_CONFIG_DIR: claudeConfigDir,
       },
     });
     assert.equal(globalRun.status, 0, globalRun.stderr);
     const globalStatus = JSON.parse(globalRun.stdout);
-    const globalResults = Object.fromEntries(
-      globalStatus.scans[0].results.map((result: { selector: string; status: string }) => [result.selector, result.status]),
+    const globalScans = Object.fromEntries(
+      globalStatus.scans.map((scan: { host: string; results: Array<{ selector: string; status: string }> }) => [
+        scan.host,
+        Object.fromEntries(scan.results.map((result) => [result.selector, result.status])),
+      ]),
     );
-    assert.deepEqual(globalResults, {
+    assert.deepEqual(globalScans.agents, {
       "harness/alpha": "installed",
       "paperwork/beta": "stale",
+    });
+    assert.deepEqual(globalScans.claude, {
+      "harness/alpha": "installed",
+      "paperwork/beta": "missing",
     });
 
     const repoLocalRun = runCli(
@@ -386,14 +467,24 @@ test("install-status compares canonical skill sources with flat install roots", 
     );
     assert.equal(repoLocalRun.status, 0, repoLocalRun.stderr);
     const repoLocalStatus = JSON.parse(repoLocalRun.stdout);
-    assert.equal(repoLocalStatus.scans[0].results[0].selector, "harness/alpha");
-    assert.equal(repoLocalStatus.scans[0].results[0].status, "missing");
+    assert.deepEqual(
+      repoLocalStatus.scans.map((scan: { host: string; results: Array<{ selector: string; status: string }> }) => ({
+        host: scan.host,
+        selector: scan.results[0]?.selector,
+        status: scan.results[0]?.status,
+      })),
+      [
+        { host: "codex", selector: "harness/alpha", status: "missing" },
+        { host: "claude", selector: "harness/alpha", status: "missing" },
+      ],
+    );
 
     const strictRun = runCli(["install-status", "--root", repoRoot, "--scope", "global", "--selector", "beta", "--strict"], {
       cwd: consumerRepo,
       env: {
         ...process.env,
         AGENTS_HOME: agentsHome,
+        CLAUDE_CONFIG_DIR: claudeConfigDir,
       },
     });
     assert.equal(strictRun.status, 1);
@@ -402,6 +493,7 @@ test("install-status compares canonical skill sources with flat install roots", 
     rmSync(repoRoot, { recursive: true, force: true });
     rmSync(consumerRepo, { recursive: true, force: true });
     rmSync(agentsHome, { recursive: true, force: true });
+    rmSync(claudeConfigDir, { recursive: true, force: true });
     rmSync(staleTarget, { recursive: true, force: true });
   }
 });

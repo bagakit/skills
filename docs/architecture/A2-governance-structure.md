@@ -75,7 +75,8 @@ This means:
   capabilities that co-evolve across harness behaviors and hosts
 - install and link distribution should project directly from those skill
   directories into runtime pickup directories such as repo-local `.codex/skills/`
-  or global `$AGENTS_HOME/skills` or `~/.agents/skills`
+  and `.claude/skills/`, or global `$AGENTS_HOME/skills` or `~/.agents/skills`
+  together with `$CLAUDE_CONFIG_DIR/skills` or `~/.claude/skills`
 
 So a system-owned runtime unit is not "internal only".
 It is part of the system and still allowed to travel as a standalone runtime
