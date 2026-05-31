@@ -43,6 +43,7 @@ required_files = [
   "gate_validation/skills/harness/bagakit-feature-tracker/check-feature-tracker-concurrency.sh",
   "gate_validation/skills/harness/bagakit-feature-tracker/check-feature-tracker-goal-contract.sh",
   "gate_validation/skills/harness/bagakit-feature-tracker/check-feature-tracker-semantic-task-truth.sh",
+  "gate_validation/skills/harness/bagakit-feature-tracker/check-feature-tracker-task-plan-repair.sh",
   "gate_validation/skills/harness/bagakit-feature-tracker/check-feature-tracker-state-contract.sh",
   "gate_validation/skills/harness/bagakit-feature-tracker/lib/feature-tracker-testlib.sh",
 ]
@@ -131,6 +132,29 @@ groups = ["skills", "harness", "feature-tracker", "quality", "semantic-task-trut
 [suite.runner]
 kind = "bash_script"
 script = "gate_validation/skills/harness/bagakit-feature-tracker/check-feature-tracker-semantic-task-truth.sh"
+args = [
+  "--root",
+  "{repo_root}",
+]
+
+[[suite]]
+id = "bagakit-feature-tracker-task-plan-repair"
+owner = "skills/harness/bagakit-feature-tracker"
+description = "Fail closed on invalid reviewed lineage and repair it under exact content guards without disturbing active execution."
+default = true
+proof_mode = "state_machine"
+protects = ["reviewed task-plan corruption detection, exact guarded repair, active task preservation, and rollback-safe receipt refresh"]
+oracle = ["public CLI fixture damages reviewed lineage, proves Goal mutation is byte-preserving fail-closed, rejects stale guards, injects receipt publication failure and verifies rollback, then repairs an active task and validates the refreshed receipt"]
+exercised_surface = ["feature-tracker set-feature-goal and repair-reviewed-task-plan commands", "feature state, reviewed tasks, Goal, and owner receipt content hashes"]
+proves = ["bagakit-feature-tracker-task-plan-repair proves invalid reviewed lineage cannot be hidden by a task_plan_missing receipt and one exact guarded repair restores canonical task truth without changing active state or task evidence."]
+does_not_prove = ["bagakit-feature-tracker-task-plan-repair does not infer missing plan semantics, authorize requirement changes, or repair unrelated lifecycle corruption."]
+timeout_seconds = 300
+validation_class = "quality"
+groups = ["skills", "harness", "feature-tracker", "quality", "repair"]
+
+[suite.runner]
+kind = "bash_script"
+script = "gate_validation/skills/harness/bagakit-feature-tracker/check-feature-tracker-task-plan-repair.sh"
 args = [
   "--root",
   "{repo_root}",

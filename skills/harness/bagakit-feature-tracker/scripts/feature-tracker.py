@@ -13,6 +13,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import tempfile
 import unicodedata
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -159,6 +160,19 @@ def write_text_atomic(path: Path, text: str) -> None:
     tmp = path.with_suffix(path.suffix + ".tmp")
     tmp.write_text(text, encoding="utf-8")
     tmp.replace(path)
+
+
+def write_bytes_atomic(path: Path, payload: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, raw_tmp = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+    tmp = Path(raw_tmp)
+    try:
+        with os.fdopen(fd, "wb") as stream:
+            stream.write(payload)
+        tmp.replace(path)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
 
 
 def normalized_markdown(text: str) -> str:
@@ -1830,6 +1844,21 @@ def has_reviewed_task_plan(tasks: dict[str, Any]) -> bool:
     return True
 
 
+def claims_reviewed_task_plan(tasks: dict[str, Any]) -> bool:
+    return tasks.get("plan_status") == "reviewed"
+
+
+def require_canonical_reviewed_claim(tasks: dict[str, Any], *, feat_id: str, action: str) -> None:
+    if not claims_reviewed_task_plan(tasks) or has_reviewed_task_plan(tasks):
+        return
+    raise SystemExit(
+        "error: "
+        f"feat {feat_id} claims plan_status=reviewed but its task plan is not canonical; "
+        "run feature-tracker.sh repair-reviewed-task-plan with exact SHA-256 guards "
+        f"before {action}"
+    )
+
+
 def require_reviewed_task_plan(tasks: dict[str, Any], *, feat_id: str, action: str) -> None:
     if has_reviewed_task_plan(tasks):
         return
@@ -2362,6 +2391,25 @@ def load_feat(paths: HarnessPaths, feat_id: str) -> tuple[dict[str, Any], dict[s
     return state, tasks
 
 
+def guarded_file_revision(path: Path, expected: str, *, label: str) -> None:
+    expected = str(expected or "").strip().lower()
+    if expected == "none":
+        if path.exists():
+            raise SystemExit(
+                f"error: stale {label} revision: expected none, current {sha256_file(path)}"
+            )
+        return
+    if not re.fullmatch(r"[0-9a-f]{64}", expected):
+        raise SystemExit(f"error: --expected-{label}-sha256 must be `none` or a lowercase SHA-256 digest")
+    if not path.is_file():
+        raise SystemExit(f"error: stale {label} revision: expected {expected}, current none")
+    current = sha256_file(path)
+    if current != expected:
+        raise SystemExit(
+            f"error: stale {label} revision: expected {expected}, current {current}"
+        )
+
+
 def expected_feature_goal_ref(paths: HarnessPaths, state: dict[str, Any]) -> str:
     feat_id = str(state.get("feat_id") or "")
     status = str(state.get("status") or "")
@@ -2617,6 +2665,7 @@ def cmd_set_feature_goal(args: argparse.Namespace) -> int:
     paths = HarnessPaths(root)
     ensure_harness_exists(paths)
     state, tasks = load_feat(paths, args.feat)
+    require_canonical_reviewed_claim(tasks, feat_id=args.feat, action="setting a Feature Goal")
     status = str(state.get("status") or "")
     if status in CLOSED_FEAT_STATUS:
         eprint("error: closed features preserve goal.md but do not accept Goal updates")
@@ -2706,6 +2755,7 @@ def save_feat(
 ) -> None:
     normalize_state_payload(state)
     normalize_tasks_payload(tasks)
+    require_canonical_reviewed_claim(tasks, feat_id=feat_id, action="saving Feature state")
     normalize_feature_goal_ref(paths, state)
     require_valid_feature_goal_contract(paths, state)
     status = str(state.get("status") or "")
@@ -3449,6 +3499,109 @@ def cmd_set_task_plan(args: argparse.Namespace) -> int:
     )
     save_feat(paths, args.feat, state, tasks)
     print(f"ok: task plan set {args.feat} revision={next_revision}")
+    return 0
+
+
+def validate_repaired_task_plan(
+    state: dict[str, Any],
+    previous: dict[str, Any],
+    replacement: dict[str, Any],
+    *,
+    feat_id: str,
+) -> None:
+    normalize_tasks_payload(replacement)
+    if replacement.get("feat_id") != feat_id:
+        raise SystemExit(f"error: repaired task plan feat_id must be {feat_id}")
+    if not has_reviewed_task_plan(replacement):
+        raise SystemExit("error: repaired task plan must be a complete canonical reviewed tasks.json")
+    previous_revision = previous.get("plan_revision")
+    replacement_revision = replacement.get("plan_revision")
+    if (
+        not isinstance(previous_revision, int)
+        or isinstance(previous_revision, bool)
+        or replacement_revision < previous_revision
+    ):
+        raise SystemExit(
+            "error: repaired task plan must not lower plan_revision; "
+            f"current {previous_revision}, replacement {replacement_revision}"
+        )
+    require_canonical_task_blockers(replacement, feat_id=feat_id)
+    current_task_id = state.get("current_task_id")
+    in_progress = [
+        str(task.get("id"))
+        for task in replacement.get("tasks", [])
+        if isinstance(task, dict) and task.get("status") == "in_progress"
+    ]
+    if current_task_id is None:
+        if in_progress:
+            raise SystemExit("error: repaired task plan introduces an in_progress task without current_task_id")
+    elif in_progress != [current_task_id]:
+        raise SystemExit(
+            "error: repaired task plan must preserve the active current_task_id as the only in_progress task"
+        )
+
+
+def publish_repaired_task_plan(
+    paths: HarnessPaths,
+    state: dict[str, Any],
+    replacement: dict[str, Any],
+    *,
+    feat_id: str,
+) -> None:
+    status = str(state.get("status") or "")
+    tasks_path = paths.feat_tasks(feat_id, status=status)
+    receipt_path = paths.feat_owner_receipt(feat_id, status=status)
+    old_tasks = tasks_path.read_bytes()
+    old_receipt = receipt_path.read_bytes() if receipt_path.exists() else None
+    try:
+        write_bytes_atomic(tasks_path, json_payload_bytes(replacement))
+        save_json(receipt_path, build_owner_receipt(paths, state, replacement))
+    except BaseException:
+        write_bytes_atomic(tasks_path, old_tasks)
+        if old_receipt is None:
+            receipt_path.unlink(missing_ok=True)
+        else:
+            write_bytes_atomic(receipt_path, old_receipt)
+        raise
+
+
+def cmd_repair_reviewed_task_plan(args: argparse.Namespace) -> int:
+    root = Path(args.root).resolve()
+    paths = HarnessPaths(root)
+    ensure_harness_exists(paths)
+    state, tasks = load_feat(paths, args.feat)
+    status = str(state.get("status") or "")
+    if status in CLOSED_FEAT_STATUS:
+        eprint("error: closed features do not accept task-plan repair")
+        return 1
+
+    state_path = paths.feat_state(args.feat, status=status)
+    tasks_path = paths.feat_tasks(args.feat, status=status)
+    goal_path = paths.feat_goal(args.feat, status=status)
+    receipt_path = paths.feat_owner_receipt(args.feat, status=status)
+    guarded_file_revision(state_path, args.expected_state_sha256, label="state")
+    guarded_file_revision(tasks_path, args.expected_tasks_sha256, label="tasks")
+    guarded_file_revision(goal_path, args.expected_goal_sha256, label="goal")
+    guarded_file_revision(receipt_path, args.expected_receipt_sha256, label="receipt")
+
+    source = resolve_input_file(root, args.tasks_file, label="repaired tasks file")
+    replacement = load_json(source)
+    if not isinstance(replacement, dict):
+        eprint("error: repaired tasks file must contain a JSON object")
+        return 1
+    replacement = copy.deepcopy(replacement)
+    validate_repaired_task_plan(state, tasks, replacement, feat_id=args.feat)
+    normalize_feature_goal_ref(paths, state)
+    require_valid_feature_goal_contract(paths, state)
+    canonical_feature_blocker(state, feat_id=args.feat)
+    if status == "blocked":
+        require_current_blocker_task_evidence(state, replacement, feat_id=args.feat)
+
+    publish_repaired_task_plan(paths, state, replacement, feat_id=args.feat)
+    print(
+        "ok: reviewed task plan repaired "
+        f"{args.feat} revision={replacement['plan_revision']} tasks_sha256={sha256_file(tasks_path)}"
+    )
     return 0
 
 
@@ -6033,6 +6186,19 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--expected-revision", type=int, required=True)
     sp.set_defaults(func=cmd_set_task_plan)
 
+    sp = sub.add_parser(
+        "repair-reviewed-task-plan",
+        help="replace a damaged reviewed tasks.json under exact content guards",
+    )
+    add_common(sp)
+    sp.add_argument("--feature", dest="feat", required=True)
+    sp.add_argument("--tasks-file", required=True)
+    sp.add_argument("--expected-state-sha256", required=True)
+    sp.add_argument("--expected-tasks-sha256", required=True)
+    sp.add_argument("--expected-goal-sha256", required=True)
+    sp.add_argument("--expected-receipt-sha256", required=True)
+    sp.set_defaults(func=cmd_repair_reviewed_task_plan)
+
     sp = sub.add_parser("validate-feature-goal", help="validate a candidate or installed feature-owned goal.md")
     add_common(sp)
     sp.add_argument("--feature", dest="feat", required=True)
@@ -6198,6 +6364,7 @@ def command_requires_global_tracker_lock(args: argparse.Namespace) -> bool:
         "create-feature",
         "create-feature-from-planning-entry-handoff",
         "set-task-plan",
+        "repair-reviewed-task-plan",
         "set-feature-goal",
         "assign-feature-workspace",
         "start-task",

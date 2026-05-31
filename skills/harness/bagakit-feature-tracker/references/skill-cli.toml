@@ -28,6 +28,10 @@ name = "set-task-plan"
 summary = "Materialize or revise one reviewed semantic task plan with an expected revision guard."
 
 [[command]]
+name = "repair-reviewed-task-plan"
+summary = "Repair one damaged reviewed tasks.json under exact state, tasks, Goal, and receipt SHA-256 guards."
+
+[[command]]
 name = "validate-feature-goal"
 summary = "Validate candidate or installed goal.md identity, Feature binding, content presence, and portability."
 

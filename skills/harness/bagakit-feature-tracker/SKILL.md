@@ -128,6 +128,7 @@ bash "$BAGAKIT_FEATURE_TRACKER_SKILL_DIR/scripts/feature-tracker.sh" materialize
 - `feature-tracker.sh create-feature`
 - `feature-tracker.sh create-feature-from-planning-entry-handoff`
 - `feature-tracker.sh set-task-plan`
+- `feature-tracker.sh repair-reviewed-task-plan`
 - `feature-tracker.sh validate-feature-goal`
 - `feature-tracker.sh set-feature-goal`
 - `feature-tracker.sh assign-feature-workspace`
@@ -177,6 +178,11 @@ Workspace assignment and task start fail closed until that plan exists.
 Plan replacement uses `--expected-revision`, is rejected during active task
 execution, preserves blocked/done evidence, and requires explicit supersession
 lineage against the immediately prior current plan.
+When persisted state claims a reviewed plan but canonical lineage is damaged,
+ordinary owner writes fail closed. `repair-reviewed-task-plan` is the single
+maintainer repair path: it accepts a complete canonical `tasks.json`, requires
+exact SHA-256 guards for state/tasks/Goal/receipt, preserves `state.json` and
+the active current-task identity, and atomically refreshes tasks plus receipt.
 Historical superseded tasks remain attributable but cannot be restarted.
 Review, source, verification, and evidence refs must be portable repo-relative
 paths and must not use URI, absolute, drive-qualified, UNC, or escaping paths.

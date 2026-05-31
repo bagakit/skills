@@ -304,6 +304,17 @@ Required behavior:
   claim that no commit occurred since task start
 - active features must use this explicit contract; closed historical features
   may retain their pre-v2 task shape
+- a payload that claims `plan_status=reviewed` but fails canonical reviewed
+  lineage validation blocks ordinary Feature mutation; owner writes must not
+  replace that defect with a derived `task_plan_missing` receipt
+- `repair-reviewed-task-plan` is the only canonical repair path for this
+  corruption class; it requires exact SHA-256 guards for current state,
+  tasks, optional Goal, and receipt plus a complete canonical replacement
+- repair preserves `state.json` and the identity of any active current task;
+  it never lowers the observed plan revision; the explicitly reviewed
+  replacement owns repaired task semantics and evidence, and publication
+  replaces only `tasks.json` plus the derived receipt in one rollback-safe
+  boundary
 
 Normal `set-task-plan` replacement remains forbidden while a task is active.
 

@@ -137,6 +137,13 @@ Agent-authored plans and execution discoveries cannot self-authorize scope.
 `set-task-plan` uses optimistic `--expected-revision` checks, rejects plan
 replacement while a task is active, preserves blocked/done evidence, and
 records explicit supersession against the immediately prior current plan.
+If a persisted payload claims `plan_status=reviewed` but fails the canonical
+lineage contract, ordinary owner writes fail closed. Maintainers may use
+`repair-reviewed-task-plan` with a complete canonical replacement and exact
+SHA-256 guards for the current state, tasks, Goal, and receipt. Repair may keep
+an active task, preserves `state.json` byte-for-byte, requires identical task
+identity for the active current task, then atomically refreshes tasks and the
+derived receipt with rollback on publication failure.
 Historical superseded tasks remain visible for attribution but cannot restart.
 All review, source, verification, and evidence refs are portable repo-relative
 paths; URI, absolute, drive-qualified, UNC, and escaping paths are rejected.
@@ -191,6 +198,7 @@ Closed feature roots should preserve legacy `ui-verification.md` under
 - `create-feature`
 - `create-feature-from-planning-entry-handoff`
 - `set-task-plan`
+- `repair-reviewed-task-plan`
 - `validate-feature-goal`
 - `set-feature-goal`
 - `assign-feature-workspace`
