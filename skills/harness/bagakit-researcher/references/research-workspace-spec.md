@@ -195,50 +195,60 @@ Survey handback conditions should distinguish search-resolvable unknowns from
 unknowns that require user, project, or local context. Do not fill that gap by
 expanding retrieval.
 
-### Evidence-Lens Stress Test
+## Evidence Challenge Rule
 
-Use an evidence-lens stress test only when one-sided framing, contested
-evidence, incentives, or historical analogy could materially change the search
-plan or decision. The lenses are question generators, not personas, and none is
-mandatory when it adds no decision value:
+Run only checks that can change retrieval, synthesis, or the decision; none is
+mandatory.
 
-- operations:
-  - surface tacit practice, implementation constraints, and realities that
-    formal accounts may omit
-- scholarship:
-  - seek peer-reviewed or systematic evidence, including findings that
-    contradict popular belief
-- countercase:
-  - construct the strongest serious objection and seek evidence the favored
-    position may be neglecting
-- incentives:
-  - inspect beneficiaries, funding, business models, conflicts, and incentives
-    that may shape available claims or evidence
-- precedent:
-  - compare earlier cases, outcomes, and mechanism-level similarities and
-    differences instead of relying on superficial analogy
+Before retrieval, select evidence lenses only when one-sided framing, contested
+evidence, incentives, or historical analogy could change the search plan.
+Derive lenses from topic structure, stakeholders, disagreements, and evidence
+gaps. Use these only as fallbacks:
 
-Prefer deriving lenses from adjacent-topic structures, real stakeholder
-classes, known disagreements, and current evidence gaps. Treat the five lenses
-above as fallback prompts, not a closed panel.
+- operations: seek tacit practice, implementation constraints, and omitted
+  realities
+- scholarship: seek peer-reviewed or systematic evidence, including contrary
+  findings
+- countercase: seek the strongest serious objection and neglected evidence
+- incentives: inspect beneficiaries, funding, business models, and conflicts
+- precedent: compare earlier outcomes and mechanisms, not superficial analogy
 
-Before retrieval, record only lens-specific questions, hypotheses, likely
-source classes, and what evidence could change or resolve the working
-hypothesis. After retrieval, a selected lens may produce a compact note with:
+For each lens, record its question, hypothesis, source classes, and
+resolving evidence. Route results into claims and insights; any lens note must
+bind its position to evidence, limits, decision contribution, confidence, and
+claim kind.
 
-- a one- or two-sentence evidence-bounded position
-- the strongest supporting evidence ref
-- the strongest limitation, counterevidence, or unresolved gap
-- the decision-relevant contribution not already supplied by another lens
-- confidence and whether the position is sourced observation or inference
+Never present lenses as simulated expert testimony. When the user requests all
+five perspectives, cover five question routes and mark unsupported positions as
+evidence needs.
 
-Judge a lens by the distinct evidence, source route, contradiction, or decision
-change it contributes, not by lexical diversity or expert-like tone.
+When material claims conflict, compare claims and evidence, not lenses or
+personas:
 
-Never attribute a position to a simulated practitioner, academic, skeptic,
-economist, historian, or other expert. If the user explicitly requests all five
-perspectives, cover all five lenses, but leave unsupported positions as
-evidence needs rather than inventing representative testimony.
+- name the clashing claim refs and whether the disagreement is factual,
+  definitional, causal, scope-bound, or value-bound; hand value- or
+  preference-bound conflicts back
+- compare the strongest evidence chain on each side and whether the source
+  routes are independent
+- state how the conflict affects the decision
+- name the evidence, test, or question that could resolve it
+
+Count agreement as convergence only across independent evidence routes. Shared
+prompts, models, source families, or assumptions are not consensus.
+Lens omission is a coverage gap, not proof of a field-wide blind spot.
+
+Before synthesis or handoff, audit reliability:
+
+- for each material finding, name supporting claim refs, counterclaims or gaps,
+  confidence, and source-independence limits
+- check whether one source family, stakeholder class, method, or lens is
+  overrepresented, and whether an omitted lens could change the decision
+- rank findings only when ordering helps the decision; do not require a fixed
+  number of findings
+- use model self-critique to find gaps, not as validation or an authority score
+
+Keep only review outputs that add evidence, source routes, resolved
+contradictions, or decision value.
 
 ## Pass And Track Rule
 

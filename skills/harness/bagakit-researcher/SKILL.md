@@ -95,17 +95,16 @@ Follow `docs/specs/principle-layer-contract.md` when research evidence is
 synthesized into Bagakit-facing guidance.
 
 - charter the question before broad search
-- create a survey packet before non-trivial broad source collection when the field, source landscape, or unknowns are still unclear
+- create a survey packet before non-trivial broad source collection when the
+  field, source landscape, or unknowns are still unclear
 - keep source summaries source-bound; promote only claim-backed conclusions
-- record counterevidence or confidence limits for recommendations
 - distinguish source-landscape unknowns from user-goal or local-context
   unknowns before starting broad retrieval
 - when one-sided framing could change the research decision, use selected
   evidence lenses as question generators, not simulated expert testimony
-- keep each synthesis anchored to its parent charter, and carry material
-  evidence-coverage gaps forward as open risks instead of dropping them
-- before synthesis or handoff, check that recommendations and citations trace
-  back to source cards, summaries, or claim refs instead of floating prose
+- before synthesis or handoff, review material claim conflicts, finding-level
+  support and confidence, counterevidence or gaps, and the
+  charter-to-claim-to-source evidence chain
 - judge source authority against the claim being supported; owner documentation
   is primary for its own behavior, not independent proof of superiority
 - treat benchmark results as evidence for the capability and setup actually
@@ -133,12 +132,8 @@ synthesized into Bagakit-facing guidance.
 
 ## Core Surfaces
 
-Researcher uses the configured `researcher_root` when `docs/.bagakit-knowledge.toml` exists.
-
-Current default:
-
-- `.bagakit/researcher`
-
+Researcher uses the configured `researcher_root` when
+`docs/.bagakit-knowledge.toml` exists; the default is `.bagakit/researcher`.
 Each topic lives under:
 
 - `<researcher_root>/topics/<topic-class>/<topic>/`
@@ -147,8 +142,6 @@ Researcher may also maintain a researcher-local wiki/frontdoor:
 
 - `<researcher_root>/index.md`
 - `<researcher_root>/wiki/`
-
-Rule:
 
 - `researcher_root` may override the default path only when it stays under
   `.bagakit/`
@@ -286,13 +279,10 @@ sh scripts/bagakit-researcher.sh plan-survey \
   --handoff-target "passes/pass-001.md"
 ```
 
-`plan-survey` writes a pre-retrieval packet under `surveys/`. It creates or
-replaces `charter.md` only when `--charter-question` is provided, because the
-survey-routing question is often narrower than the topic anchor. The packet
-does not execute search, call providers, or replace source cards, summaries,
-claims, or pass planning.
-The four-quadrant fields borrow the consensus-ledger lens as local survey
-fields; they do not create a mandatory `bagakit-consensus-ledger` dependency.
+`plan-survey` writes under `surveys/`; it changes `charter.md` only when
+`--charter-question` is provided. See `references/research-workspace-spec.md`
+for charter separation and four-quadrant boundaries. The command does not
+execute search or replace later evidence and pass planning.
 
 3. Plan one bounded research pass:
 
