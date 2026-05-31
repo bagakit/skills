@@ -9,6 +9,10 @@ Dispatch principle review when any of these are true:
 - protected goal is inferred or contested
 - selected level may be wrong
 - new abstraction, dependency, or cross-boundary change is proposed
+- compatibility, migration, fallback, replacement, or cutover is proposed
+- a new quality gate or model-authored protocol field is proposed
+- a working path may be removed before its replacement is proven
+- confirmed discussion changed durable requirement truth
 - stop rule is uncertain
 - proof plan is weak or indirect
 - implementation may affect safety, data, production, or accessibility
@@ -41,8 +45,17 @@ rationale.
 
 ## Ladder State
 - selected_rung:
+- owning_boundary:
+- smallest_vertical_slice:
 - stop_reason:
 - rejected_heavier_rungs:
+
+## Decision Lenses
+- truth_and_ownership:
+- total_complexity_delta:
+- durable_evolution_path:
+- reuse_evidence:
+- causal_and_proof_closure:
 
 ## Evidence
 - changed_surfaces:
@@ -59,6 +72,9 @@ rationale.
 - `unknown_unknown`: plausible blind spots or unexplored dimensions
 
 Reviewers must not treat `unknown_known` as confirmed.
+
+Use `n/a` for a decision lens that the task does not trigger. Do not invent
+work only to fill the packet.
 
 ## Sharing Rule
 

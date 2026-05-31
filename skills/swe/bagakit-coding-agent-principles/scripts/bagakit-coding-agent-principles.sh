@@ -18,7 +18,7 @@ EOF
 
 case "${1:-}" in
   describe)
-    printf '%s\n' "Protect the task-specific user goal with the smallest project-native, behavior-proven change."
+    printf '%s\n' "Protect the task-specific user goal with the smallest durable, project-native change at the owning boundary, proven through behavior."
     ;;
   list-references)
     find "$skill_root/references" -type f | sed "s#^$skill_root/##" | sort
@@ -37,6 +37,7 @@ case "${1:-}" in
     test -f "$skill_root/references/decision-ladder.md"
     test -f "$skill_root/references/verdict-policy.md"
     test -f "$skill_root/studies/compensatory-complexity-runaway.md"
+    test -f "$skill_root/studies/validation-authority-inversion.md"
     ;;
   ""|-h|--help|help)
     usage

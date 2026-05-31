@@ -1,5 +1,5 @@
 version = 1
 skill = "bagakit-coding-agent-principles"
-trigger = "Non-trivial coding needs the smallest project-native, behavior-proven change."
-do = "State the protected principle, stop at the first sufficient implementation rung, and prove public behavior or an owned contract."
+trigger = "A non-trivial task reaches an implementation decision, including after debugging, review, refactoring, architecture, verification, or research."
+do = "Protect the user goal at the owning boundary, choose the smallest durable project-native slice, reuse before inventing, and prove owned and public behavior."
 see = "skills/swe/bagakit-coding-agent-principles/SKILL.md"

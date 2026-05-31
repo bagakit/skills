@@ -1,4 +1,4 @@
 interface:
   display_name: "Coding Agent Principles"
-  short_description: "Principle-led coding changes"
-  default_prompt: "Use $bagakit-coding-agent-principles to make a small, project-native code change with behavior proof."
+  short_description: "Owner-correct, low-complexity implementation"
+  default_prompt: "Use $bagakit-coding-agent-principles to make the smallest durable project-native change at the owning boundary and prove its behavior."

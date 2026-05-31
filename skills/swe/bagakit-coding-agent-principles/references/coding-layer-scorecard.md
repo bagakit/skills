@@ -9,22 +9,26 @@ Use `0`, `1`, or `2`.
 
 - `protected_goal`
   - goal is explicit and implementation-relevant
-- `project_native_strategy`
-  - implementation follows nearby owners, patterns, configuration, or platform
-    affordances
+- `owner_truth_and_strategy`
+  - requirement and behavior owners are explicit, one SSOT is preserved, and
+    implementation follows the durable project-native boundary
 - `ladder_use`
-  - lighter rungs were considered and rejected for clear reasons
+  - existing code, dependency capabilities, lighter rungs, and any required
+    prior art were inspected and rejected for clear reasons
 - `stop_rule`
-  - selected rung is sufficient and heavier work is not justified
+  - the selected vertical slice is sufficient and heavier work is not justified
 - `proof_plan`
-  - proof covers public behavior or owner-owned contract
+  - proof closes the causal owner when applicable, an owner-owned contract, and
+    public behavior with proportionate oracles
 - `scope_control`
-  - diff stays narrow and avoids opportunistic cleanup
-- `compensation_risk`
-  - change avoids adding or preserving fragile repair/gate/fallback layers
-    when the owner contract should be fixed, narrowed, deleted, or replaced
+  - diff stays inside one intent and minimizes total system complexity rather
+    than only changed lines
+- `compensation_and_evolution_risk`
+  - change avoids unowned compatibility, temporary architecture, permanent
+    dual paths, and fragile repair/gate/fallback stacks
 - `maintainability`
-  - change is understandable and does not create avoidable debt
+  - responsibilities and dependency direction stay clear, and the target state
+    does not require a known later rewrite
 
 Total interpretation:
 
@@ -33,40 +37,57 @@ Total interpretation:
 - `8-10`: correction recommended before implementation or commit
 - `0-7`: blocking unless user explicitly lowers the bar
 
-## Cross-Cutting Engineering Checks
+## Five Decision Lenses
 
-Apply these checks with coding-layer weight, not as universal hammers:
+Apply only the lenses triggered by the task. They guide the scores above; do
+not score them again or create work merely to fill every lens.
 
-- `SSOT`
-  - does the change reuse the owned source of truth instead of creating a
-    parallel one?
-- `DRY`
-  - does the change avoid meaningful duplication without inventing premature
-    abstraction?
-- `SOLID`
-  - when object or module boundaries are touched, does the change preserve clear
-    responsibility and dependency direction?
-- `KISS/YAGNI`
-  - does the change avoid future-proofing beyond the protected goal?
-- `Locality`
-  - is the change near the existing behavior and reviewable in one intent?
-- `Proof`
-  - does validation prove behavior, not just implementation shape?
-- `Compensation`
-  - does the change reduce the compensating stack, or does it make a fragile
-    repair/gate/fallback path more entrenched?
+- `Truth And Ownership`
+  - does the change use the owning requirement and behavior sources instead of
+    creating parallel truth?
+  - if confirmed discussion changed a durable requirement, is the owner updated
+    with the same meaning?
+- `Total Complexity`
+  - does the change prefer deletion, narrowing, wiring, reuse, DRY, and
+    KISS/YAGNI without premature abstraction?
+  - do modules keep one clear responsibility and established dependency
+    direction?
+- `Durable Evolution`
+  - is the long-term boundary correct while the current vertical slice stays
+    minimal?
+  - does cutover preserve working behavior until the replacement is proven,
+    then remove obsolete paths under project policy?
+- `Reuse Before Invention`
+  - were existing dependency capabilities inspected rather than assumed absent?
+  - when local evidence is insufficient, is the chosen library mature and
+    maintained, or is custom work justified by proven gaps?
+- `Causal And Proof Closure`
+  - for a fix, does the change repair the causal owner rather than compensate
+    around it?
+  - do validators check owner-known facts directly, request only the minimum
+    external decision delta, and prove behavior with the smallest sufficient
+    oracles?
 
 ## Blocking Conditions
 
-- proof plan is insufficient
-- stop rule is invalid
+- protected goal or owner truth is insufficient
+- selected level or stop rule is invalid
 - implementation drops required behavior
-- new dependency or abstraction lacks a goal-protecting reason
-- new repair, quality gate, fallback, exception, retry, or supervisor layer
-  masks an unexamined broken contract or owner boundary
-- patch hardcodes a type, report, route, or environment as a shortcut around a
-  general contract failure
-- SSOT break creates conflicting truth
+- change creates conflicting requirement or behavior truth
+- new dependency, abstraction, or custom mechanism lacks evidence that existing
+  capabilities are insufficient
+- compatibility, migration, fallback, or temporary architecture is invented
+  without an explicit user or project-owner requirement
+- a working path is removed before its durable replacement proves the required
+  vertical slice, or old and new paths become permanent truth
+- new repair, quality gate, exception, retry, or supervisor layer masks an
+  unexamined broken contract or owner boundary
+- hard gate requires exhaustive model restatement of owner-known facts or turns
+  subjective quality into admission protocol
+- patch hardcodes a type, report, route, or environment around a general
+  contract failure
+- implementation relies on a confirmed durable requirement change while the
+  owning document stays stale
 - engineering risk affects safety, data, production, or accessibility
 
 ## Output

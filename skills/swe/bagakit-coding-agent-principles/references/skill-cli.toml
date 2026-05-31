@@ -4,7 +4,7 @@ cli_id = "bagakit-coding-agent-principles"
 entrypoint = "scripts/bagakit-coding-agent-principles.sh"
 runner = "shell"
 usage = "sh scripts/bagakit-coding-agent-principles.sh <command>"
-summary = "Inspect and validate the coding-agent principle gate and proof-first ladder."
+summary = "Inspect and validate the owner-correct coding principle gate and proof-first ladder."
 surface_refs = []
 
 [[command]]

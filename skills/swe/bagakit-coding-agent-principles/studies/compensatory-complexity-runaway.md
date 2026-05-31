@@ -121,6 +121,9 @@ Before adding a compensating layer, answer:
 If the answer to 5 is "harder", reroute to architecture, refactoring, or
 research unless the user explicitly asks for a temporary containment patch.
 
+When the compensation stack is driven by validators that ask a model to echo
+owner-known facts, also read `validation-authority-inversion.md`.
+
 ## Sources
 
 - Richard I. Cook, "How Complex Systems Fail":

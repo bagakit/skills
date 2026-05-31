@@ -6,6 +6,10 @@ Use this scorecard before layer-specific review.
 
 Is this task really a coding/implementation task?
 
+An adjacent discipline may own the first motion without owning the eventual
+implementation. Route there first, then return to this skill when a concrete
+implementation decision exists.
+
 ## Candidate Levels
 
 - `coding`
@@ -47,6 +51,19 @@ Total interpretation:
 - task requires causal diagnosis before implementation
 - task requires behavior-preserving structure work before new behavior
 - task is primarily documentation, research, architecture, review, or testing
+  and has not yet produced an implementation decision
+
+## Re-entry Rule
+
+- debugging re-enters after causal isolation identifies the implementation
+  owner
+- review re-enters when findings become an authorized correction
+- refactoring re-enters when a concrete behavior-preserving change is chosen
+- architecture re-enters after the durable boundary and evolution path are
+  accepted
+- testing or verification re-enters after the proof surface or oracle design
+  produces an implementation decision
+- research re-enters when evidence supports an implementation choice
 
 ## Output
 

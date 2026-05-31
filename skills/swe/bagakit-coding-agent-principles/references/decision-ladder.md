@@ -4,49 +4,109 @@ Use this ladder after the protected-principle gate.
 
 ## Ladder
 
-1. Clarify the protected principle.
-   - Confirm the user goal, behavior boundary, non-goal, and proof plan.
-2. Locate existing behavior.
-   - Read nearby code, tests, configuration, owners, helpers, and conventions
-     before proposing new code.
-   - Identify whether the failing path already depends on stacked repairs,
-     gates, fallbacks, exceptions, retries, or supervisors.
-3. Prefer no-code, configuration, deletion, or wiring changes.
-   - Use this rung when existing behavior already supports the goal.
-   - Prefer deleting or narrowing an unnecessary compensating layer when that
-     restores the owner contract.
-4. Reuse a local project pattern.
-   - Extend the nearest owner-owned abstraction instead of inventing a parallel
-     path.
-5. Use native platform, standard library, or installed dependency behavior.
-   - Prefer what the project already accepts over new dependencies.
-6. Write the minimum new code.
-   - Add only the code needed to protect the goal and satisfy the proof plan.
-7. Prove public behavior.
-   - Validate through user-visible behavior, contract text, deterministic
-     artifacts, or commands that cover the protected goal.
+1. Clarify the protected principle and owner truth.
+   - Confirm the user goal, behavior boundary, non-goal, requirement owner,
+     implementation owner, and proof plan.
+   - If confirmed discussion changed a durable requirement, update the owning
+     requirement document before implementation relies on it.
+2. Locate existing behavior and capabilities.
+   - Read nearby code, tests, configuration, owner documents, helpers,
+     conventions, and installed dependencies before proposing new code.
+   - Inspect the actual dependency API and project usage before concluding that
+     an existing library cannot satisfy the need.
+   - Identify stacked repairs, gates, fallbacks, exceptions, retries,
+     supervisors, duplicate state, or compatibility paths.
+3. Choose the durable owning boundary and smallest real vertical slice.
+   - Make the architecture decision for the maintainable target state.
+   - Implement only the smallest current end-to-end path through that target
+     boundary; do not create a knowingly disposable architecture for later
+     replacement.
+4. Prefer deletion, narrowing, configuration, or wiring.
+   - Use existing behavior when it already supports the goal.
+   - Delete obsolete code, state, tests, or documents when the project policy
+     does not require a transition path.
+   - Prefer removing or narrowing a compensating layer when that restores the
+     owner contract.
+5. Reuse before invention.
+   - Prefer the nearest owner-owned project pattern, then platform or standard
+     library behavior, then an already installed dependency.
+   - When a new dependency is justified, prefer a mature and actively
+     maintained library over custom implementation.
+6. Write the minimum new code at the chosen boundary.
+   - Add only what the protected goal and proof plan require.
+   - Keep modules cohesive, concerns separated, and dependency direction clear.
+   - Preserve a working path until its durable replacement closes the required
+     vertical slice; then cut over and delete the obsolete path according to
+     project policy.
+7. Close cause and proof proportionally.
+   - For fixes, prove that the causal owner was repaired rather than hidden.
+   - Prove an owner-owned contract and the public behavior it supports.
+   - Use the smallest sufficient oracles; do not multiply checks when one
+     stronger proof surface already closes the risk.
 
 ## Stop Rule
 
-Stop at the first rung that protects the task-specific goal and satisfies the
-proof plan. Do not escalate to a heavier rung for polish, symmetry, future
-flexibility, or unrelated cleanup.
+Stop at the first rung that protects the task-specific goal, uses the durable
+owning boundary, and satisfies the proof plan. Do not escalate for polish,
+symmetry, speculative flexibility, or unrelated cleanup.
+
+Smallest means minimum total system complexity for the required behavior, not
+minimum changed lines. A smaller diff that preserves duplicate truth, temporary
+architecture, or a compensation stack has stopped too early.
 
 ## Escalation Rule
 
-Escalate only when the current rung cannot protect the goal or cannot be proven.
-Name the failed rung and the reason before moving up.
+Escalate only when the current rung cannot protect the goal, cannot reach the
+durable boundary, or cannot be proven. Name the failed rung and reason before
+moving up.
+
+Route back to debugging, refactoring, architecture, research, or verification
+when that discipline must close a prerequisite before implementation can
+continue.
+
+## Compatibility And Cutover Rule
+
+Do not invent compatibility, migration, fallback, dual-read, or dual-write
+behavior. Follow the explicit user or project owner policy.
+
+When compatibility is required, name its contract, owner, scope, exit
+condition, and deletion path. When the project requires direct replacement,
+switch all owners and delete the obsolete path in the same completed cutover.
+
+Preserving a working path while its target-state replacement is unfinished is
+delivery sequencing, not permission to create permanent split truth.
 
 ## New Abstraction Rule
 
-Add a new abstraction only when it reduces real complexity, prevents meaningful
-duplication, or matches a local pattern that already owns the behavior.
+Add a new abstraction only when it reduces real total complexity, prevents
+meaningful duplication, or matches a local pattern that already owns the
+behavior. Do not add an abstraction or configuration layer merely to predict a
+future variant.
 
-## New Dependency Rule
+## Dependency And Prior-Art Rule
 
-Add a dependency only when existing project code, platform features, standard
-library behavior, and installed dependencies cannot protect the goal with
-acceptable proof and maintenance cost.
+Before adding a dependency or writing a custom capability:
+
+1. inspect project code and installed dependency capabilities
+2. inspect platform and standard library behavior
+3. for novel, foundational, security-sensitive, reliability-sensitive, or
+   costly decisions, inspect proven mature-product or research patterns
+4. add a maintained dependency or custom implementation only when the earlier
+   routes cannot protect the goal at acceptable proof and maintenance cost
+
+Do not require external research for ordinary local changes when project-native
+evidence already resolves the decision.
+
+## Requirement Sync Rule
+
+When confirmed user discussion changes a durable requirement, update the
+owning requirement document before completing implementation or commit. Keep
+the wording close to the user's meaning while normalizing it into the owner's
+existing structure.
+
+Do not create a new requirement document when an owner already exists, and do
+not turn unconfirmed inference or implementation discovery into user-approved
+scope.
 
 ## Compensation Layer Rule
 
@@ -58,14 +118,30 @@ Escalate or reroute when the proposed patch would make the old compensating
 stack harder to delete, hides a broken owner boundary, or proves only that the
 scaffold still satisfies itself.
 
+## Validation Authority Rule
+
+Each owner validates deterministic facts it already owns. A model or caller
+should submit only the smallest decision delta the owner cannot derive.
+
+Do not require exhaustive restatement of owner-known inventory, unselected
+items, duplicated metadata, or subjective quality judgments as an admission
+hard gate. Keep truth, safety, permission, membership, protocol, idempotency,
+and atomicity hard; keep relevance, sufficiency, style, and preference advisory
+unless the user goal makes one of them an exact contract.
+
+Correction should be monotonic: narrower, more local, and easier to satisfy.
+If a rejection expands the required payload or retry surface, recheck the gate
+owner before adding another repair.
+
 ## Proof Rule
 
 Prefer proof surfaces in this order:
 
-1. structured state or deterministic artifact
-2. public command boundary
+1. structured owner state or deterministic artifact
+2. public command or API boundary
 3. test that covers the requested behavior
 4. narrow wording contract when wording is the behavior
 5. manual verification when automation is not yet available
 
-Do not claim success from implementation shape alone.
+Use only the layers needed by the risk. Do not claim success from implementation
+shape alone, and do not treat more checks as stronger proof by default.
