@@ -15,6 +15,7 @@ from pathlib import Path
 ROOT_ATTRIBUTES = {"type", "name", "time"}
 MESSAGE_TYPES = {
     "agent-v1",
+    "agent-set-v1",
     "supervisor-v1",
     "worker-v1",
     "reviewer-v1",

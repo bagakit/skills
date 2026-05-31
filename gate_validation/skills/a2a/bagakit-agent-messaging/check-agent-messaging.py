@@ -60,6 +60,14 @@ def main() -> int:
         0,
         [],
     )
+    require_case(
+        cli,
+        '<bagakit-msg type="agent-set-v1" name="Cedar-FL4" time="2000-01-01T00:00:00Z">'
+        "你负责独立检查当前候选结果，只读取和汇报。结果返回给派生你的 Agent。"
+        "</bagakit-msg>",
+        0,
+        [],
+    )
     require_case(cli, agent_template.replace(' type="supervisor-v1"', ' type="owner-v1"'), 1, ["type.invalid"])
     require_case(cli, agent_template.replace(' name="Cedar-7K2M"', ""), 1, ["attribute.missing"])
     require_case(cli, agent_template.replace(' time="2000-01-01T00:00:00+00:00"', ' time="2000-01-01T00:00:00"'), 1, ["time.invalid"])
@@ -108,7 +116,7 @@ def main() -> int:
     assert rejected.stdout == ""
     assert "xml.parse" in rejected.stderr
 
-    print("ok: bagakit-agent-messaging checks passed (15 shape cases, 2 fail-stop emission cases)")
+    print("ok: bagakit-agent-messaging checks passed (16 shape cases, 2 fail-stop emission cases)")
     return 0
 
 

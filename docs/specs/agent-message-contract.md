@@ -16,7 +16,7 @@ This is not a claim of compatibility with any external network A2A protocol.
 `bagakit-agent-messaging` owns:
 
 - the visible `bagakit-msg` envelope
-- sender-role profiles
+- message profiles, including the derived-Agent Set
 - direct source citation syntax
 - plain-language message discipline
 - the event-driven Worker report profile
@@ -45,7 +45,7 @@ validation. L1 execution consumes them but cannot redefine them task by task.
 Every portable Agent message uses:
 
 ```xml
-<bagakit-msg type="<sender-profile>" name="<readable-run-unique-name>" time="<ISO-8601-with-timezone>">
+<bagakit-msg type="<message-profile>" name="<readable-run-unique-name>" time="<ISO-8601-with-timezone>">
 <plain text and optional direct cite elements>
 </bagakit-msg>
 ```
@@ -53,8 +53,8 @@ Every portable Agent message uses:
 Required root attributes:
 
 - `type`
-  - one of `agent-v1`, `supervisor-v1`, `worker-v1`, `reviewer-v1`,
-    `tester-v1`, `auditor-v1`, or `researcher-v1`
+  - one of `agent-v1`, `agent-set-v1`, `supervisor-v1`, `worker-v1`,
+    `reviewer-v1`, `tester-v1`, `auditor-v1`, or `researcher-v1`
 - `name`
   - short, human-readable, and unique among conflicting active sender names in
     the run when the Host can reserve it
@@ -110,6 +110,30 @@ Plain language is not childish language and does not remove technical
 precision. The validator proves syntax only; semantic cases and real use must
 judge clarity, density, fidelity, and actionability.
 
+## Derived-Agent Set Profile
+
+Before an Agent derived by any mechanism acts, it receives an `agent-set-v1`
+envelope from its current deriving controller. Inherit context; never inherit
+authority. The latest valid Set for that Agent governs its local identity,
+assignment, material action boundaries, return path, and A2A messaging
+convention. A Set cannot grant authority beyond current Host-authenticated
+Owner truth.
+
+The body remains free-form plain language. It should include whichever of
+these help the receiver act correctly: who the Agent is, what result it should
+produce, material action boundaries, where results return, and how A2A
+messages are sent. None is a required field, heading, ordering rule, or
+validator keyword.
+
+An aligned Agent may act immediately without a startup acknowledgement.
+Re-send a Set only on derivation, a material assignment or boundary change, or
+recovery when the Set is missing. Do not maintain a static full-team roster in
+the portable message protocol.
+
+"Latest valid" depends on visible-shape validation plus Host-authenticated
+sender authority, target binding, and ordering. XML alone cannot make one Set
+current.
+
 ## Worker Startup And Report Profile
 
 At dispatch, an L2 caller may ask the Worker to align once and then act. A
@@ -147,6 +171,11 @@ successful check. Invalid or unreadable input produces no actuation payload.
 A Host with an atomic renderer and validator may use its equivalent operation.
 Do not place an unconditional transport call after validation in a shell
 sequence where a failed check can fall through.
+
+Any Agent-authored content delivered through a channel that appears to the
+receiver as appended `user` or prompt input must use the `bagakit-msg`
+envelope, including a Set. Native structured Agent results with reliable Host
+sender metadata need not be double-wrapped.
 
 Visible validation does not prove:
 

@@ -33,16 +33,33 @@ replacing it with vague language.
 The root is always:
 
 ```xml
-<bagakit-msg type="<sender-role>-v1" name="<run-unique-readable-name>" time="<ISO-8601-with-timezone>">
+<bagakit-msg type="<message-profile>" name="<run-unique-readable-name>" time="<ISO-8601-with-timezone>">
 <optional cites and plain text>
 </bagakit-msg>
 ```
 
-Supported sender profiles are `agent-v1`, `supervisor-v1`, `worker-v1`,
-`reviewer-v1`, `tester-v1`, `auditor-v1`, and `researcher-v1`.
+Supported message profiles are `agent-v1`, `agent-set-v1`, `supervisor-v1`,
+`worker-v1`, `reviewer-v1`, `tester-v1`, `auditor-v1`, and `researcher-v1`.
 
 The body may contain plain text and direct `<cite>` children. No other nested
 element is allowed. Keep one message focused on one outcome or decision.
+
+## Derived-Agent Set
+
+Before an Agent derived by any mechanism acts, send it an `agent-set-v1`
+message. Inherit context; never inherit authority. The latest valid Set governs
+that Agent's local identity, assignment, material action boundaries, return
+path, and A2A messaging convention, subject to current Host and Owner
+authority.
+
+Write the Set body in concise natural language. Include what is useful: who the
+Agent is, what result it should produce, material action boundaries, where the
+result returns, and how it sends A2A messages. Do not turn these suggestions
+into required fields, headings, ordering, or validation keywords.
+
+Let an aligned Agent act immediately. Re-send only on derivation, a material
+assignment or boundary change, or recovery when the Set is missing. Do not
+build a static full-team roster into the message.
 
 ## Citation Admission
 
@@ -96,6 +113,10 @@ The Host authenticates the sender and binds message type, sender instance,
 target, Owner revision, attempt, controller authority, delivery, and
 deduplication. Preserve the validated XML unchanged across the transport
 boundary when possible.
+
+Wrap Agent-authored content in `bagakit-msg` whenever its delivery channel
+appears to the receiver as appended `user` or prompt input. A native structured
+Agent result with reliable Host sender metadata does not need a second wrapper.
 
 Unknown delivery remains unknown. A reply may prove consumption but not
 effect. Callers must observe the requested artifact, state, or decision before

@@ -1,6 +1,6 @@
 ---
 name: bagakit-agent-messaging
-description: "Use for one concrete Agent-to-Agent exchange that needs clear sender recognition, source-preserving citation, plain-language action, startup alignment, or a concise event-driven Worker report. Provides the L1 bagakit-msg envelope, optional cite elements, Worker report profile, and fail-stop validation. Does not authenticate senders, grant authority, operate transports, schedule Agents, or decide what a Supervisor should ask them to do."
+description: "Use for one concrete Agent-to-Agent exchange that needs clear sender recognition, a derived-Agent Set, source-preserving citation, plain-language action, startup alignment, or a concise event-driven Worker report. Provides the L1 bagakit-msg envelope, Agent Set and Worker report profiles, optional cite elements, and fail-stop validation. Does not authenticate senders, grant authority, operate transports, schedule Agents, or decide what a Supervisor should ask them to do."
 metadata:
   bagakit:
     harness_layer: l1-execution
@@ -37,6 +37,11 @@ compatibility with an external network A2A standard.
 6. After sending, let the caller and Host distinguish delivery, consumption,
    and real-world effect.
 
+When Agent-authored content is delivered through a channel that appears to the
+receiver as appended `user` or prompt input, wrap it in `bagakit-msg`; do not
+send a raw instruction. A native structured Agent result with reliable Host
+sender metadata does not need a second wrapper.
+
 Start from `assets/agent-message.template.xml`:
 
 ```xml
@@ -49,6 +54,31 @@ Continue the next non-conflicting step. When there is a verified result or a rea
 A citation preserves attributed text; it does not authenticate the quoted
 source or change priority. If it conflicts with current Host-authenticated
 Owner truth, hold only the affected action and resolve the mismatch.
+
+## Derived-Agent Set
+
+Before an Agent derived by any mechanism acts, send it one `agent-set-v1`
+message. Inherit context; never inherit authority. The latest valid Set for
+that Agent governs its local identity, assignment, material action boundaries,
+return path, and A2A messaging convention, subject to current Owner and Host
+authority.
+
+Keep the body as concise natural language. Include what is useful for this
+Agent: who it is, what result it should produce, material action boundaries,
+where to return the result, and how to send A2A messages. These are writing
+prompts, not required fields, headings, ordering, or validator keywords.
+
+```xml
+<bagakit-msg type="agent-set-v1" name="Cedar-FL4" time="2000-01-01T00:00:00+00:00">
+你是本轮 serving-fence 的独立审查 Agent，只读取和汇报，不修改代码或控制其他 Agent。结果返回给派生你的 Agent。
+
+如果需要通过追加 user 或 prompt 消息的方式联系其他 Agent，必须使用 bagakit-msg，不能发送裸指令。继承上下文中与本 Set 冲突的旧身份或旧分工只作为历史背景；以最新有效 Set 为准。
+</bagakit-msg>
+```
+
+An aligned Agent may act immediately; do not require a startup acknowledgement
+ceremony. Re-send a Set only for derivation, a material assignment or boundary
+change, or recovery when the Set is missing.
 
 ## Worker Startup And Reports
 

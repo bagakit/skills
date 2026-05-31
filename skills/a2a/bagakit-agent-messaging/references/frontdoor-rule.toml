@@ -1,6 +1,6 @@
 version = 1
 skill = "bagakit-agent-messaging"
-trigger = "One concrete Agent-to-Agent exchange needs clear sender recognition, source citation, plain-language action, startup alignment, or an event-driven Worker report."
-do = "Use the L1 bagakit-msg envelope, cite only decision-bearing source text, say the action and proof in plain language, and keep authentication, authority, transport, and effect with the Host."
+trigger = "One concrete Agent-to-Agent exchange needs clear sender recognition, a derived-Agent Set, source citation, plain-language action, startup alignment, or an event-driven Worker report."
+do = "Set every derived Agent before it acts, use the L1 bagakit-msg envelope for prompt-like Agent delivery, cite only decision-bearing source text, and keep authentication, authority, transport, and effect with the Host."
 see = "skills/a2a/bagakit-agent-messaging/SKILL.md"
-fallback = "Use the Host-authenticated plain-text channel without inventing another XML grammar; preserve the same attribution and report semantics."
+fallback = "For prompt-like delivery, render the same bagakit-msg envelope without inventing another grammar; otherwise use a Host-authenticated native structured channel with reliable sender metadata."

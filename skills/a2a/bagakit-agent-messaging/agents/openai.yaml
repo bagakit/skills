@@ -1,4 +1,4 @@
 interface:
   display_name: "Bagakit Agent Messaging"
   short_description: "Clear, attributable Agent-to-Agent messages"
-  default_prompt: "Use $bagakit-agent-messaging to send a concise, attributable Agent message or request a high-signal Worker report."
+  default_prompt: "Use $bagakit-agent-messaging to Set a derived Agent, send a concise attributable Agent message, or request a high-signal Worker report."
