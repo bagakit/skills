@@ -407,8 +407,18 @@ declared as its entire result. Missing result triggers bounded failure-scope
 inspection before stale, reassign, or replace; it does not authorize blind
 duplication.
 
-After a new Worker dispatch, obtain the smallest goal assimilation that makes
-the first action trustworthy. Natural language is sufficient when it exposes:
+Before an Agent derived by any mechanism acts, it receives the L1
+`agent-set-v1` Set from its current deriving controller. Inherit context; never
+inherit authority. The latest valid Set governs that Agent's local identity,
+assignment, material action boundaries, return path, and A2A messaging
+convention, subject to current Owner and Host authority. The body stays
+free-form natural language; useful content includes who the Agent is, its
+result, material boundaries, return path, and messaging convention, but these
+are not fields or a roster schema.
+
+After a new Worker dispatch, confirm the smallest goal assimilation that makes
+the first action trustworthy. Natural language or the first material action is
+sufficient when it exposes:
 
 - the Owner-visible outcome
 - the current acceptance or proof target
@@ -417,11 +427,12 @@ the first action trustworthy. Natural language is sufficient when it exposes:
 - a nearby non-goal
 
 When current truth is clear and the model matches, execution begins
-immediately. Only a mismatch that can change outcome, scope, acceptance,
-critical path, authority, or irreversible work earns discussion or Owner
-escalation. Paraphrase length, template completion, agreement language, and
-discussion volume are not proof. Judge assimilation by the causal quality of
-the first action and later artifact effect.
+immediately without a startup acknowledgement ceremony. Only a mismatch that
+can change outcome, scope, acceptance, critical path, authority, or
+irreversible work earns discussion or Owner escalation. Paraphrase length,
+template completion, agreement language, and discussion volume are not proof.
+Judge assimilation by the causal quality of the first action and later
+artifact effect.
 
 These fields do not extend the portable receipt in v1. Authoritative role
 liveness, load, controller binding, cancellation, and capacity belong to the
@@ -918,11 +929,14 @@ followed by the same action again.
 
 The portable Supervisor consumes the L1 Agent message protocol defined by
 `docs/specs/agent-message-contract.md`; it does not own a private XML grammar,
-template, or validator. Its sender profile is `supervisor-v1`.
+template, or validator. It uses `agent-set-v1` to Set a newly derived Agent and
+`supervisor-v1` for an ordinary Supervisor message.
 
-In a standalone host where that L1 capability is unavailable, Supervisor uses
-the Host-authenticated plain-text channel with the same content and reporting
-semantics. It does not recreate another visible XML grammar or validator.
+Any Agent-authored content delivered through a channel that appears as
+appended `user` or prompt input uses the L1 envelope rather than raw text. A
+native structured Agent result with reliable Host sender metadata need not be
+double-wrapped. The Supervisor does not recreate another visible XML grammar
+or validator.
 
 Supervisor selects one decision-bearing message and translates its internal
 control judgment into the receiver's language. Lead with the concrete result
@@ -980,7 +994,7 @@ may prove consumption but never resolves effect by itself. A resolved effect
 needs post-delivery Host, artifact, external-oracle, or independent-review
 evidence bound to the current target and candidate identity.
 
-At first dispatch, Supervisor tells the Worker when a proactive report should
+In the first Set, Supervisor tells the Worker when a proactive report should
 return: a verified result or stable checkpoint, a direction-changing mismatch,
 a real blocker or assurance deadline, a decision before irreversible work, or
 completion of an assigned review or test predicate. It requests the L1 Worker

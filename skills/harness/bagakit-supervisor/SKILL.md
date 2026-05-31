@@ -126,13 +126,22 @@ risk. Keep one integration writer unless the Owner and Host prove isolated
 write roots, merge ownership, and fencing. Keep reviewers evidentially or
 mechanically read-only.
 
-After dispatch, accept a short natural-language goal assimilation rather than
-a fixed form. It is sufficient when the Worker identifies the intended
-outcome, proof, any material direction-changing uncertainty, the first
-evidence-producing action, and a nearby non-goal. Clear truth should lead
-straight to action; only material mismatch should delay execution. At startup,
-tell the Worker which result, mismatch, blocker, or decision events should
-trigger a proactive report; do not request timed status chatter.
+Before an Agent derived by any mechanism acts, send it the L1
+`agent-set-v1` Set. Inherit context; never inherit authority. Keep the body as
+natural-language guidance rather than a field schema, and let the latest valid
+Set govern that Agent's local identity, assignment, material boundaries,
+return path, and A2A convention. Do not build or broadcast a static team map.
+Re-send the Set only for derivation, a material assignment or boundary change,
+or recovery when it is missing.
+
+After dispatch, confirm goal assimilation from the Worker's first material
+response or action rather than requiring a startup acknowledgement. It is
+sufficient when the Worker exposes the intended outcome, proof, any material
+direction-changing uncertainty, the first evidence-producing action, and a
+nearby non-goal. Clear truth should lead straight to action; only material
+mismatch should delay execution. In the Set, tell the Worker which result,
+mismatch, blocker, or decision events should trigger a proactive report; do
+not request timed status chatter.
 
 ## Loop
 
@@ -142,8 +151,9 @@ trigger a proactive report; do not request timed status chatter.
    optimizing execution.
 2. Before changing team topology, inspect only the relevant current roles and
    choose reuse, one useful independent lane, narrowing, stale-role inspection,
-   safe replacement, or no fan-out. After a new dispatch, confirm bounded goal
-   assimilation and let a clear, aligned Worker act immediately.
+   safe replacement, or no fan-out. Set every newly derived Agent before it
+   acts. Confirm bounded goal assimilation from material work and let a clear,
+   aligned Worker act immediately.
 3. Select the highest-priority unresolved control question and name the
    decision it gates, current-candidate closure target, minimal evidence needed,
    and stop or preemption condition. Do not start a substantial review without

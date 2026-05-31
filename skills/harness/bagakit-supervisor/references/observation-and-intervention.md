@@ -197,8 +197,15 @@ assignment truth stay with their existing planner or lifecycle owner.
 
 ## Worker Goal Assimilation
 
-After a new dispatch, obtain the smallest Worker response that makes its first
-action trustworthy. Prefer natural language over a fixed form. A useful
+Before any Agent derived by any mechanism acts, send it the L1
+`agent-set-v1` Set. Inherit context; never inherit authority. State in natural
+language whatever is useful about its local identity, result, material
+boundaries, return path, and A2A convention. Do not impose body fields or build
+a static roster. The latest valid Set governs, subject to Host and Owner
+authority.
+
+After a new dispatch, confirm the smallest Worker goal model that makes its
+first action trustworthy. Prefer natural language over a fixed form. A useful
 assimilation exposes:
 
 ```text
@@ -209,18 +216,20 @@ First action: <smallest evidence-producing step now>
 Non-goal: <nearest attractive work outside this result>
 ```
 
-This is a semantic check, not a required visible template. When current truth
-is clear and the Worker's model matches, let it act immediately. Do not require
-a meeting, long paraphrase, or repeated confirmation. When a material mismatch
-could change outcome, scope, acceptance, critical path, authority, or
-irreversible work, reconcile that one decision before the affected commitment.
+This is a semantic check, not a required visible template. Confirm it from the
+first material response or action. When current truth is clear and the Worker's
+model matches, let it act immediately without an acknowledgement ceremony. Do
+not require a meeting, long paraphrase, or repeated confirmation. When a
+material mismatch could change outcome, scope, acceptance, critical path,
+authority, or irreversible work, reconcile that one decision before the
+affected commitment.
 
 Do not prescribe the Worker's implementation method to make assimilation look
 complete. Judge it by whether the first action has a credible causal path to
 the named evidence and whether later artifacts preserve the Owner boundary.
 Agreement language, response length, and checklist completion earn no credit.
 
-At startup, tell the Worker when a proactive report is useful. Admit one on a
+In the Set, tell the Worker when a proactive report is useful. Admit one on a
 verified result or stable checkpoint, a direction-changing mismatch, a real
 blocker or assurance deadline, a decision before irreversible work, or a
 completed review or test predicate. Use the L1 `bagakit-agent-messaging`
@@ -503,8 +512,10 @@ accepted it.
 
 Use the L1 `bagakit-agent-messaging` protocol instead of owning a
 Supervisor-private envelope or validator. The Supervisor selects
-`type="supervisor-v1"`, keeps one short run-unique readable name, and uses
-plain text plus optional direct `<cite>` elements.
+`type="agent-set-v1"` for a derived Agent's Set and
+`type="supervisor-v1"` for an ordinary Supervisor message, keeps one short
+run-unique readable name, and uses plain text plus optional direct `<cite>`
+elements.
 
 Use `<cite from="user">` to preserve a decision-bearing human direction,
 `from="worker"` for the Worker's own prior report or commitment, and
@@ -525,10 +536,11 @@ inspect active names and add a suffix; rename before sending on collision. Bind
 at most one action-authorized Supervisor to a target attempt. Other
 Supervisors route findings to that controller or the Owner.
 
-If `bagakit-agent-messaging` is unavailable in a standalone host, send the
-same plain content through the Host-authenticated channel without inventing a
-second XML grammar or local validator. Host identity, authority, target,
-delivery, consumption, and effect remain external in both cases.
+When Agent-authored content is delivered through a channel that appears as
+appended `user` or prompt input, use `bagakit-msg` rather than raw text. A
+native structured Agent result with reliable Host sender metadata need not be
+double-wrapped. Do not invent a second XML grammar or local validator. Host
+identity, authority, target, delivery, consumption, and effect remain external.
 
 ## Repair Recommendation Boundary
 

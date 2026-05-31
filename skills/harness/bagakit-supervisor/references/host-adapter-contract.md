@@ -77,6 +77,13 @@ That evidence lets the Supervisor check bounded goal assimilation without
 turning the Host into a semantic grader. The Host need not parse a fixed
 template; it only preserves attribution and current target identity.
 
+Before a derived Agent acts, deliver its validated L1 `agent-set-v1` Set. When
+the delivery channel appears to that Agent as appended `user` or prompt input,
+the Set and later Agent-authored messages use `bagakit-msg`, not raw text. A
+native structured Agent result with reliable sender metadata does not need a
+second wrapper. The Host binds which authorized sender and ordering make a Set
+current; the XML does not grant authority.
+
 For later Worker reports, preserve sender, target attempt, candidate identity,
 and receipt time separately from the visible L1 message. The semantic report
 profile may help the Supervisor read the result, evidence, mismatch, and next
