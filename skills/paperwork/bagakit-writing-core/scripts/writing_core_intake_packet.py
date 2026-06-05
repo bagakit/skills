@@ -28,6 +28,7 @@ REQUIRED_TOP_LEVEL = [
     "task_route",
     "audience_channel_genre",
     "source_material_state",
+    "clarity_routing",
     "evidence_ledger",
     "privacy_boundary",
     "language_profile",
@@ -44,6 +45,14 @@ REQUIRED_OBJECT_FIELDS = {
     "task_route": ["requested_action", "intake_lane", "final_prose_requested", "final_prose_owner"],
     "audience_channel_genre": ["audience", "channel", "genre", "decision_or_action_expected"],
     "source_material_state": ["available_materials", "missing_materials", "stability", "reason"],
+    "clarity_routing": [
+        "reader_target_language_proficiency",
+        "text_mode",
+        "misunderstanding_consequence",
+        "terminology_state",
+        "precision_route",
+        "evidence_ids",
+    ],
     "privacy_boundary": ["raw_private_samples_in_packet", "retention_rule", "allowed_reuse", "notes"],
     "language_profile": ["dimensions", "confidence", "evidence_ids"],
     "handoff": ["next_owner", "owner_reason", "must_read_refs", "open_questions"],
@@ -89,6 +98,11 @@ ENUMS = {
         "other",
     },
     "source_material_state.stability": {"stable", "partial", "unstable"},
+    "clarity_routing.reader_target_language_proficiency": {"fluent", "working", "limited", "mixed", "unknown"},
+    "clarity_routing.text_mode": {"procedure", "description", "argument", "mixed"},
+    "clarity_routing.misunderstanding_consequence": {"low", "moderate", "high", "safety_critical"},
+    "clarity_routing.terminology_state": {"stable", "glossary_available", "inconsistent", "unknown"},
+    "clarity_routing.precision_route": {"ordinary", "core_clarity", "controlled_technical"},
     "privacy_boundary.allowed_reuse": {"task_only", "user_confirmed_profile", "team_pattern", "none"},
     "handoff.next_owner": {
         "bagakit-writing-core",
@@ -270,6 +284,17 @@ def check_object_types(packet: dict[str, Any], errors: list[str]) -> None:
     for field in ["stability", "reason"]:
         require_string(source, field, "source_material_state", errors)
 
+    clarity = require_object(packet, "clarity_routing", errors)
+    for field in [
+        "reader_target_language_proficiency",
+        "text_mode",
+        "misunderstanding_consequence",
+        "terminology_state",
+        "precision_route",
+    ]:
+        require_string(clarity, field, "clarity_routing", errors)
+    require_string_list_field(clarity, "evidence_ids", "clarity_routing", errors)
+
     privacy = require_object(packet, "privacy_boundary", errors)
     require_bool(privacy, "raw_private_samples_in_packet", "privacy_boundary", errors)
     for field in ["retention_rule", "allowed_reuse", "notes"]:
@@ -403,6 +428,11 @@ def evidence_ids(packet: dict[str, Any]) -> set[str]:
 
 def iter_evidence_refs(packet: dict[str, Any]) -> list[tuple[str, list[Any]]]:
     refs: list[tuple[str, list[Any]]] = []
+    clarity_routing = packet.get("clarity_routing", {})
+    if isinstance(clarity_routing, dict):
+        ids = clarity_routing.get("evidence_ids")
+        if isinstance(ids, list):
+            refs.append(("clarity_routing.evidence_ids", ids))
     language_profile = packet.get("language_profile", {})
     if isinstance(language_profile, dict):
         ids = language_profile.get("evidence_ids")
@@ -488,6 +518,7 @@ def check_packet(path: Path) -> tuple[dict[str, Any], int]:
         "file": str(path),
         "stable": stable,
         "packetVersion": packet.get("packet_version"),
+        "clarityRouting": packet.get("clarity_routing", {}),
         "coreVetoCandidates": core_veto_candidates(packet),
         "errors": errors,
         "nextAction": "run_core_review" if stable else "repair_intake_packet",

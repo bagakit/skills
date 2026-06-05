@@ -3,8 +3,24 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { runCommand, type CommandResult } from "../../../../dev/eval/src/lib/command.ts";
+import { loadEvalDataset, reportEvalDataset } from "../../../../dev/eval/src/lib/dataset.ts";
 import type { EvalCaseContext, EvalCaseResult, EvalSuiteDefinition } from "../../../../dev/eval/src/lib/model.ts";
 import { cleanupTempDir, createTempDir, registerTempRepo } from "../../../../dev/eval/src/lib/temp.ts";
+
+const CLARITY_DATASET_REL = "gate_eval/skills/paperwork/bagakit-writing-core/cases/writing-clarity-transfer-eval-dataset.json";
+const CLARITY_CASE_IDS = [
+  "en-procedure-keeps-order-and-actions",
+  "en-rationale-resists-procedure-flattening",
+  "en-terminology-stays-stable",
+  "zh-nominalization-restores-actions",
+  "zh-referents-preserve-role-mapping",
+];
+const CLARITY_RULE_IDS = new Set([
+  "instruction-primary-action",
+  "reader-burden-bounds-complexity",
+  "referent-actor-action-visible",
+  "terminology-stability-one-concept",
+]);
 
 function expectOk(result: CommandResult, label: string): void {
   assert.equal(result.status, 0, `${label} failed\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`);
@@ -131,7 +147,7 @@ export const SUITE: EvalSuiteDefinition = {
           expectOk(rules, "rules validate");
           const rulesJson = JSON.parse(rules.stdout);
           assert.equal(rulesJson.ok, true, "rule registry should validate");
-          assert.ok(rulesJson.count >= 9, "rule registry should expose expanded Core rules");
+          assert.ok(rulesJson.count >= 13, "rule registry should expose expanded Core rules");
 
           const ruleShow = runCommand("bash", [cli, "rules", "show", "title-promise-topic-label"], {
             cwd: context.repoRoot,
@@ -150,6 +166,15 @@ export const SUITE: EvalSuiteDefinition = {
           const rhythmRuleShowJson = JSON.parse(rhythmRuleShow.stdout);
           assert.equal(rhythmRuleShowJson.owner, "bagakit-writing-core");
           assert.equal(rhythmRuleShowJson.proof_mode, "lint_json");
+
+          const clarityRuleShow = runCommand("bash", [cli, "rules", "show", "terminology-stability-one-concept"], {
+            cwd: context.repoRoot,
+            replacements: fixture.replacements,
+          });
+          expectOk(clarityRuleShow, "rules show terminology-stability-one-concept");
+          const clarityRuleShowJson = JSON.parse(clarityRuleShow.stdout);
+          assert.equal(clarityRuleShowJson.owner, "bagakit-writing-core");
+          assert.ok(Array.isArray(clarityRuleShowJson.source_refs) && clarityRuleShowJson.source_refs.length >= 2);
 
           const inventory = runCommand("bash", [cli, "inventory", "compare", sourcePath, rewritePath, "--fail-on", "risk"], {
             cwd: context.repoRoot,
@@ -205,6 +230,7 @@ export const SUITE: EvalSuiteDefinition = {
               "foundation review emits stable structured dimensions for a complete route artifact",
               "rule registry validates and exposes individual rule metadata",
               "object-before-short-judgment is exposed as lint-backed Core rule metadata",
+              "STE-derived clarity rules expose source parentage without claiming compliance",
               "inventory compare flags dropped evidence, actions, risks, or protected-like tokens",
               "lint emits structured writing signals, sentence-rhythm advisory, and prose mechanics",
               "de-AI-tone primitive is reachable through writing-core",
@@ -217,6 +243,7 @@ export const SUITE: EvalSuiteDefinition = {
               `bash ${cliRel} rules validate`,
               `bash ${cliRel} rules show title-promise-topic-label`,
               `bash ${cliRel} rules show object-before-short-judgment`,
+              `bash ${cliRel} rules show terminology-stability-one-concept`,
               `bash ${cliRel} inventory compare <temp-repo>/source.md <temp-repo>/rewrite.md --fail-on risk`,
               `bash ${cliRel} lint --fail-on none <temp-repo>/draft.md`,
               `bash ${cliRel} de-ai-tone lint --profile blog --fail-on none <temp-repo>/draft.md`,
@@ -243,6 +270,52 @@ export const SUITE: EvalSuiteDefinition = {
         } finally {
           cleanupTempDir(fixture.tempRepo, context.keepTemp);
         }
+      },
+    },
+    {
+      id: "clarity-transfer-cases-preserve-information-and-boundaries",
+      title: "Clarity Transfer Cases Preserve Information And Boundaries",
+      summary: "The Core-owned case pack should cover STE-derived clarity gains and a holdout that rejects procedure-style flattening.",
+      focus: ["clarity", "terminology", "referents", "instructions", "no-regression"],
+      run: (context): EvalCaseResult => {
+        const dataset = loadEvalDataset(path.join(context.repoRoot, CLARITY_DATASET_REL));
+        const report = reportEvalDataset(dataset);
+        const caseIds = dataset.items.map((item) => item.id).sort();
+        assert.deepEqual(caseIds, [...CLARITY_CASE_IDS].sort());
+        assert.equal(dataset.items.length, 5);
+        assert.ok(report.splits.some((split) => split.split === "baseline" && split.count === 4));
+        assert.ok(report.splits.some((split) => split.split === "holdout" && split.count === 1));
+        assert.ok(dataset.items.every((item) => item.skill_id === "bagakit-writing-core"));
+
+        const observedRuleIds = new Set<string>();
+        for (const item of dataset.items) {
+          assert.ok(item.prompt.length >= 150, `${item.id} prompt should define a real rewrite boundary`);
+          assert.ok(item.expected_outcome.length >= 140, `${item.id} expected_outcome should guide review`);
+          assert.ok(item.notes_for_human_review.length >= 80, `${item.id} review notes should identify failure modes`);
+          const reference = item.reference_state as Record<string, unknown>;
+          assert.ok(Array.isArray(reference.required_facts) && reference.required_facts.length >= 3, `${item.id} should preserve a fact ledger`);
+          const applicable = reference.applicable_rule_ids;
+          assert.ok(Array.isArray(applicable) && applicable.length >= 1, `${item.id} should name applicable Core rules`);
+          for (const ruleId of applicable as string[]) {
+            assert.ok(CLARITY_RULE_IDS.has(ruleId), `${item.id} references unknown clarity rule ${ruleId}`);
+            observedRuleIds.add(ruleId);
+          }
+        }
+        assert.deepEqual([...observedRuleIds].sort(), [...CLARITY_RULE_IDS].sort());
+
+        return {
+          assertions: [
+            "clarity case pack covers all four new Core rule ids",
+            "every case carries an explicit fact ledger for no-regression review",
+            "holdout case rejects procedure-style flattening of technical rationale",
+          ],
+          artifacts: [{ label: "clarity-transfer-dataset", path: CLARITY_DATASET_REL }],
+          outputs: {
+            cases: caseIds,
+            splits: report.splits,
+            rule_ids: [...observedRuleIds].sort(),
+          },
+        };
       },
     },
   ],

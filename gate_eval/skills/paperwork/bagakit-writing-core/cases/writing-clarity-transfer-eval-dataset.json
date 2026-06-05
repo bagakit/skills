@@ -1,0 +1,150 @@
+{
+  "schema": "bagakit.eval-dataset/v1",
+  "dataset_id": "bagakit-writing-core-clarity-transfer-v1",
+  "title": "Writing Core Clarity Transfer Eval",
+  "description": "Shared qualitative cases for terminology stability, referent and actor clarity, instruction atomicity, reader burden, and no-regression boundaries.",
+  "item_schema": "bagakit.eval-dataset-item/v1",
+  "evidence_basis": [
+    "https://www.asd-ste100.org/about_STE.html",
+    "https://www.asd-ste100.org/STEsoftware.html",
+    "https://doi.org/10.1177/154193129604000502",
+    "https://doi.org/10.14288/1.0078187"
+  ],
+  "items": [
+    {
+      "id": "zh-nominalization-restores-actions",
+      "skill_id": "bagakit-writing-core",
+      "split": "baseline",
+      "prompt": "Rewrite the source text for an internal technical status note. Restore the real actions hidden behind nominalized phrases. Preserve the sample count and failure-rate movement exactly. Do not invent an owner, cause, benchmark, or next action.",
+      "expected_outcome": "The rewrite says directly that the team analyzed 48 failed samples and moved validation earlier. It preserves the movement from 18% to 7%, removes unsupported abstract praise, and does not replace it with a new causal story.",
+      "notes_for_human_review": "Penalize loss of the sample boundary, changed percentages, invented ownership, or a smoother sentence that still hides completed work behind abstract nouns.",
+      "allowed_tools": [],
+      "expected_tools": [],
+      "tags": ["zh", "status", "actions", "no-regression"],
+      "risk_tags": ["fact-drift", "causal-invention", "empty-verb-retention"],
+      "dimensions": ["action_visibility", "evidence_preservation", "rewrite_quality"],
+      "reference_state": {
+        "source_text": "团队对 48 个失败样本进行了分析，并完成了验证环节的前置化改造。改造实现了问题发现效率的显著提升：失败率从 18% 降到 7%。",
+        "required_facts": ["48 个失败样本", "18%", "7%"],
+        "applicable_rule_ids": ["referent-actor-action-visible", "reader-burden-bounds-complexity"]
+      },
+      "metadata": {
+        "rubric": {
+          "action_visibility": "Names analyzing the samples and moving validation earlier as direct actions instead of leaving them inside abstract process nouns.",
+          "evidence_preservation": "Preserves the 48-sample boundary and both percentages without adding a cause, owner, or unsupported benefit.",
+          "rewrite_quality": "Produces a compact status statement whose clarity comes from visible work and evidence rather than inflated evaluation."
+        },
+        "minimum_pass": ["direct actions restored", "48 samples preserved", "18% and 7% preserved"],
+        "red_flags": ["sample count removed", "percentages changed", "new owner invented", "new cause invented"]
+      }
+    },
+    {
+      "id": "zh-referents-preserve-role-mapping",
+      "skill_id": "bagakit-writing-core",
+      "split": "baseline",
+      "prompt": "Rewrite the source text so a technical reader does not have to resolve former and latter. Preserve the exact responsibility mapping: Copilot handles short inline completions, Cursor handles cross-file changes, the system records validation results, and engineers complete fixes.",
+      "expected_outcome": "The rewrite repeats Copilot and Cursor where needed, keeps all four responsibility relationships, and makes agency visible without inventing a performance comparison or forcing every clause into active voice.",
+      "notes_for_human_review": "Penalize a role swap, collapsed responsibility, invented comparison, or a blanket active-voice rewrite that changes what the system and engineers do.",
+      "allowed_tools": [],
+      "expected_tools": [],
+      "tags": ["zh", "technical", "referent", "agency"],
+      "risk_tags": ["role-swap", "agency-loss", "invented-comparison"],
+      "dimensions": ["referent_clarity", "action_visibility", "evidence_preservation"],
+      "reference_state": {
+        "source_text": "Copilot 和 Cursor 都会生成补全建议，前者负责较短的行内补全，后者负责跨文件修改。验证结果被系统记录，修复动作则由工程师完成。",
+        "required_facts": ["Copilot: short inline completions", "Cursor: cross-file changes", "system: records validation", "engineers: complete fixes"],
+        "applicable_rule_ids": ["referent-actor-action-visible", "terminology-stability-one-concept"]
+      },
+      "metadata": {
+        "rubric": {
+          "referent_clarity": "Uses explicit product names when former and latter would make the reader look back to recover the mapping.",
+          "action_visibility": "Keeps the system and engineers attached to their original actions and does not treat passive voice as an automatic defect.",
+          "evidence_preservation": "Preserves all four role relationships and adds no performance, quality, or preference claim."
+        },
+        "minimum_pass": ["product roles preserved", "system role preserved", "engineer role preserved"],
+        "red_flags": ["roles swapped", "actor removed", "comparison invented", "technical name replaced"]
+      }
+    },
+    {
+      "id": "en-procedure-keeps-order-and-actions",
+      "skill_id": "bagakit-writing-core",
+      "split": "baseline",
+      "prompt": "Rewrite the source as an executable deployment procedure for readers with working English. Keep the validation precondition, installation, restart, and traffic migration in that order. Give each numbered step one primary action and preserve the operator responsibility.",
+      "expected_outcome": "The result separates the procedure into ordered steps, states the validation condition before installation, keeps the operator responsible for the restart, and does not drop the traffic-migration boundary.",
+      "notes_for_human_review": "Penalize reordered actions, a missing precondition, an actor loss, or fragmentation that removes the relationship between validation and installation.",
+      "allowed_tools": [],
+      "expected_tools": [],
+      "tags": ["en", "procedure", "order", "atomic-action"],
+      "risk_tags": ["order-drift", "condition-loss", "actor-loss"],
+      "dimensions": ["instruction_atomicity", "referent_clarity", "evidence_preservation"],
+      "reference_state": {
+        "source_text": "After the package has been validated, it should be installed and the service should then be restarted by the operator before production traffic migration begins.",
+        "required_facts": ["validation before installation", "installation before restart", "operator restarts service", "restart before traffic migration"],
+        "applicable_rule_ids": ["instruction-primary-action", "referent-actor-action-visible", "reader-burden-bounds-complexity"]
+      },
+      "metadata": {
+        "rubric": {
+          "instruction_atomicity": "Centers each numbered step on one primary action while keeping necessary conditions and expected order attached.",
+          "referent_clarity": "Names the package, service, operator, and traffic migration where pronouns or passives would obscure responsibility.",
+          "evidence_preservation": "Preserves every precondition, action, actor, and ordering relationship from the source."
+        },
+        "minimum_pass": ["one primary action per step", "operator preserved", "full order preserved"],
+        "red_flags": ["condition dropped", "order changed", "operator removed", "traffic migration omitted"]
+      }
+    },
+    {
+      "id": "en-terminology-stays-stable",
+      "skill_id": "bagakit-writing-core",
+      "split": "baseline",
+      "prompt": "Edit the source so one generic term consistently names the worker startup action. Preserve the exact API symbol resumeJob() and do not replace it with a plain-language synonym. Do not change the operational sequence.",
+      "expected_outcome": "The prose uses one stable generic verb for the startup action, preserves resumeJob() exactly, and makes clear that resuming a job is a separate API operation rather than a stylistic synonym.",
+      "notes_for_human_review": "Penalize cosmetic synonym cycling, API renaming, or a rewrite that collapses worker startup and job resumption into one operation.",
+      "allowed_tools": [],
+      "expected_tools": [],
+      "tags": ["en", "terminology", "technical-name", "sequence"],
+      "risk_tags": ["term-drift", "api-breakage", "operation-collapse"],
+      "dimensions": ["terminology_stability", "evidence_preservation", "rewrite_quality"],
+      "reference_state": {
+        "source_text": "Begin the worker after configuration loads. Initiate the worker only once. If a paused job exists, call resumeJob() after the worker starts.",
+        "required_facts": ["configuration loads before worker starts", "worker starts once", "resumeJob() only for paused job", "resume after worker starts"],
+        "applicable_rule_ids": ["terminology-stability-one-concept"]
+      },
+      "metadata": {
+        "rubric": {
+          "terminology_stability": "Uses one generic term for one startup concept while retaining the distinct API operation and its exact symbol.",
+          "evidence_preservation": "Keeps the startup count, paused-job condition, API symbol, and operation order unchanged.",
+          "rewrite_quality": "Reduces resolution cost without replacing precise technical identity with generic vocabulary."
+        },
+        "minimum_pass": ["stable startup term", "resumeJob() preserved", "operation order preserved"],
+        "red_flags": ["API renamed", "operations merged", "condition removed", "synonym cycling retained"]
+      }
+    },
+    {
+      "id": "en-rationale-resists-procedure-flattening",
+      "skill_id": "bagakit-writing-core",
+      "split": "holdout",
+      "prompt": "Review the source as technical design rationale. Improve only genuine ambiguity. Preserve the trade-off, qualifiers, and causal relationships. Do not convert the paragraph into imperative steps or enforce a fixed sentence-length target.",
+      "expected_outcome": "A strong answer keeps the client-versus-service trade-off and the local timing constraint. It may adjust one overloaded clause, but it does not flatten the rationale into a checklist or delete the qualification that both choices carry costs.",
+      "notes_for_human_review": "This case protects against over-applying controlled technical language. Penalize a procedure rewrite, dropped nuance, forced active voice, or a generic shorter-is-better edit.",
+      "allowed_tools": [],
+      "expected_tools": [],
+      "tags": ["en", "rationale", "holdout", "non-goal"],
+      "risk_tags": ["voice-flattening", "qualifier-loss", "over-application"],
+      "dimensions": ["reader_burden_judgment", "evidence_preservation", "minimal_edit_judgment"],
+      "reference_state": {
+        "source_text": "Keeping retries in the client makes the failure visible where the request originates, but it also means each caller must choose an appropriate limit. Moving that policy to the service would centralize control while hiding local timing constraints that still matter during incident analysis.",
+        "required_facts": ["client keeps origin visibility", "callers choose limits", "service centralizes control", "service can hide local timing constraints"],
+        "applicable_rule_ids": ["reader-burden-bounds-complexity"]
+      },
+      "metadata": {
+        "rubric": {
+          "reader_burden_judgment": "Distinguishes necessary qualified rationale from an overloaded instruction and avoids applying procedural constraints by genre alone.",
+          "evidence_preservation": "Keeps both benefits, both costs, and the incident-analysis boundary visible after any edit.",
+          "minimal_edit_judgment": "Leaves already clear reasoning intact or makes only a local change justified by a concrete ambiguity."
+        },
+        "minimum_pass": ["trade-off preserved", "no procedure conversion", "no fixed-length rewrite"],
+        "red_flags": ["converted to steps", "qualifier dropped", "one side removed", "active voice forced"]
+      }
+    }
+  ]
+}

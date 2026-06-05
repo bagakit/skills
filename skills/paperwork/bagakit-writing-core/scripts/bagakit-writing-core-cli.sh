@@ -73,6 +73,7 @@ case "${1:-}" in
     test -f "$skill_root/references/workflow/OPERATING_SURFACE_MATRIX.md"
     test -f "$skill_root/references/knowledge/PRE_DRAFT_ROUTE_MEMO_TEMPLATE.md"
     test -f "$skill_root/references/writing/AI_SMELLS.md"
+    test -f "$skill_root/references/writing/PRECISION_AND_READER_BURDEN.md"
     test -f "$skill_root/references/writing/ai-smell-lexicon.json"
     test -f "$skill_root/references/workflow/INTAKE_HANDOFF_AND_CORE_VETO.md"
     test -f "$skill_root/references/rules/core-rule-registry.toml"

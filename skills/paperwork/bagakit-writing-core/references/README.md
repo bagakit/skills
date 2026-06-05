@@ -41,6 +41,7 @@ they do not duplicate the full de-AI-tone taxonomy.
 - `writing/NARRATIVE_ANGLE_REVIEW_HEURISTIC.md`
 - `writing/NO_REGRESSION.md`
 - `writing/POV_FIRST_PERSON.md`
+- `writing/PRECISION_AND_READER_BURDEN.md`
 - `writing/STRUCTURE_PYRAMID.md`
 - `writing/TONE_HUMBLE_TOUGH.md`
 - `writing/VOICE.md`

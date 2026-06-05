@@ -101,6 +101,10 @@ def validate_rule(rule: dict[str, object], seen: set[str]) -> list[str]:
         value = rule.get(field)
         if not isinstance(value, list) or not all(isinstance(item, str) and item for item in value):
             errors.append(f"{rule_id}: {field} must be a non-empty string list")
+    if "source_refs" in rule:
+        value = rule.get("source_refs")
+        if not isinstance(value, list) or not all(isinstance(item, str) and item for item in value):
+            errors.append(f"{rule_id}: source_refs must be a non-empty string list when present")
     for field in ("good_example", "bad_example", "non_goal"):
         value = rule.get(field)
         if not isinstance(value, str) or not value.strip():

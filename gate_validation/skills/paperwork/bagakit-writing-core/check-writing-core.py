@@ -131,6 +131,7 @@ def main() -> int:
     rules_script = SKILL_DIR / "scripts/writing_core_rules.py"
     inventory_script = SKILL_DIR / "scripts/writing_core_inventory.py"
     rule_registry = SKILL_DIR / "references/rules/core-rule-registry.toml"
+    precision_reference = SKILL_DIR / "references/writing/PRECISION_AND_READER_BURDEN.md"
     review_template = SKILL_DIR / "references/review/REVIEW_PACKET_TEMPLATE.md"
     anti_rationalization = SKILL_DIR / "references/review/ANTI_RATIONALIZATION_TABLE.md"
     de_ai_cli = Path("skills/paperwork/bagakit-writing-de-ai-tone/scripts/bagakit-writing-de-ai-tone-cli.sh")
@@ -147,6 +148,7 @@ def main() -> int:
         rules_script,
         inventory_script,
         rule_registry,
+        precision_reference,
         review_template,
         anti_rationalization,
         Path("skills/paperwork/bagakit-writing-de-ai-tone/references/lexicon.json"),
@@ -166,7 +168,7 @@ def main() -> int:
     require(rules_validate.returncode == 0, f"rules validate failed: {rules_validate.stderr}", failures)
     rules_payload = load_json(rules_validate.stdout, "rules validate", failures)
     require(rules_payload.get("ok") is True, "rules validate should report ok", failures)
-    require(int(rules_payload.get("count", 0)) >= 9, "rules registry should expose the expanded Core rule set", failures)
+    require(int(rules_payload.get("count", 0)) >= 13, "rules registry should expose the expanded Core rule set", failures)
 
     rule_show = run(["bash", str(cli), "rules", "show", "title-promise-topic-label"], root)
     require(rule_show.returncode == 0, "rules show should find title-promise-topic-label", failures)
@@ -179,6 +181,18 @@ def main() -> int:
     rhythm_rule_payload = load_json(rhythm_rule_show.stdout, "object-before-short-judgment rule", failures)
     require(rhythm_rule_payload.get("owner") == "bagakit-writing-core", "object-before-short-judgment should keep Core ownership", failures)
     require(rhythm_rule_payload.get("proof_mode") == "lint_json", "object-before-short-judgment should use lint_json proof", failures)
+
+    for clarity_rule_id in [
+        "terminology-stability-one-concept",
+        "referent-actor-action-visible",
+        "instruction-primary-action",
+        "reader-burden-bounds-complexity",
+    ]:
+        clarity_rule_show = run(["bash", str(cli), "rules", "show", clarity_rule_id], root)
+        require(clarity_rule_show.returncode == 0, f"rules show should find {clarity_rule_id}", failures)
+        clarity_rule_payload = load_json(clarity_rule_show.stdout, clarity_rule_id, failures)
+        require(clarity_rule_payload.get("owner") == "bagakit-writing-core", f"{clarity_rule_id} should keep Core ownership", failures)
+        require(clarity_rule_payload.get("source_refs"), f"{clarity_rule_id} should expose source_refs", failures)
 
     de_ai_proc = run(["bash", str(cli), "de-ai-tone", "describe"], root)
     require(de_ai_proc.returncode == 0, "writing-core de-ai-tone dispatch failed", failures)
@@ -417,6 +431,14 @@ def main() -> int:
                             "stability": "partial",
                             "reason": "draft is present but style evidence is thin",
                         },
+                        "clarity_routing": {
+                            "reader_target_language_proficiency": "working",
+                            "text_mode": "argument",
+                            "misunderstanding_consequence": "moderate",
+                            "terminology_state": "stable",
+                            "precision_route": "core_clarity",
+                            "evidence_ids": ["e1"],
+                        },
                         "evidence_ledger": [
                             {
                                 "id": "e1",
@@ -478,6 +500,11 @@ def main() -> int:
         require(intake_proc.returncode == 0, f"intake check-packet failed: {intake_proc.stderr}", failures)
         intake_payload = load_json(intake_proc.stdout, "intake check-packet", failures)
         require(intake_payload.get("stable") is True, "intake check-packet should mark valid fixture stable", failures)
+        require(
+            intake_payload.get("clarityRouting", {}).get("precision_route") == "core_clarity",
+            "intake check-packet should expose the selected clarity route",
+            failures,
+        )
         veto_kinds = {str(item.get("vetoKind")) for item in intake_payload.get("coreVetoCandidates", [])}
         require("content_regression" in veto_kinds, "intake check-packet should map semantic_drift to content_regression", failures)
 
@@ -516,6 +543,13 @@ def main() -> int:
                     "    missing_materials: []",
                     "    stability: partial",
                     "    reason: draft is present but style evidence is thin",
+                    "  clarity_routing:",
+                    "    reader_target_language_proficiency: working",
+                    "    text_mode: argument",
+                    "    misunderstanding_consequence: moderate",
+                    "    terminology_state: stable",
+                    "    precision_route: core_clarity",
+                    "    evidence_ids: [e1]",
                     "  evidence_ledger:",
                     "    - id: e1",
                     "      kind: draft",

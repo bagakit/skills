@@ -125,3 +125,63 @@ exempt_when = ["commands", "reference_table", "deliberate_parallelism"]
 good_example = "A long or qualified object carries the sentence first, and the short judgment lands at the end."
 bad_example = "A short judgment verb opens the sentence, then drags a long object behind it."
 non_goal = "Do not overturn claim-first structure or force every Chinese sentence into a `把` construction."
+
+[[rule]]
+id = "terminology-stability-one-concept"
+source = "asd-ste100-issue-9"
+source_refs = ["https://www.asd-ste100.org/about_STE.html", "references/writing/PRECISION_AND_READER_BURDEN.md"]
+scope = ["terminology", "clarity"]
+severity = "warn"
+enforcement_tier = "review"
+proof_mode = "agent_review"
+owner = "bagakit-writing-core"
+applies_when = ["technical_description", "procedure", "handoff", "shared_doc"]
+exempt_when = ["quoted_source", "defined_alias", "style_comparison"]
+good_example = "One concept keeps one stable term, while exact technical names and declared aliases remain unchanged."
+bad_example = "The draft cycles through near-synonyms and makes the reader decide whether they name one concept or several."
+non_goal = "Do not replace precise domain terms with a small generic vocabulary or claim STE compliance."
+
+[[rule]]
+id = "referent-actor-action-visible"
+source = "asd-ste100-issue-9"
+source_refs = ["https://www.asd-ste100.org/STEsoftware.html", "references/writing/PRECISION_AND_READER_BURDEN.md"]
+scope = ["clarity", "agency", "referent"]
+severity = "warn"
+enforcement_tier = "review"
+proof_mode = "agent_review"
+owner = "bagakit-writing-core"
+applies_when = ["procedure", "technical_description", "status", "handoff"]
+exempt_when = ["actor_unknown_and_marked", "deliberate_voice", "quoted_source"]
+good_example = "The sentence names the actor and repeats the precise referent when a pronoun or passive form would be ambiguous."
+bad_example = "The former, the latter, it, or a passive clause makes responsibility or reference resolution uncertain."
+non_goal = "Do not ban passive voice or pronouns when the actor is irrelevant and the referent is unambiguous."
+
+[[rule]]
+id = "instruction-primary-action"
+source = "asd-ste100-issue-9"
+source_refs = ["https://www.asd-ste100.org/about_STE.html", "https://doi.org/10.1177/154193129604000502", "references/writing/PRECISION_AND_READER_BURDEN.md"]
+scope = ["procedure", "instruction"]
+severity = "review"
+enforcement_tier = "review"
+proof_mode = "agent_review"
+owner = "bagakit-writing-core"
+applies_when = ["procedure", "runbook", "execution_appendix", "safety_instruction"]
+exempt_when = ["descriptive_prose", "argument", "inseparable_atomic_action"]
+good_example = "Each numbered step has one primary action, with its condition and expected signal attached without hiding order."
+bad_example = "One step joins several actions, conditions, and outcomes so the reader can execute them in the wrong order."
+non_goal = "Do not turn explanatory or argumentative prose into a mechanical sequence of short commands."
+
+[[rule]]
+id = "reader-burden-bounds-complexity"
+source = "ste-comprehension-evidence"
+source_refs = ["https://doi.org/10.1177/154193129604000502", "https://doi.org/10.14288/1.0078187", "references/writing/PRECISION_AND_READER_BURDEN.md"]
+scope = ["audience", "clarity", "sentence_complexity"]
+severity = "review"
+enforcement_tier = "review"
+proof_mode = "audience_review"
+owner = "bagakit-writing-core"
+applies_when = ["mixed_language_audience", "high_consequence", "procedure", "technical_description"]
+exempt_when = ["expert_rationale", "literary_prose", "necessary_qualified_claim"]
+good_example = "Sentence and paragraph load matches reader proficiency, text mode, and the consequence of misunderstanding."
+bad_example = "A universal length target removes qualifiers, or an overloaded sentence forces a high-consequence reader to reconstruct the sequence."
+non_goal = "Do not impose one sentence-length threshold across languages, genres, and readers."

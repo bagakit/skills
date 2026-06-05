@@ -23,6 +23,8 @@ This skill owns generic writing primitives:
 - foundation sufficiency checks
 - title promise and title-pattern discipline
 - structure, paragraph movement, and claim/support quality
+- terminology stability, referent and actor clarity, instruction atomicity,
+  and reader-burden review
 - evidence architecture, source parentage, sample boundary, and counterevidence
 - content preservation, no-regression checks, task fitness, and Core vetoes
 - Core rule metadata for reusable generic writing checks
@@ -84,6 +86,9 @@ compose the core explicitly.
    - When a `bagakit-writing-intake` `intake_packet` is supplied, consume it
      through `references/workflow/INTAKE_HANDOFF_AND_CORE_VETO.md` before
      selecting the lane.
+   - When `clarity_routing.precision_route` is `core_clarity` or
+     `controlled_technical`, load
+     `references/writing/PRECISION_AND_READER_BURDEN.md`.
 2. Check whether the foundation is stable.
    - Use `references/knowledge/PRE_DRAFT_ROUTE_MEMO_TEMPLATE.md`.
    - Run `scripts/writing_core_route_tools.py check-foundation` when a route
@@ -141,6 +146,7 @@ bash scripts/bagakit-writing-core-cli.sh print-intake-handoff
 - `references/rules/core-rule-registry.toml`
 - `references/knowledge/PRE_DRAFT_ROUTE_MEMO_TEMPLATE.md`
 - `references/writing/AI_SMELLS.md`
+- `references/writing/PRECISION_AND_READER_BURDEN.md`
 - `references/writing/STRUCTURE_PYRAMID.md`
 - `references/review/QA_HARD_METRICS.md`
 - `references/review/ANTI_RATIONALIZATION_TABLE.md`
