@@ -101,7 +101,8 @@ If such a surface becomes stable, it must remain distinct from both:
 ## Human Status Projection
 
 `feature-tracker.sh show-feature-status --format html` emits a disposable,
-read-only status page on stdout.
+read-only status page on stdout. `--output <path>` instead writes the same page
+atomically and prints its local file URI so a Host can present it to a human.
 
 It may present canonical Feature identity, lifecycle status, workspace,
 current Task, blocker, dependencies, Task counts, and current-plan Task detail.
@@ -113,6 +114,21 @@ Feature card opens its review in place, showing current-plan objectives,
 outcomes, acceptance, verification, and links to canonical files. The default
 surface stays light and visually quiet instead of following the host into a
 dark, heavily outlined dashboard.
+
+A relative `--output` path resolves from `--root`. The recommended stable
+scratch path is `.tmp/feature-tracker/status.html`. The operator must reject an
+output path inside `.bagakit/feature-tracker/`; a generated page is never
+tracker state. The file is a static snapshot, so current status requires
+rerunning the command against canonical files and reloading the page.
+
+For human-visible work, the first useful publication point is after
+`create-feature` creates or reuses the Feature and before planning continues.
+The calling Agent may include the returned page link in that start update when
+the Host can present local files. It should reuse and refresh the same path at
+meaningful lifecycle breakpoints: reviewed-plan confirmation, execution start,
+blocker change, closeout, or an explicit status request. It must not publish a
+link before the Feature exists or emit a new link for every tracker mutation.
+The Host still owns presentation and delivery.
 
 Every active Feature card may render one claim-message draft using the
 `bagakit-agent-messaging` `agent-set-v1` envelope. The draft includes Feature

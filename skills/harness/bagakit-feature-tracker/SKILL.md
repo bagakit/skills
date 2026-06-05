@@ -55,7 +55,8 @@ multiple tasks or later reuse.
   when the failure mode is reproducible
 - do not add subjective scores to feature lifecycle transitions
 - `show-feature-status --format html` is a disposable, read-only human
-  projection; redirect it outside tracker state when a page artifact is useful
+  projection; use `--output` to atomically refresh a stable page outside tracker
+  state when a Host-presentable artifact is useful
 - its per-Feature Agent claim action emits a `bagakit-agent-messaging`
   `agent-set-v1` draft for Host delivery; the draft never grants authority or
   proves that an Agent received or claimed the work
@@ -86,6 +87,11 @@ bash "$BAGAKIT_FEATURE_TRACKER_SKILL_DIR/scripts/feature-tracker.sh" create-feat
   --goal "<goal>" \
   --workspace-mode proposal_only
 
+bash "$BAGAKIT_FEATURE_TRACKER_SKILL_DIR/scripts/feature-tracker.sh" show-feature-status \
+  --root . \
+  --format html \
+  --output .tmp/feature-tracker/status.html
+
 bash "$BAGAKIT_FEATURE_TRACKER_SKILL_DIR/scripts/feature-tracker.sh" set-task-plan \
   --root . \
   --feature <feature-id> \
@@ -108,6 +114,14 @@ bash "$BAGAKIT_FEATURE_TRACKER_SKILL_DIR/scripts/feature-tracker.sh" create-feat
   --handoff .bagakit/planning-entry/handoffs/<handoff-id>.json \
   --workspace-mode proposal_only
 ```
+
+Generate the human page only after `create-feature` has created or reused the
+Feature. When the Host can present local files, include its returned link in
+the next human start update before planning continues. Reuse the same output
+path and regenerate it only at a reviewed-plan boundary, execution start,
+blocker change, closeout, or explicit status request. The page is a static
+snapshot: reload it after regeneration. Do not send the page before the Feature
+exists, on every tracker mutation, or as Agent authority or task truth.
 
 Use `--slug` as the stable active Feature family key. It does not affect the
 opaque public feature id, but two non-closed Features must not share the same

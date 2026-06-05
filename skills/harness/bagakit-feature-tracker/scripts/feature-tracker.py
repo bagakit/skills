@@ -4238,7 +4238,7 @@ body { margin:0; background:var(--canvas); color:var(--ink); font-size:14px; }
         document_head
         + '<div class="shell"><header class="page-header"><div><p>Bagakit · read-only projection</p>'
         f'<h1>{html_text(page_title)}</h1></div>'
-        '<p class="projection-note">Computed on demand from Feature Tracker canonical state. This page stores no planning or runtime truth.</p></header>'
+        '<p class="projection-note">Snapshot computed from Feature Tracker canonical files. Regenerate and reload for current status; this page stores no planning or runtime truth.</p></header>'
         '<section class="metrics" aria-label="Feature summary">'
         f'<div class="metric"><strong>{active_count}</strong><span>Active</span></div>'
         f'<div class="metric"><strong>{in_progress_count}</strong><span>In progress</span></div>'
@@ -4260,8 +4260,27 @@ def cmd_feat_status(args: argparse.Namespace) -> int:
     index_data = load_index(paths)
     feats = index_data.get("features", [])
 
+    if args.output and args.format != "html":
+        raise SystemExit("error: --output requires --format html")
+
     if args.format == "html":
-        print(render_feature_status_html(paths, feat_id=args.feat))
+        document = render_feature_status_html(paths, feat_id=args.feat)
+        if not args.output:
+            print(document)
+            return 0
+
+        output_path = Path(args.output).expanduser()
+        if not output_path.is_absolute():
+            output_path = root / output_path
+        output_path = output_path.resolve()
+        try:
+            output_path.relative_to(paths.harness_dir.resolve())
+        except ValueError:
+            pass
+        else:
+            raise SystemExit("error: human status output must stay outside tracker state")
+        write_bytes_atomic(output_path, document.encode("utf-8"))
+        print(f"status_page: {output_path.as_uri()}")
         return 0
 
     if args.feat:
@@ -6780,6 +6799,7 @@ def build_parser() -> argparse.ArgumentParser:
     status_output = sp.add_mutually_exclusive_group()
     status_output.add_argument("--json", action="store_true")
     status_output.add_argument("--format", choices=["text", "html"], default="text")
+    sp.add_argument("--output", default=None, help="atomically write HTML outside tracker state")
     sp.set_defaults(func=cmd_feat_status)
 
     sp = sub.add_parser("get-owner-receipt", help="read the current feature execution-owner receipt")

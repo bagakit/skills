@@ -189,8 +189,22 @@ bash "$SKILL_DIR/scripts/feature-tracker.sh" set-task-plan --root "$TMP_DIR" --f
 bash "$SKILL_DIR/scripts/feature-tracker.sh" assign-feature-workspace --root "$TMP_DIR" --feature "$FEATURE_ID" --workspace-mode current_tree
 bash "$SKILL_DIR/scripts/feature-tracker.sh" start-task --root "$TMP_DIR" --feature "$FEATURE_ID" --task T-001
 bash "$SKILL_DIR/scripts/feature-tracker.sh" show-feature-status --root "$TMP_DIR" --feature "$FEATURE_ID" --json >/dev/null
-bash "$SKILL_DIR/scripts/feature-tracker.sh" show-feature-status --root "$TMP_DIR" --format html >"$TMP_DIR/feature-status-overview.html"
+STATUS_PAGE_REL=".tmp/feature-tracker/status.html"
+STATUS_PAGE="$TMP_DIR/$STATUS_PAGE_REL"
+bash "$SKILL_DIR/scripts/feature-tracker.sh" show-feature-status --root "$TMP_DIR" --format html --output "$STATUS_PAGE_REL" >"$TMP_DIR/feature-status-page.out"
+grep -F "status_page: file://" "$TMP_DIR/feature-status-page.out" >/dev/null
+test -f "$STATUS_PAGE"
 bash "$SKILL_DIR/scripts/feature-tracker.sh" show-feature-status --root "$TMP_DIR" --feature "$FEATURE_ID" --format html >"$TMP_DIR/feature-status-detail.html"
+if bash "$SKILL_DIR/scripts/feature-tracker.sh" show-feature-status --root "$TMP_DIR" --output "$STATUS_PAGE_REL" >"$TMP_DIR/feature-status-invalid-format.out" 2>"$TMP_DIR/feature-status-invalid-format.err"; then
+  echo "human status output unexpectedly accepted non-HTML format" >&2
+  exit 1
+fi
+grep -F -- "--output requires --format html" "$TMP_DIR/feature-status-invalid-format.err" >/dev/null
+if bash "$SKILL_DIR/scripts/feature-tracker.sh" show-feature-status --root "$TMP_DIR" --format html --output ".bagakit/feature-tracker/status.html" >"$TMP_DIR/feature-status-invalid-path.out" 2>"$TMP_DIR/feature-status-invalid-path.err"; then
+  echo "human status output unexpectedly wrote inside tracker state" >&2
+  exit 1
+fi
+grep -F "human status output must stay outside tracker state" "$TMP_DIR/feature-status-invalid-path.err" >/dev/null
 python3 - "$TMP_DIR" "$FEATURE_ID" <<'PY'
 from html.parser import HTMLParser
 import sys
@@ -220,11 +234,12 @@ class ClaimDraftParser(HTMLParser):
 
 root = Path(sys.argv[1])
 feature_id = sys.argv[2]
-overview = (root / "feature-status-overview.html").read_text(encoding="utf-8")
+overview = (root / ".tmp" / "feature-tracker" / "status.html").read_text(encoding="utf-8")
 detail = (root / "feature-status-detail.html").read_text(encoding="utf-8")
 
 assert overview.startswith("<!doctype html>")
 assert "Bagakit · read-only projection" in overview
+assert "Snapshot computed from Feature Tracker canonical files" in overview
 assert feature_id in overview
 assert "In progress" in overview
 assert "T-001" in overview
@@ -627,6 +642,18 @@ grep -F "cannot finish task as done without gate pass" \
 set_gate_policy non_ui never non_ui_commands '["sh .bagakit/feature-tracker/test-bin/ok.sh"]'
 bash "$SKILL_DIR/scripts/feature-tracker.sh" run-task-gate --root "$TMP_DIR" --feature "$FEATURE_ID" --task T-001 >/dev/null
 bash "$SKILL_DIR/scripts/feature-tracker.sh" finish-task --root "$TMP_DIR" --feature "$FEATURE_ID" --task T-001 --result done >/dev/null
+bash "$SKILL_DIR/scripts/feature-tracker.sh" show-feature-status --root "$TMP_DIR" --format html --output "$STATUS_PAGE_REL" >"$TMP_DIR/feature-status-page-refreshed.out"
+cmp "$TMP_DIR/feature-status-page.out" "$TMP_DIR/feature-status-page-refreshed.out"
+python3 - "$STATUS_PAGE" "$FEATURE_ID" <<'PY'
+import sys
+from pathlib import Path
+
+page = Path(sys.argv[1]).read_text(encoding="utf-8")
+feature_id = sys.argv[2]
+assert feature_id in page
+assert "<h2>Needs closeout</h2>" in page
+assert "Current task" not in page
+PY
 
 python3 - "$TMP_DIR" "$FEATURE_ID" "$SKILL_DIR" <<'PY'
 import json
