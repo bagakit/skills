@@ -1,0 +1,119 @@
+version = 1
+skill = "bagakit-visual-explainer"
+default_delivery = "built_html"
+runtime_surface = "none"
+
+[purpose]
+outcome = "A newcomer can enter, navigate, and reconstruct a faithful visual mental model."
+non_claim = "Artifact completion does not prove learner understanding, retention, transfer, or mastery."
+
+[language]
+source = "latest_substantive_user_request"
+scope = "all learner-facing copy, captions, labels, controls, examples, and alt text"
+preserve = "exact identifiers, formulas, API names, and proper nouns"
+
+[artifact]
+format = "responsive_html"
+text_policy = "one main idea per visible scene; secondary detail uses deliberate reveal"
+visual_policy = "every large visual must encode a relationship, sequence, comparison, mechanism, or faithful intuition"
+overview_policy = "complex topics require one stable architecture map before detail and throughout reassembly"
+coverage_policy = "few words per scene, not few scenes; major modules and the end-to-end example need dedicated explanation space"
+style_policy = "choose one intentional topic-fit visual world after the explanation graph; the skill defines no house style"
+verification = ["desktop_render", "mobile_render", "interaction_smoke_when_interactive", "accessibility_basics"]
+
+[ownership]
+owns = [
+  "zero-context entry and vocabulary staging",
+  "conceptual overview and module hierarchy",
+  "mechanism depth and root-understanding gates",
+  "analogy boundaries",
+  "visual content hierarchy",
+  "learner-facing language choice",
+]
+does_not_own = [
+  "mastery claims or learner evidence",
+  "adaptive course lifecycle",
+  "general HITL round-trip state",
+  "frontend craft and browser debugging",
+  "new factual research",
+]
+
+[[stage]]
+id = "scope"
+goal = "Bound the topic, purpose, dependencies, unknowns, and exclusions."
+
+[[stage]]
+id = "coverage"
+goal = "Turn reader questions, major modules, and causal transitions into an explanation graph that determines scene count."
+
+[[stage]]
+id = "orient"
+goal = "Give the newcomer one familiar anchor and only the vocabulary needed to enter."
+
+[[stage]]
+id = "map"
+goal = "Show the whole-system architecture before module detail when the topic is complex."
+
+[[stage]]
+id = "zoom"
+goal = "Explain one module at a time while preserving its location and flows on the map."
+
+[[stage]]
+id = "walkthrough"
+goal = "Trace one concrete example through the whole system from input to outcome."
+
+[[stage]]
+id = "mechanism"
+goal = "Expose the causal chain, necessary parts, and constraints behind the observed behavior."
+
+[[stage]]
+id = "roots"
+goal = "Expose assumptions, trade-offs, boundaries, and one changed-case prediction."
+
+[[stage]]
+id = "reassemble"
+goal = "Return to the stable map and reconnect every detailed part to the whole."
+
+[[stage]]
+id = "verify"
+goal = "Verify the selected HTML delivery and report unresolved limits without mastery claims."
+
+[[guard]]
+id = "user-language"
+rule = "Use the user's language for every learner-facing surface unless explicitly overridden."
+
+[[guard]]
+id = "complex-topic-map"
+rule = "Do not enter module detail for a complex topic before showing the architecture overview."
+
+[[guard]]
+id = "coverage-before-compression"
+rule = "Few words applies per scene; do not remove required module or walkthrough scenes to shorten the artifact."
+
+[[guard]]
+id = "few-words-not-few-ideas"
+rule = "Move meaning into visuals and staged reveal; do not delete causal structure or explanation coverage to reduce text."
+
+[[guard]]
+id = "causal-depth"
+rule = "Do not stop at labels or analogy; explain why the mechanism produces the outcome."
+
+[[guard]]
+id = "analogy-boundary"
+rule = "Mark where an analogy differs from the real mechanism."
+
+[[guard]]
+id = "semantic-visuals"
+rule = "Large visuals must teach; decorative size alone does not satisfy the visual contract."
+
+[[guard]]
+id = "intentional-style"
+rule = "Choose a coherent topic-fit visual world without treating a dashboard or card grid as the default technical style."
+
+[[guard]]
+id = "no-false-mastery"
+rule = "Do not infer learner understanding, retention, transfer, or mastery from artifact completion."
+
+[[guard]]
+id = "responsive-accessible"
+rule = "Verify responsive rendering, meaningful alt text, keyboard use when interactive, and non-color-only meaning."
