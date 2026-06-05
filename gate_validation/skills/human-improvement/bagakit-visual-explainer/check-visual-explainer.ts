@@ -27,6 +27,7 @@ const REQUIRED_GUARDS = new Set([
   "analogy-boundary",
   "semantic-visuals",
   "intentional-style",
+  "tonality-not-topic-stereotype",
   "no-false-mastery",
   "responsive-accessible",
 ]);

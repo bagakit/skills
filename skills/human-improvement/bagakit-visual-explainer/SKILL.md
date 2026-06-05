@@ -85,6 +85,11 @@ skill has no house style. Technical accuracy must not default to a dashboard or
 card grid. Use expressive illustration, spatial composition, typography, and
 motion when they improve memory.
 
+Do not infer a dark palette from technical complexity. Derive lightness,
+temperature, chroma, and shape language from the audience, emotional goal, and
+memory strategy; before committing, consider one materially different light or
+editorial direction.
+
 - match the visual form to the reasoning job: map, flow, sequence, comparison,
   or annotated close-up
 - keep illustrations faithful and use HTML, CSS, or SVG when precision matters

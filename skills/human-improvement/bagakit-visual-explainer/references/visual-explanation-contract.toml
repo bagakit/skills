@@ -19,6 +19,7 @@ visual_policy = "every large visual must encode a relationship, sequence, compar
 overview_policy = "complex topics require one stable architecture map before detail and throughout reassembly"
 coverage_policy = "few words per scene, not few scenes; major modules and the end-to-end example need dedicated explanation space"
 style_policy = "choose one intentional topic-fit visual world after the explanation graph; the skill defines no house style"
+tonality_policy = "technical complexity does not imply darkness; derive lightness, temperature, chroma, and shape language from audience and emotional goal, then consider a light or editorial alternative"
 verification = ["desktop_render", "mobile_render", "interaction_smoke_when_interactive", "accessibility_basics"]
 
 [ownership]
@@ -109,6 +110,10 @@ rule = "Large visuals must teach; decorative size alone does not satisfy the vis
 [[guard]]
 id = "intentional-style"
 rule = "Choose a coherent topic-fit visual world without treating a dashboard or card grid as the default technical style."
+
+[[guard]]
+id = "tonality-not-topic-stereotype"
+rule = "Do not derive darkness from technical complexity; choose tonality from audience, emotional goal, and memory strategy after considering a light or editorial alternative."
 
 [[guard]]
 id = "no-false-mastery"
