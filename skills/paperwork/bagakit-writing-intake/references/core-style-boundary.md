@@ -12,8 +12,12 @@ Intake may say:
 - what strengths and frictions appear in the samples
 - what style rules are candidates, with confidence and rollback conditions
 - what Core risks should be checked next
+- whether ordinary, Core-clarity, or controlled-technical precision is the
+  best downstream route
 
 Intake must not say that a final draft is good enough.
+Intake must not apply a controlled vocabulary, fixed sentence limit, or
+procedure rule merely because `clarity_routing` selects a stricter route.
 
 ## Core Owns Universal Quality
 

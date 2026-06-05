@@ -10,6 +10,25 @@ the evidence supports.
 - `action_orientation`: inform, decide, persuade, teach, align, unblock
 - `domain_load`: how much domain context the prose expects the reader to have
 
+## Clarity Routing
+
+- `reader_target_language_proficiency`: fluent, working, limited, mixed, or
+  unknown
+- `text_mode`: procedure, description, argument, or mixed
+- `misunderstanding_consequence`: low, moderate, high, or safety-critical
+- `terminology_state`: stable, glossary available, inconsistent, or unknown
+- `precision_route`: ordinary, Core clarity, or controlled technical
+
+These dimensions route later writing behavior. They are not style traits and
+must not be inferred from one attractive sample. The controlled-technical route
+is strongest for instructions and technical descriptions where misunderstanding
+has a material consequence.
+
+The route shape is informed by ASD-STE100 Issue 9's controlled technical
+language model and scope. Use the official overview as source context; do not
+copy its controlled dictionary or claim compliance from an Intake packet:
+`https://www.asd-ste100.org/about_STE.html`.
+
 ## Structure
 
 - `opening_move`: conclusion-first, question-first, scene-first, definition-first

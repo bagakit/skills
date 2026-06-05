@@ -119,6 +119,13 @@ def check_packet_contract(root: Path, failures: list[str]) -> None:
             "task_route.final_prose_requested": r"^    final_prose_requested:",
             "task_route.final_prose_owner": r"^    final_prose_owner:",
             "audience_channel_genre.audience": r"^    audience:",
+            "top-level clarity_routing": r"^  clarity_routing:",
+            "clarity_routing.reader_target_language_proficiency": r"^    reader_target_language_proficiency:",
+            "clarity_routing.text_mode": r"^    text_mode:",
+            "clarity_routing.misunderstanding_consequence": r"^    misunderstanding_consequence:",
+            "clarity_routing.terminology_state": r"^    terminology_state:",
+            "clarity_routing.precision_route": r"^    precision_route:",
+            "clarity_routing.evidence_ids": r"^    evidence_ids:",
             "source_material_state.available_materials": r"^    available_materials:",
             "evidence_ledger[].id": r"^    - id:",
             "privacy_boundary.raw_private_samples_in_packet": r"^    raw_private_samples_in_packet:",
@@ -141,6 +148,7 @@ def check_packet_contract(root: Path, failures: list[str]) -> None:
             "task_route",
             "audience_channel_genre",
             "source_material_state",
+            "clarity_routing",
             "evidence_ledger",
             "privacy_boundary",
             "language_profile",
@@ -171,6 +179,19 @@ def check_packet_contract(root: Path, failures: list[str]) -> None:
         text,
         ["available_materials", "missing_materials", "stability", "reason"],
         "source_material_state contract",
+        failures,
+    )
+    require_tokens(
+        text,
+        [
+            "reader_target_language_proficiency",
+            "text_mode",
+            "misunderstanding_consequence",
+            "terminology_state",
+            "precision_route",
+            "controlled_technical",
+        ],
+        "clarity_routing contract",
         failures,
     )
     require_tokens(
@@ -253,6 +274,7 @@ def check_packet_contract(root: Path, failures: list[str]) -> None:
         "retention_rule: \"do_not_store_raw_samples\"",
         "Use `source_scope: inferred` only for gaps or route assumptions",
         "Every profile claim, friction, style candidate, and risk candidate must cite",
+        "does not authorize Intake to apply controlled-language rules",
     ]:
         require(guardrail in text, f"privacy/provenance guardrail missing: {guardrail}", failures)
 

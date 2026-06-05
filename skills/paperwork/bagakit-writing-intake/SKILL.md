@@ -17,6 +17,8 @@ It emits an evidence-bound `intake_packet`. It does not produce final prose.
 This skill owns:
 
 - writing task route, audience, channel, genre, and source-material state
+- clarity routing from target-language proficiency, text mode, terminology
+  state, and the consequence of misunderstanding
 - sample provenance, privacy boundary, retention posture, and evidence strength
 - language-profile observations derived from supplied samples or guided prompts
 - expression strengths, expression frictions, protected spans, and exclusions
@@ -46,6 +48,8 @@ It does not own:
    - Do not persist raw private samples inside the skill payload.
    - If evidence is thin, mark confidence low and ask one focused question only
      when the missing answer changes the route.
+   - For procedures, technical descriptions, or high-consequence text, record
+     the `clarity_routing` dimensions before choosing Core or delivery work.
 3. Read the required reference for the current decision:
    - packet shape: `references/intake-packet-contract.md`
    - profile dimensions: `references/profile-dimensions.md`
@@ -77,6 +81,7 @@ Minimum top-level fields:
 - `task_route`
 - `audience_channel_genre`
 - `source_material_state`
+- `clarity_routing`
 - `evidence_ledger`
 - `privacy_boundary`
 - `language_profile`

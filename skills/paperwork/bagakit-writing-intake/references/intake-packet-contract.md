@@ -28,6 +28,13 @@ intake_packet:
     missing_materials: []
     stability: "stable | partial | unstable"
     reason: ""
+  clarity_routing:
+    reader_target_language_proficiency: "fluent | working | limited | mixed | unknown"
+    text_mode: "procedure | description | argument | mixed"
+    misunderstanding_consequence: "low | moderate | high | safety_critical"
+    terminology_state: "stable | glossary_available | inconsistent | unknown"
+    precision_route: "ordinary | core_clarity | controlled_technical"
+    evidence_ids: []
   evidence_ledger:
     - id: "e1"
       kind: "draft | sample | user_edit | instruction | constraint | inferred_gap"
@@ -105,6 +112,14 @@ intake_packet:
 - Every `rewrite_feedback_rule_candidates[]` item must include `delta_type` so
   downstream owners can distinguish content, structure, tone, rhythm, evidence,
   specificity, and layout deltas before accepting a candidate rule.
+- `clarity_routing` classifies reader burden and communication consequence. It
+  does not authorize Intake to apply controlled-language rules or approve the
+  final text.
+- Use `controlled_technical` only when the text is procedural or descriptive
+  and misunderstanding has a high or safety-critical consequence, or when the
+  user explicitly requests a controlled-language route.
+- `clarity_routing.evidence_ids` must cite the user instruction, audience
+  evidence, source artifact, or an explicit inferred gap.
 - Use `source_scope: inferred` only for gaps or route assumptions, not for
   claims about a person's style.
 - Keep excerpts minimal. Prefer pointers when the source material already lives
@@ -154,6 +169,13 @@ intake_packet:
     missing_materials: ["longform example"]
     stability: "partial"
     reason: "enough for low-confidence profile, not enough for reusable style"
+  clarity_routing:
+    reader_target_language_proficiency: "working"
+    text_mode: "argument"
+    misunderstanding_consequence: "moderate"
+    terminology_state: "stable"
+    precision_route: "core_clarity"
+    evidence_ids: ["e1"]
   evidence_ledger:
     - id: "e1"
       kind: "sample"
