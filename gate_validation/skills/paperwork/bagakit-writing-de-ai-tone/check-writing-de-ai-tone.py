@@ -86,7 +86,7 @@ def main() -> int:
 
     protocol = run(["bash", str(cli), "print-rewrite-protocol"], root)
     require(protocol.returncode == 0, "print-rewrite-protocol failed", failures)
-    for token in ["Detect Mode", "Rewrite Mode", "Protected-Span Pass", "Second-pass audit", "Evidence Gap Guard"]:
+    for token in ["Detect Mode", "Rewrite Mode", "Protected-Span Pass", "Precision Cross-Check", "Second-pass audit", "Evidence Gap Guard"]:
         require(token in protocol.stdout, f"rewrite protocol missing token: {token}", failures)
 
     protected_protocol = run(["bash", str(cli), "print-protected-spans"], root)
@@ -166,6 +166,34 @@ def main() -> int:
         "technical profile should exempt precise technical terms in fixture",
         failures,
     )
+
+    nominalized = run(
+        [
+            "bash",
+            str(cli),
+            "lint",
+            "--profile",
+            "blog",
+            "--fail-on",
+            "none",
+            str(FIXTURE_DIR / "nominalized-action-shell.md"),
+        ],
+        root,
+    )
+    require(nominalized.returncode == 0, f"nominalized-action lint failed: {nominalized.stderr}", failures)
+    nominalized_payload = load_json(nominalized.stdout, "nominalized-action lint", failures)
+    nominalized_findings = [
+        item
+        for item in nominalized_payload.get("findings", [])
+        if item.get("code") == "P2_NOMINALIZED_ACTION_SHELL"
+    ]
+    require(len(nominalized_findings) == 1, "nominalized-action fixture should emit one aggregate advisory", failures)
+    if nominalized_findings:
+        require(
+            len(nominalized_findings[0].get("meta", {}).get("items", [])) == 2,
+            "nominalized-action advisory should expose both high-signal shells without flagging precise deployment prose",
+            failures,
+        )
 
     advisory = run(
         [

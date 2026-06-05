@@ -83,6 +83,14 @@ SUPPORT_SIGNAL_RE = re.compile(
 )
 FOUR_CHAR_RE = re.compile(r"[\u4e00-\u9fff]{4}")
 STACKED_DE_RE = re.compile(r"的[^。！？\n]{0,8}的[^。！？\n]{0,8}的")
+NOMINALIZED_ACTION_SHELL_RE = re.compile(
+    r"(?:实现了?对[^。！？!?\n]{1,36}的(?:显著|全面|有效)?(?:提升|优化|改善)|"
+    r"\b(?:conduct(?:ed|s|ing)?|perform(?:ed|s|ing)?|undert(?:ake|ook|aken|aking)|"
+    r"carry(?:ing)? out|carried out)\s+(?:a\s+|an\s+)?"
+    r"(?:comprehensive\s+|detailed\s+|systematic\s+)?"
+    r"(?:analysis|evaluation|assessment|review|optimization)\b)",
+    re.I,
+)
 LIST_RE = re.compile(r"^\s*(?:[-*+]\s+|\d+\.\s+)", re.M)
 HEADING_RE = re.compile(r"^#{1,6}\s+", re.M)
 BOLD_RE = re.compile(r"\*\*[^*\n]{1,80}\*\*")
@@ -404,6 +412,18 @@ def pattern_findings(text: str, profile: str) -> list[Finding]:
                 "P2_TRANSITION_DENSITY",
                 "Transition phrase density is high",
                 {"count": transition_count},
+            )
+        )
+
+    nominalized_action_items = snippets(text, NOMINALIZED_ACTION_SHELL_RE)
+    if nominalized_action_items:
+        findings.append(
+            Finding(
+                "ADVISORY",
+                "P2",
+                "P2_NOMINALIZED_ACTION_SHELL",
+                "An abstract noun shell may be hiding the action; review whether a direct verb preserves the meaning more clearly",
+                {"items": nominalized_action_items},
             )
         )
 

@@ -41,6 +41,23 @@ as a separate factual issue instead of silently fixing it.
 The CLI lint report includes a `protected_spans` summary to make this pass
 visible for downstream agents.
 
+## Precision Cross-Check
+
+After rewriting, compare the source and result for:
+
+- stable technical terms and declared aliases
+- actor-to-action and referent mappings
+- preconditions, action order, and expected outcomes
+- qualifiers, modality, causal direction, and trade-offs
+
+Use the Core rules `terminology-stability-one-concept`,
+`referent-actor-action-visible`, `instruction-primary-action`, and
+`reader-burden-bounds-complexity` when available. A clearer surface does not
+justify changing these relationships.
+
+This cross-check does not turn de-AI-tone into an STE checker. Do not apply a
+controlled vocabulary, fixed sentence length, or blanket active-voice rewrite.
+
 ## Scene Pack
 
 When the CLI receives `--scene auto`, it may infer an active scene from visible

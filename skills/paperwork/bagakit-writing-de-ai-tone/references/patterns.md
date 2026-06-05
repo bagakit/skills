@@ -38,6 +38,23 @@ These should normally be removed or rewritten before release.
 - stacked Chinese `的` phrases
 - high four-character slogan density
 - generic endings: `未来可期`, `only time will tell`
+- action hidden in a noun shell: `conduct a comprehensive evaluation`,
+  `实现了对体验的显著提升`
+
+## Controlled-Clarity Overlap
+
+Some controlled-language concerns overlap with AI tone only when they hide
+meaning or add decorative complexity:
+
+- an empty verb carries an abstract action noun
+- a passive or pronoun hides responsibility or reference
+- synonym cycling makes one concept look like several
+- a clause stack obscures action order or a necessary qualifier
+
+Treat the first item as a script-backed advisory when the pattern is strong.
+Treat the others as contextual review questions through `bagakit-writing-core`.
+Do not import a controlled dictionary, universal sentence limit, blanket
+active-voice rule, or one-action procedure style into generic de-AI-tone work.
 
 ## Rewrite Principles
 
@@ -50,6 +67,8 @@ These should normally be removed or rewritten before release.
 - Specific failure modes beat vague group dunking.
 - A real continuum beats a staged binary fight.
 - Protected hard facts beat smoother wording.
+- Stable terms, visible responsibility, and preserved action order beat a
+  superficially more natural rewrite.
 
 When in doubt, ask: if this sentence is deleted, what information disappears?
 If the answer is "nothing", delete it.

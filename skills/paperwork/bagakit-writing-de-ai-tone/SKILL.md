@@ -26,6 +26,9 @@ Owns:
   responsibility-bearing identifiers
 - structural AI tells: uniform rhythm, template phrases, fake contrast,
   parallelism without information gain, vague authority, PR inflation
+- AI-tone overlap with hidden actions or decorative nominalization, while
+  generic terminology, referent, actor, and instruction clarity remain owned
+  by `bagakit-writing-core`
 - context profile exceptions for technical, docs, blog, social, and casual prose
 - scene packs for chat, status, docs, public-writing, and technical prose
 
@@ -53,6 +56,8 @@ Does not own:
    - rewritten version
    - change summary
    - second-pass audit
+   - a precision cross-check for stable terms, actors, referents, sequence,
+     qualifiers, and protected facts
 
 ## Modes
 

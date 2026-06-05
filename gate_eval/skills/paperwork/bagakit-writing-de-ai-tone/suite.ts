@@ -97,6 +97,7 @@ export const SUITE: EvalSuiteDefinition = {
               "大多数人会把它写成该做 vs 不该做。很多团队往往又会写成老路 vs 新路。",
               "",
               "业内人士指出，这具有里程碑式的意义。",
+              "这次改造实现了对响应速度的显著提升。",
               "",
             ].join("\n"),
           );
@@ -126,6 +127,7 @@ export const SUITE: EvalSuiteDefinition = {
             "P1_FAKE_CONTRAST",
             "P1_CONFLICT_BAIT_BINARY",
             "P1_UNSUPPORTED_PEOPLE_GENERALIZATION",
+            "P2_NOMINALIZED_ACTION_SHELL",
           ]) {
             assert.ok(codes.has(expected), `lint should include ${expected}`);
           }
@@ -150,6 +152,7 @@ export const SUITE: EvalSuiteDefinition = {
           return {
             assertions: [
               "de-AI-tone lint catches representative structural and lexical AI-tone issues",
+              "nominalized action shells stay advisory instead of becoming a generic clarity gate",
               "technical profile exemptions avoid false positives for precise technical terms",
               "writing-core dispatch reaches the de-AI-tone primitive",
             ],
