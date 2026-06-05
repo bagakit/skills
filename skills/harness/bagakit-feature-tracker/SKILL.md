@@ -54,6 +54,11 @@ multiple tasks or later reuse.
 - repeated tracker failures should become task-gate or validation ratchets only
   when the failure mode is reproducible
 - do not add subjective scores to feature lifecycle transitions
+- `show-feature-status --format html` is a disposable, read-only human
+  projection; redirect it outside tracker state when a page artifact is useful
+- its per-Feature Agent claim action emits a `bagakit-agent-messaging`
+  `agent-set-v1` draft for Host delivery; the draft never grants authority or
+  proves that an Agent received or claimed the work
 - non-trivial feature proposals should distinguish rationale, intended
   generalization, non-goals, acceptance criteria, and verification checks
 

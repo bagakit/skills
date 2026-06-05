@@ -45,7 +45,7 @@ summary = "Assign one reviewed feature to current_tree or worktree execution."
 
 [[command]]
 name = "show-feature-status"
-summary = "Show one feature's status."
+summary = "Show all or one feature as terminal text, JSON, or a read-only HTML review with Agent claim-message drafts."
 
 [[command]]
 name = "get-owner-receipt"

@@ -73,7 +73,7 @@ test "$FAMILY_TASKS_SHA" = "$(shasum "$FAMILY_TASKS" | awk '{print $1}')"
 test "$FAMILY_INDEX_SHA" = "$(shasum "$FAMILY_INDEX" | awk '{print $1}')"
 test "$FAMILY_ISSUER_SHA" = "$(shasum "$FAMILY_ISSUER" | awk '{print $1}')"
 TASK_PLAN_JSON="$TMP_DIR/.bagakit/feature-tracker/artifacts/reviewed-task-plan.json"
-feature_tracker_write_reviewed_task_plan "$TASK_PLAN_JSON" "Ship the demo feature through a reviewed task plan."
+feature_tracker_write_reviewed_task_plan "$TASK_PLAN_JSON" "Ship the demo feature through a reviewed task plan with <literal> input."
 if bash "$SKILL_DIR/scripts/feature-tracker.sh" create-feature \
   --root "$TMP_DIR" \
   --title "Demo feature reviewed extension" \
@@ -189,6 +189,88 @@ bash "$SKILL_DIR/scripts/feature-tracker.sh" set-task-plan --root "$TMP_DIR" --f
 bash "$SKILL_DIR/scripts/feature-tracker.sh" assign-feature-workspace --root "$TMP_DIR" --feature "$FEATURE_ID" --workspace-mode current_tree
 bash "$SKILL_DIR/scripts/feature-tracker.sh" start-task --root "$TMP_DIR" --feature "$FEATURE_ID" --task T-001
 bash "$SKILL_DIR/scripts/feature-tracker.sh" show-feature-status --root "$TMP_DIR" --feature "$FEATURE_ID" --json >/dev/null
+bash "$SKILL_DIR/scripts/feature-tracker.sh" show-feature-status --root "$TMP_DIR" --format html >"$TMP_DIR/feature-status-overview.html"
+bash "$SKILL_DIR/scripts/feature-tracker.sh" show-feature-status --root "$TMP_DIR" --feature "$FEATURE_ID" --format html >"$TMP_DIR/feature-status-detail.html"
+python3 - "$TMP_DIR" "$FEATURE_ID" <<'PY'
+from html.parser import HTMLParser
+import sys
+from pathlib import Path
+
+class ClaimDraftParser(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.in_claim = False
+        self.current = []
+        self.messages = []
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if tag == "textarea" and "claim-draft" in attrs.get("class", "").split():
+            self.in_claim = True
+            self.current = []
+
+    def handle_data(self, data):
+        if self.in_claim:
+            self.current.append(data)
+
+    def handle_endtag(self, tag):
+        if tag == "textarea" and self.in_claim:
+            self.messages.append("".join(self.current))
+            self.in_claim = False
+
+root = Path(sys.argv[1])
+feature_id = sys.argv[2]
+overview = (root / "feature-status-overview.html").read_text(encoding="utf-8")
+detail = (root / "feature-status-detail.html").read_text(encoding="utf-8")
+
+assert overview.startswith("<!doctype html>")
+assert "Bagakit · read-only projection" in overview
+assert feature_id in overview
+assert "In progress" in overview
+assert "T-001" in overview
+assert "Current plan" in detail
+assert overview.index("<h2>Proposal</h2>") < overview.index("<h2>In progress</h2>")
+assert '<summary class="feature-summary">' in overview
+assert "Review" in overview
+assert "file://" in detail
+assert "prefers-color-scheme:dark" not in overview
+assert "&lt;literal&gt;" in detail
+assert "<literal>" not in detail
+assert overview.count("<script>") == 1
+assert detail.count("<script>") == 1
+assert "Agent 认领" in overview
+assert "复制认领消息" in overview
+parser = ClaimDraftParser()
+parser.feed(detail)
+assert len(parser.messages) == 1
+claim = parser.messages[0]
+assert '<bagakit-msg type="agent-set-v1"' in claim
+assert "Feature name: Demo feature" in claim
+assert "Worktree: none" in claim
+assert "Branch: none" in claim
+assert "Progress snapshot: status=in_progress; current_task=T-001; todo=0, in_progress=1, done=0, blocked=0" in claim
+assert f".bagakit/feature-tracker/features/{feature_id}/owner-receipt.json" in claim
+assert f".bagakit/feature-tracker/features/{feature_id}/state.json" in claim
+assert f".bagakit/feature-tracker/features/{feature_id}/tasks.json" in claim
+assert "Current task objective:" not in claim
+assert "Current task outcome:" not in claim
+assert "&lt;" not in claim and "&gt;" not in claim
+assert "本消息只传递认领上下文，不授予" in claim
+assert "Goal / Result / Evidence / Mismatch or blocker / Next" in claim
+(root / "claim-message.xml").write_text(claim, encoding="utf-8")
+assert not list((root / ".bagakit" / "feature-tracker").rglob("*.html"))
+PY
+python3 "$ROOT/skills/a2a/bagakit-agent-messaging/scripts/agent_message_check.py" \
+  --input "$TMP_DIR/claim-message.xml" --json >"$TMP_DIR/claim-message-check.json"
+python3 - "$TMP_DIR/claim-message-check.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["valid"] is True
+assert payload["issues"] == []
+PY
 bash "$SKILL_DIR/scripts/feature-tracker.sh" list-features --root "$TMP_DIR" >/dev/null
 bash "$SKILL_DIR/scripts/feature-tracker.sh" replan-features --root "$TMP_DIR" --json >/dev/null
 bash "$SKILL_DIR/scripts/feature-tracker.sh" validate-tracker --root "$TMP_DIR" >/dev/null
@@ -235,7 +317,7 @@ assert (feature_dir / "owner-receipt.json").exists()
 assert tasks_payload["plan_status"] == "reviewed"
 assert tasks_payload["plan_revision"] == 1
 task = tasks_payload["tasks"][0]
-assert task["objective"] == "Ship the demo feature through a reviewed task plan."
+assert task["objective"] == "Ship the demo feature through a reviewed task plan with <literal> input."
 for key in ("last_gate_at", "started_at", "finished_at", "updated_at", "last_commit_hash"):
     assert key not in task
 assert issuer_payload["namespace"] == feature_id[5:7]

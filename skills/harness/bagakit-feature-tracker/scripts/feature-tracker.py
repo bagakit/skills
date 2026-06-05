@@ -6,6 +6,7 @@ import argparse
 import copy
 import fcntl
 import hashlib
+import html
 import json
 import os
 import re
@@ -17,6 +18,7 @@ import tempfile
 import unicodedata
 from contextlib import contextmanager
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Generator, Iterable
 
@@ -3702,12 +3704,565 @@ def cmd_assign_feat_workspace(args: argparse.Namespace) -> int:
     return 0
 
 
+FEATURE_STATUS_PRESENTATION = {
+    "in_progress": ("In progress", "amber"),
+    "blocked": ("Blocked", "red"),
+    "ready": ("Ready", "blue"),
+    "proposal": ("Proposal", "slate"),
+    "done": ("Needs closeout", "green"),
+    "archived": ("Archived", "slate"),
+    "discarded": ("Discarded", "red"),
+}
+FEATURE_STATUS_ORDER = ("proposal", "ready", "in_progress", "blocked", "done")
+
+
+def human_status_label(status: Any) -> str:
+    token = str(status or "unknown")
+    return FEATURE_STATUS_PRESENTATION.get(token, (token.replace("_", " ").title(), "slate"))[0]
+
+
+def html_text(value: Any) -> str:
+    return html.escape(str(value or ""), quote=True)
+
+
+def xml_text(value: Any) -> str:
+    return html.escape(str(value or ""), quote=False)
+
+
+def feature_current_task(state: dict[str, Any], tasks: dict[str, Any]) -> dict[str, Any] | None:
+    current_id = str(state.get("current_task_id") or "")
+    if not current_id:
+        return None
+    return next(
+        (task for task in tasks.get("tasks", []) if str(task.get("id") or "") == current_id),
+        None,
+    )
+
+
+def render_task_stats_html(tasks: dict[str, Any]) -> str:
+    parts = []
+    for status in ("in_progress", "blocked", "todo", "done"):
+        count = count_tasks(tasks, status)
+        if count:
+            parts.append(
+                f'<span class="task-count task-count--{status.replace("_", "-")}">'
+                f"{html_text(status.replace('_', ' ').title())} {count}</span>"
+            )
+    return "".join(parts) or '<span class="task-count">No tasks</span>'
+
+
+def build_agent_claim_message(
+    paths: HarnessPaths,
+    state: dict[str, Any],
+    tasks: dict[str, Any],
+) -> str:
+    feat_id = str(state.get("feat_id") or "")
+    feature_name = str(state.get("title") or feat_id)
+    worktree = str(state.get("worktree_path") or "").strip() or "none"
+    branch = str(state.get("branch") or "").strip() or "none"
+    feature_status = str(state.get("status") or "unknown")
+    current_task = feature_current_task(state, tasks)
+    task_id = str(current_task.get("id") or "none") if current_task else "none"
+    task_title = str(current_task.get("title") or "none") if current_task else "none"
+    task_counts = ", ".join(
+        f"{status}={count_tasks(tasks, status)}"
+        for status in ("todo", "in_progress", "done", "blocked")
+    )
+    feature_dir = relative_display(
+        paths.root,
+        paths.feat_dir(feat_id, status=feature_status),
+    )
+    canonical_refs = [f"{feature_dir}/state.json", f"{feature_dir}/tasks.json"]
+    if paths.feat_goal(feat_id, status=feature_status).is_file():
+        canonical_refs.insert(0, f"{feature_dir}/goal.md")
+    if paths.feat_owner_receipt(feat_id, status=feature_status).is_file():
+        canonical_refs.insert(1 if canonical_refs[0].endswith("goal.md") else 0, f"{feature_dir}/owner-receipt.json")
+    canonical_text = "\n".join(f"{index}. {ref}" for index, ref in enumerate(canonical_refs, 1))
+    generated_time = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    name = f"Feature-Tracker-{feat_id}"
+    nearest_action = f"当前定位到 {task_id} · {task_title}。" if current_task else "当前未定位到 active Task。"
+    body = f"""你是认领 Feature“{feature_name}”（{feat_id}）的 Agent。先从 canonical truth 建立自己的 Goal model，对齐后直接行动，不需要仅为确认而回复。
+
+Feature name: {feature_name}
+Feature ID: {feat_id}
+Worktree: {worktree}
+Branch: {branch}
+Progress snapshot: status={feature_status}; current_task={task_id}; {task_counts}
+
+SSOT（按顺序读取）：
+{canonical_text}
+
+{nearest_action} 上面的 progress 只帮助定位，不是状态副本。请从 SSOT 恢复 Goal、当前 Task、验收、blocker、authority 和下一步；若两者不一致，以 SSOT 为准。
+
+本消息只传递认领上下文，不授予超出当前 Host 和 Owner truth 的写入、外部副作用、合并或发布权限。对齐后直接推进最接近验收证据的动作；只有在 verified result、稳定 checkpoint、真实 blocker、方向或权限 mismatch、不可逆决策，或完成当前任务验收时，按 Goal / Result / Evidence / Mismatch or blocker / Next 返回。
+
+如果通过追加 user 或 prompt 消息联系其他 Agent，必须使用 bagakit-msg，不能发送裸指令。"""
+    return (
+        f'<bagakit-msg type="agent-set-v1" name="{html_text(name)}" time="{html_text(generated_time)}">\n'
+        f"{xml_text(body)}\n"
+        "</bagakit-msg>"
+    )
+
+
+def current_plan_tasks(tasks: dict[str, Any]) -> list[dict[str, Any]]:
+    current_ids = set(latest_plan_task_ids(tasks))
+    return [
+        task
+        for task in tasks.get("tasks", [])
+        if not current_ids or str(task.get("id") or "") in current_ids
+    ]
+
+
+def local_ref_href(root: Path, ref: Any) -> str | None:
+    raw = str(ref or "").strip()
+    path_part = raw.partition("#")[0]
+    if not path_part or URI_SCHEME_RE.match(path_part) or path_part.startswith(("/", "\\")):
+        return None
+    target = (root / path_part).resolve()
+    try:
+        target.relative_to(root.resolve())
+    except ValueError:
+        return None
+    return target.as_uri() if target.is_file() else None
+
+
+def render_task_review_html(root: Path, task: dict[str, Any]) -> str:
+    status = str(task.get("status") or "todo")
+    gate_result = str(task.get("gate_result") or "").strip()
+    acceptance = task.get("acceptance") if isinstance(task.get("acceptance"), list) else []
+    verification = task.get("verification") if isinstance(task.get("verification"), list) else []
+    acceptance_html = (
+        '<ul class="acceptance-list">'
+        + "".join(f"<li>{html_text(item)}</li>" for item in acceptance)
+        + "</ul>"
+        if acceptance
+        else '<p class="empty">No acceptance statements.</p>'
+    )
+    verification_rows = []
+    for item in verification:
+        if not isinstance(item, dict):
+            continue
+        ref = str(item.get("ref") or "")
+        href = local_ref_href(root, ref)
+        ref_html = (
+            f'<a href="{html_text(href)}" target="_blank" rel="noreferrer">{html_text(ref)}</a>'
+            if href
+            else f"<code>{html_text(ref)}</code>"
+        )
+        verification_rows.append(
+            '<li><span class="verification-kind">'
+            f'{html_text(item.get("kind") or "evidence")}</span>{ref_html}'
+            f'<p>{html_text(item.get("proves"))}</p></li>'
+        )
+    verification_html = (
+        '<ul class="verification-list">' + "".join(verification_rows) + "</ul>"
+        if verification_rows
+        else '<p class="empty">No verification mappings.</p>'
+    )
+    gate_html = f'<span class="gate">Gate {html_text(gate_result)}</span>' if gate_result else ""
+    return (
+        '<section class="review-task">'
+        '<div class="task-heading">'
+        f'<span class="task-id">{html_text(task.get("id"))}</span>'
+        f'<span class="task-status task-status--{html_text(status.replace("_", "-"))}">'
+        f"{html_text(status.replace('_', ' ').title())}</span>"
+        + gate_html
+        + "</div>"
+        f'<h4>{html_text(task.get("title"))}</h4>'
+        f'<p class="review-copy"><strong>Objective</strong>{html_text(task.get("objective"))}</p>'
+        f'<p class="review-copy"><strong>Outcome</strong>{html_text(task.get("outcome"))}</p>'
+        '<div class="review-grid"><div><h5>Acceptance</h5>'
+        + acceptance_html
+        + "</div><div><h5>Verification</h5>"
+        + verification_html
+        + "</div></div></section>"
+    )
+
+
+def render_feature_review_html(
+    paths: HarnessPaths,
+    state: dict[str, Any],
+    tasks: dict[str, Any],
+) -> str:
+    feat_id = str(state.get("feat_id") or "")
+    status = str(state.get("status") or "")
+    branch = str(state.get("branch") or "").strip()
+    worktree = str(state.get("worktree_path") or "").strip()
+    workspace_detail = branch or worktree or "repository root"
+    dependencies = state.get("depends_on", [])
+    dependency_text = ", ".join(str(item) for item in dependencies) if isinstance(dependencies, list) else ""
+    feature_dir = paths.feat_dir(feat_id, status=status)
+    canonical_files = [
+        ("state.json", paths.feat_state(feat_id, status=status)),
+        ("tasks.json", paths.feat_tasks(feat_id, status=status)),
+        ("goal.md", paths.feat_goal(feat_id, status=status)),
+        ("verification.md", feature_dir / FEATURE_VERIFICATION_FILENAME),
+    ]
+    canonical_links = "".join(
+        f'<a href="{html_text(path.resolve().as_uri())}" target="_blank" rel="noreferrer">{label}</a>'
+        for label, path in canonical_files
+        if path.is_file()
+    )
+    reviewed_tasks = current_plan_tasks(tasks)
+    tasks_html = (
+        "".join(render_task_review_html(paths.root, task) for task in reviewed_tasks)
+        if reviewed_tasks
+        else '<p class="empty">No reviewed tasks.</p>'
+    )
+    return (
+        '<div class="review-panel"><div class="review-header"><div><span class="eyebrow">Review</span>'
+        '<h3>Current plan and proof</h3></div>'
+        f'<nav class="canonical-links" aria-label="Canonical files">{canonical_links}</nav></div>'
+        '<dl class="review-facts">'
+        f'<div><dt>Status</dt><dd>{html_text(human_status_label(status))}</dd></div>'
+        f'<div><dt>Workspace</dt><dd>{html_text(workspace_detail)}</dd></div>'
+        f'<div><dt>Runtime role</dt><dd>{html_text(state.get("runtime_role") or "standalone")}</dd></div>'
+        f'<div><dt>Depends on</dt><dd>{html_text(dependency_text or "none")}</dd></div>'
+        "</dl>"
+        f'<div class="review-tasks">{tasks_html}</div></div>'
+    )
+
+
+def render_feature_card_html(
+    paths: HarnessPaths,
+    state: dict[str, Any],
+    tasks: dict[str, Any],
+    *,
+    open_review: bool,
+) -> str:
+    current_task = feature_current_task(state, tasks)
+    current_task_html = (
+        '<div class="current-task">'
+        '<span class="eyebrow">Current task</span>'
+        f'<strong>{html_text(current_task.get("id"))} · {html_text(current_task.get("title"))}</strong>'
+        "</div>"
+        if current_task
+        else '<div class="current-task current-task--empty">No task is currently active</div>'
+    )
+    blocker = str(state.get("blocked_reason") or "").strip()
+    blocker_html = (
+        f'<p class="blocker"><strong>Blocked:</strong> {html_text(blocker)}</p>' if blocker else ""
+    )
+    goal = str(state.get("goal") or "").strip()
+    open_attr = " open" if open_review else ""
+    claim_message = build_agent_claim_message(paths, state, tasks)
+    feature_title = str(state.get("title") or state.get("feat_id") or "Feature")
+
+    return (
+        f'<article class="feature-card" id="{html_text(state.get("feat_id"))}">'
+        f'<details class="feature-review"{open_attr}>'
+        '<summary class="feature-summary">'
+        '<div class="card-kicker">'
+        f'<span class="feature-id">{html_text(state.get("feat_id"))}</span>'
+        f'<span class="workspace-chip">{html_text(state.get("workspace_mode") or "unassigned")}</span>'
+        "</div>"
+        f'<h3>{html_text(state.get("title"))}</h3>'
+        + (f'<p class="goal">{html_text(goal)}</p>' if goal else "")
+        + blocker_html
+        + current_task_html
+        + f'<div class="task-counts">{render_task_stats_html(tasks)}</div>'
+        + '<span class="review-hint">Review <span aria-hidden="true">↓</span></span>'
+        + "</summary>"
+        + render_feature_review_html(paths, state, tasks)
+        + "</details>"
+        + '<div class="claim-bar"><button type="button" class="claim-trigger" '
+        f'data-feature-title="{html_text(feature_title)}">Agent 认领</button>'
+        '<span>生成 agent-set-v1 认领消息</span></div>'
+        f'<textarea class="claim-draft" hidden>{html_text(claim_message)}</textarea>'
+        + "</article>"
+    )
+
+
+def render_closed_features_html(items: list[dict[str, Any]]) -> str:
+    if not items:
+        return ""
+    rows = []
+    for item in items:
+        rows.append(
+            '<li><span class="closed-id">'
+            f'{html_text(item.get("feat_id"))}</span><strong>{html_text(item.get("title"))}</strong>'
+            f'<span class="closed-status">{html_text(human_status_label(item.get("status")))}</span></li>'
+        )
+    return (
+        '<section class="closed-section"><details><summary>Closed history '
+        f'<span>{len(items)}</span></summary><ul>{"".join(rows)}</ul></details></section>'
+    )
+
+
+def render_feature_status_html(paths: HarnessPaths, *, feat_id: str | None) -> str:
+    index_items = load_index(paths).get("features", [])
+    if feat_id:
+        state, tasks = load_feat(paths, feat_id)
+        active_records = [(state, tasks)]
+        closed_items: list[dict[str, Any]] = []
+        page_title = str(state.get("title") or feat_id)
+    else:
+        active_records = []
+        closed_items = []
+        for item in index_items:
+            status = str(item.get("status") or "")
+            if status in CLOSED_FEAT_STATUS:
+                closed_items.append(item)
+                continue
+            state, tasks = load_feat(paths, str(item.get("feat_id") or ""))
+            active_records.append((state, tasks))
+        page_title = "Feature Tracker"
+
+    by_status: dict[str, list[tuple[dict[str, Any], dict[str, Any]]]] = {}
+    for state, tasks in active_records:
+        by_status.setdefault(str(state.get("status") or "unknown"), []).append((state, tasks))
+
+    status_order = list(FEATURE_STATUS_ORDER)
+    status_order.extend(sorted(status for status in by_status if status not in FEATURE_STATUS_ORDER))
+    columns = []
+    for status in status_order:
+        records = by_status.get(status, [])
+        if not records:
+            continue
+        tone = FEATURE_STATUS_PRESENTATION.get(status, ("", "slate"))[1]
+        cards = "".join(
+            render_feature_card_html(paths, state, tasks, open_review=bool(feat_id))
+            for state, tasks in records
+        )
+        columns.append(
+            f'<section class="status-column status-column--{html_text(tone)}">'
+            '<header><div class="status-title">'
+            f'<span class="status-dot" aria-hidden="true"></span><h2>{html_text(human_status_label(status))}</h2>'
+            f'<span class="status-count">{len(records)}</span></div></header>'
+            f'<div class="feature-list">{cards}</div></section>'
+        )
+
+    active_count = sum(
+        1 for state, _ in active_records if str(state.get("status") or "") not in CLOSED_FEAT_STATUS
+    )
+    in_progress_count = len(by_status.get("in_progress", []))
+    blocked_count = len(by_status.get("blocked", []))
+    closeout_count = len(by_status.get("done", []))
+    board_html = (
+        f'<main class="status-board">{"".join(columns)}</main>'
+        if columns
+        else '<main class="status-board status-board--empty"><p class="empty">No active features.</p></main>'
+    )
+
+    document_head = """<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>Feature Tracker Status</title>
+<style>
+:root { color-scheme:light; --canvas:#f5f5f2; --surface:#fff; --ink:#1d1d1b; --muted:#74756f; --shadow:0 2px 8px rgb(28 28 24 / .055); font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--canvas); color:var(--ink); font-size:14px; }
+.shell { min-height:100vh; padding:28px; }
+.page-header { display:flex; align-items:flex-end; justify-content:space-between; gap:24px; margin:0 0 20px; }
+.page-header h1 { margin:3px 0 0; font-size:24px; line-height:1.25; letter-spacing:-.025em; }
+.page-header p { margin:0; color:var(--muted); font-size:12px; }
+.projection-note { max-width:420px; text-align:right; }
+.metrics { display:flex; flex-wrap:wrap; gap:14px 34px; margin:0 0 20px; padding:0 2px; }
+.metric { min-width:86px; }
+.metric strong { display:block; font-size:23px; line-height:1.15; font-variant-numeric:tabular-nums; }
+.metric span { color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.055em; }
+.status-board { display:grid; grid-auto-flow:column; grid-auto-columns:auto; gap:10px; align-items:start; overflow-x:auto; padding-bottom:12px; }
+.status-column { --tone:#8b8c86; --tint:#ecece7; width:266px; min-height:180px; border-radius:15px; background:color-mix(in srgb,var(--tint) 72%,var(--canvas)); padding:9px; }
+.status-column--amber { --tone:#b98313; --tint:#fbf5e5; }
+.status-column--red { --tone:#c4413b; --tint:#fbefee; }
+.status-column--blue { --tone:#3578c7; --tint:#edf4fb; }
+.status-column--green { --tone:#2f8a5c; --tint:#edf7f1; }
+.status-column:has(.feature-review[open]) { width:min(720px,calc(100vw - 64px)); }
+.status-column > header { padding:6px 6px 10px; }
+.status-title { display:flex; align-items:center; gap:7px; }
+.status-title h2 { margin:0; font-size:12px; font-weight:650; }
+.status-dot { width:8px; height:8px; border:2px solid var(--tone); border-radius:999px; }
+.status-count { color:var(--muted); font-size:12px; font-variant-numeric:tabular-nums; }
+.feature-list { display:grid; gap:8px; }
+.feature-card { border-radius:12px; background:var(--surface); box-shadow:var(--shadow); overflow:hidden; }
+.feature-review { display:block; }
+.feature-summary { cursor:pointer; list-style:none; padding:12px; }
+.feature-summary::-webkit-details-marker { display:none; }
+.feature-summary:focus-visible { outline:2px solid var(--tone); outline-offset:-3px; border-radius:12px; }
+.feature-card:has(.feature-review[open]) { box-shadow:0 8px 24px rgb(28 28 24 / .09); }
+.card-kicker,.task-heading { display:flex; align-items:center; gap:6px; min-width:0; }
+.feature-id,.task-id { color:var(--muted); font-size:11px; font-variant-numeric:tabular-nums; }
+.workspace-chip,.task-status,.gate { margin-left:auto; border-radius:999px; background:#f0f0ed; color:#5f605b; padding:2px 6px; font-size:10px; white-space:nowrap; }
+.feature-card h3 { margin:7px 0 0; font-size:14px; line-height:1.35; letter-spacing:-.01em; }
+.goal { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; margin:5px 0 0; color:var(--muted); font-size:12px; line-height:1.45; }
+.blocker { margin:8px 0 0; border-radius:7px; background:#fff0ef; color:#8e2d29; padding:7px; font-size:11px; line-height:1.45; }
+.current-task { display:grid; gap:2px; margin-top:10px; border-radius:8px; background:color-mix(in srgb,var(--tone) 6%,transparent); padding:7px 8px; font-size:12px; line-height:1.4; }
+.current-task--empty { background:#f7f7f4; color:var(--muted); }
+.eyebrow { color:var(--muted); font-size:10px; text-transform:uppercase; letter-spacing:.06em; }
+.task-counts { display:flex; flex-wrap:wrap; gap:5px; margin-top:10px; }
+.task-count { border-radius:999px; background:#f2f2ef; color:#666761; padding:2px 6px; font-size:10px; font-variant-numeric:tabular-nums; }
+.task-count--in-progress { background:#fff4d8; color:#7a5610; }
+.task-count--blocked { background:#fff0ef; color:#8e2d29; }
+.task-count--done { background:#eaf7ef; color:#256746; }
+.review-hint { display:inline-flex; align-items:center; gap:4px; margin-top:10px; color:var(--tone); font-size:11px; font-weight:650; }
+.feature-review[open] .review-hint span { transform:rotate(180deg); }
+.review-panel { margin:0 8px 8px; border-radius:10px; background:#f8f8f5; padding:14px; }
+.review-header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+.review-header h3 { margin:2px 0 0; font-size:15px; }
+.canonical-links { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:5px; }
+.canonical-links a { border-radius:999px; background:#eaeae5; color:#4f504b; padding:4px 8px; font-size:10px; text-decoration:none; }
+.canonical-links a:hover { background:#dfdfd8; color:var(--ink); }
+.review-facts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px 16px; margin:14px 0 0; }
+.review-facts div { display:grid; grid-template-columns:76px 1fr; gap:8px; }
+.review-facts dt { color:var(--muted); font-size:10px; text-transform:uppercase; }
+.review-facts dd { margin:0; overflow-wrap:anywhere; font-size:11px; }
+.review-tasks { margin-top:18px; }
+.review-task + .review-task { margin-top:22px; }
+.review-task h4 { margin:8px 0 0; font-size:14px; }
+.review-copy { display:grid; grid-template-columns:70px 1fr; gap:9px; margin:7px 0 0; color:var(--muted); font-size:11px; line-height:1.5; }
+.review-copy strong { color:var(--ink); font-size:10px; text-transform:uppercase; letter-spacing:.04em; }
+.review-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; margin-top:13px; }
+.review-grid h5 { margin:0 0 7px; font-size:11px; }
+.acceptance-list,.verification-list { display:grid; gap:6px; margin:0; padding-left:17px; color:#555650; font-size:11px; line-height:1.45; }
+.verification-list { padding:0; list-style:none; }
+.verification-list li { min-width:0; }
+.verification-list a,.verification-list code { color:#356f9e; overflow-wrap:anywhere; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:10px; }
+.verification-list p { margin:2px 0 0; color:var(--muted); }
+.verification-kind { display:inline-block; margin-right:5px; border-radius:999px; background:#e9eee9; color:#46604d; padding:1px 5px; font-size:9px; text-transform:uppercase; }
+.claim-bar { display:flex; align-items:center; gap:8px; padding:0 12px 12px; }
+.claim-bar span { color:var(--muted); font-size:10px; }
+.claim-trigger,.dialog-action { border:0; border-radius:8px; background:#292a27; color:#fff; cursor:pointer; padding:6px 9px; font:inherit; font-size:11px; font-weight:650; }
+.claim-trigger:hover,.dialog-action:hover { background:#42433e; }
+.claim-dialog { width:min(760px,calc(100vw - 32px)); max-height:calc(100vh - 40px); border:0; border-radius:16px; background:#fff; color:var(--ink); padding:0; box-shadow:0 24px 80px rgb(20 20 16 / .24); }
+.claim-dialog::backdrop { background:rgb(20 20 16 / .28); backdrop-filter:blur(2px); }
+.claim-dialog-shell { display:grid; gap:13px; padding:20px; }
+.claim-dialog-header { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; }
+.claim-dialog-header h2 { margin:2px 0 0; font-size:18px; }
+.dialog-close { border:0; border-radius:999px; background:#efefeb; color:var(--muted); cursor:pointer; height:30px; width:30px; font-size:17px; }
+.claim-note { margin:0; color:var(--muted); font-size:12px; line-height:1.5; }
+.claim-message { width:100%; min-height:300px; resize:vertical; border:0; border-radius:10px; background:#f4f4f0; color:#343530; padding:14px; font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace; }
+.claim-message:focus { outline:2px solid #8ba8bf; }
+.claim-actions { display:flex; align-items:center; gap:8px; }
+.dialog-action--secondary { background:#e8e8e3; color:#343530; }
+.dialog-action--secondary:hover { background:#dcdcd5; }
+.claim-status { margin-left:auto; color:var(--muted); font-size:11px; }
+.task-status { margin-left:0; }
+.gate { margin-left:0; }
+.closed-section { margin-top:20px; padding:0 4px; }
+.closed-section summary { cursor:pointer; color:var(--muted); font-size:11px; font-weight:600; }
+.closed-section summary span { font-weight:400; }
+.closed-section ul { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:5px 12px; margin:10px 0 0; padding:0; list-style:none; }
+.closed-section li { display:grid; grid-template-columns:auto 1fr auto; gap:7px; align-items:center; color:var(--muted); font-size:11px; }
+.closed-section li strong { overflow:hidden; color:var(--ink); font-weight:500; text-overflow:ellipsis; white-space:nowrap; }
+.closed-status { color:var(--muted); }
+.empty { color:var(--muted); }
+@media (max-width:720px) { .shell{padding:18px 12px}.page-header{align-items:flex-start;flex-direction:column}.projection-note{text-align:left}.metrics{gap:12px 22px}.status-board{grid-auto-flow:row;grid-auto-columns:auto;grid-template-columns:1fr;overflow:visible}.status-column,.status-column:has(.feature-review[open]){width:auto}.review-header,.claim-dialog-header{flex-direction:column}.canonical-links{justify-content:flex-start}.review-facts,.review-grid{grid-template-columns:1fr}.claim-bar{align-items:flex-start;flex-direction:column}.claim-dialog-shell{padding:15px}.claim-message{min-height:270px}.claim-actions{align-items:stretch;flex-direction:column}.claim-status{margin:0;text-align:center} }
+</style>
+</head>
+<body>
+"""
+
+    claim_dialog = r"""
+<dialog class="claim-dialog" id="claim-dialog">
+  <div class="claim-dialog-shell">
+    <header class="claim-dialog-header">
+      <div><span class="eyebrow">Agent claim draft</span><h2 id="claim-dialog-title">认领 Feature</h2></div>
+      <form method="dialog"><button class="dialog-close" aria-label="Close">×</button></form>
+    </header>
+    <p class="claim-note">这是 <code>agent-set-v1</code> 路由草稿：只告诉 Agent 去哪里恢复 SSOT，不复制 Task 或运行状态。它不认证发送者、不投递消息，也不授予 Host 或 Owner 权限。</p>
+    <textarea class="claim-message" id="claim-message" readonly spellcheck="false"></textarea>
+    <div class="claim-actions">
+      <button type="button" class="dialog-action" id="copy-claim">复制认领消息</button>
+      <button type="button" class="dialog-action dialog-action--secondary" id="share-claim">系统分享</button>
+      <span class="claim-status" id="claim-status" aria-live="polite"></span>
+    </div>
+  </div>
+</dialog>
+<script>
+(() => {
+  const dialog = document.getElementById("claim-dialog");
+  const title = document.getElementById("claim-dialog-title");
+  const message = document.getElementById("claim-message");
+  const status = document.getElementById("claim-status");
+
+  function refreshTime() {
+    const now = new Date().toISOString();
+    message.value = message.value.replace(/ time="[^"]*"/, ` time="${now}"`);
+    return message.value;
+  }
+
+  async function copyMessage() {
+    const text = refreshTime();
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        throw new Error("clipboard API unavailable");
+      }
+    } catch (_) {
+      message.focus();
+      message.select();
+      document.execCommand("copy");
+    }
+    status.textContent = "已复制；请通过 Host 发送给目标 Agent";
+  }
+
+  document.addEventListener("click", (event) => {
+    const trigger = event.target.closest(".claim-trigger");
+    if (!trigger) return;
+    const card = trigger.closest(".feature-card");
+    const draft = card && card.querySelector(".claim-draft");
+    if (!draft) return;
+    title.textContent = `认领 ${trigger.dataset.featureTitle || "Feature"}`;
+    message.value = draft.value;
+    refreshTime();
+    status.textContent = "";
+    dialog.showModal();
+  });
+
+  document.getElementById("copy-claim").addEventListener("click", copyMessage);
+  document.getElementById("share-claim").addEventListener("click", async () => {
+    const text = refreshTime();
+    if (!navigator.share) {
+      await copyMessage();
+      status.textContent = "当前浏览器不支持系统分享，已复制";
+      return;
+    }
+    try {
+      await navigator.share({ title: title.textContent, text });
+      status.textContent = "已交给系统分享；交付与认领效果仍由 Host 确认";
+    } catch (error) {
+      if (error && error.name === "AbortError") return;
+      await copyMessage();
+      status.textContent = "系统分享失败，已复制";
+    }
+  });
+})();
+</script>
+"""
+
+    return (
+        document_head
+        + '<div class="shell"><header class="page-header"><div><p>Bagakit · read-only projection</p>'
+        f'<h1>{html_text(page_title)}</h1></div>'
+        '<p class="projection-note">Computed on demand from Feature Tracker canonical state. This page stores no planning or runtime truth.</p></header>'
+        '<section class="metrics" aria-label="Feature summary">'
+        f'<div class="metric"><strong>{active_count}</strong><span>Active</span></div>'
+        f'<div class="metric"><strong>{in_progress_count}</strong><span>In progress</span></div>'
+        f'<div class="metric"><strong>{blocked_count}</strong><span>Blocked</span></div>'
+        f'<div class="metric"><strong>{closeout_count}</strong><span>Needs closeout</span></div>'
+        "</section>"
+        + board_html
+        + render_closed_features_html(closed_items)
+        + "</div>"
+        + claim_dialog
+        + "</body></html>"
+    )
+
+
 def cmd_feat_status(args: argparse.Namespace) -> int:
     root = Path(args.root).resolve()
     paths = HarnessPaths(root)
     ensure_harness_exists(paths)
     index_data = load_index(paths)
     feats = index_data.get("features", [])
+
+    if args.format == "html":
+        print(render_feature_status_html(paths, feat_id=args.feat))
+        return 0
 
     if args.feat:
         state, tasks = load_feat(paths, args.feat)
@@ -6222,7 +6777,9 @@ def build_parser() -> argparse.ArgumentParser:
     sp = sub.add_parser("show-feature-status", help="show feature status")
     add_common(sp)
     sp.add_argument("--feature", dest="feat", default=None)
-    sp.add_argument("--json", action="store_true")
+    status_output = sp.add_mutually_exclusive_group()
+    status_output.add_argument("--json", action="store_true")
+    status_output.add_argument("--format", choices=["text", "html"], default="text")
     sp.set_defaults(func=cmd_feat_status)
 
     sp = sub.add_parser("get-owner-receipt", help="read the current feature execution-owner receipt")

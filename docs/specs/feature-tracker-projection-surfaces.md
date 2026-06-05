@@ -98,6 +98,48 @@ If such a surface becomes stable, it must remain distinct from both:
 - canonical dependency truth
 - generated dependency projection
 
+## Human Status Projection
+
+`feature-tracker.sh show-feature-status --format html` emits a disposable,
+read-only status page on stdout.
+
+It may present canonical Feature identity, lifecycle status, workspace,
+current Task, blocker, dependencies, Task counts, and current-plan Task detail.
+It must derive those facts directly from `index/features.json`, `state.json`,
+and `tasks.json` on each invocation.
+
+The default human overview places proposals before execution statuses. A
+Feature card opens its review in place, showing current-plan objectives,
+outcomes, acceptance, verification, and links to canonical files. The default
+surface stays light and visually quiet instead of following the host into a
+dark, heavily outlined dashboard.
+
+Every active Feature card may render one claim-message draft using the
+`bagakit-agent-messaging` `agent-set-v1` envelope. The draft includes Feature
+name and id, worktree or `none`, branch or `none`, lifecycle status, current
+Task, and Task counts as a compact routing snapshot. It then gives the ordered
+canonical refs where the Agent must recover Goal, current Task, acceptance,
+blocker, authority, and next action. It must not copy Task objective, outcome,
+acceptance, verification, release, or execution history into the message.
+
+The page may use bounded client-side behavior only to preview, refresh the
+display time immediately before copy/share, copy, or invoke the platform share
+sheet. The draft and page do not authenticate a sender, select a target, send a
+message, assign Host authority, or prove delivery, consumption, claim, or
+effect. The message states this boundary in plain language.
+
+The human projection must not:
+
+- persist a dashboard, cache, database, or editable mirror
+- infer progress percentages, execution order, readiness, or scheduling policy
+- treat a generated claim draft as authenticated assignment or authority
+- become an input to tracker mutation, validation, recovery, or closeout
+- load closed Feature detail merely to render the active overview
+
+Closed history may use the canonical index projection because the overview
+needs only identity, title, and lifecycle status. A generated HTML file belongs
+outside tracker state and can be deleted or regenerated without repair.
+
 ## Quality Rule
 
 A good projection boundary makes these statements true:
