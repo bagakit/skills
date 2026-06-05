@@ -35,7 +35,8 @@ Typical triggers are:
 - the agent may overbuild, widen the diff, or do opportunistic cleanup
 - the proposed fix adds or changes a repair, quality gate, exception, retry, or
   supervisor layer
-- the proof plan is unclear or could prove only private implementation shape
+- the proof plan is unclear, unnecessarily broad, or could prove only private
+  implementation shape
 - confirmed user discussion changes a durable requirement that implementation
   will rely on
 - an independent principle review would improve quality for the token cost
@@ -80,6 +81,9 @@ complete coding-agent runtime.
      require only the smallest decision delta from models or callers, and prove
      the owner contract plus public behavior with the smallest sufficient
      oracles.
+   - Start verification at the affected owner surface, run independent checks
+     concurrently when isolation permits, and widen scope only when dependency
+     reach or risk requires it. Do not trade away required proof for speed.
 6. Synchronize durable truth.
    - If confirmed user discussion changed a requirement, update its owning
      document in the same implementation boundary using wording close to the

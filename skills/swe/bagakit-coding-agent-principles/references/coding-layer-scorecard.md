@@ -19,7 +19,7 @@ Use `0`, `1`, or `2`.
   - the selected vertical slice is sufficient and heavier work is not justified
 - `proof_plan`
   - proof closes the causal owner when applicable, an owner-owned contract, and
-    public behavior with proportionate oracles
+    public behavior with proportionate oracles, scope, and execution cost
 - `scope_control`
   - diff stays inside one intent and minimizes total system complexity rather
     than only changed lines
@@ -67,6 +67,9 @@ not score them again or create work merely to fill every lens.
   - do validators check owner-known facts directly, request only the minimum
     external decision delta, and prove behavior with the smallest sufficient
     oracles?
+  - does verification begin at the affected owner surface, parallelize only
+    independent checks, and expand with dependency reach or risk without
+    dropping required proof?
 
 ## Blocking Conditions
 
@@ -88,6 +91,8 @@ not score them again or create work merely to fill every lens.
   contract failure
 - implementation relies on a confirmed durable requirement change while the
   owning document stays stale
+- verification scope is narrowed for speed even though it cannot close the
+  required owner contract or public-behavior risk
 - engineering risk affects safety, data, production, or accessibility
 
 ## Output

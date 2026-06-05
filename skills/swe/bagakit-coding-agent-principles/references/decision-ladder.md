@@ -43,6 +43,7 @@ Use this ladder after the protected-principle gate.
    - Prove an owner-owned contract and the public behavior it supports.
    - Use the smallest sufficient oracles; do not multiply checks when one
      stronger proof surface already closes the risk.
+   - Treat verification scope and execution cost as part of the proof plan.
 
 ## Stop Rule
 
@@ -145,3 +146,21 @@ Prefer proof surfaces in this order:
 
 Use only the layers needed by the risk. Do not claim success from implementation
 shape alone, and do not treat more checks as stronger proof by default.
+
+## Verification Execution Rule
+
+Choose the least costly execution plan that still closes the identified risk:
+
+1. start with owner-local or affected-surface checks tied to the changed
+   behavior
+2. run independent checks concurrently only when their isolation, resources,
+   and results remain reliable
+3. expand to dependent integration, package, or repository suites when the
+   change crosses boundaries, dependency reach is uncertain, shared state raises
+   risk, or explicit owner policy requires broader proof
+4. avoid full-repository regression for a narrow change when smaller oracles
+   already close the owner contract and public behavior
+
+Execution time is a design constraint, not permission to weaken proof. If the
+selected scope cannot close the required risk, broaden it even when the checks
+are slow; improve test partitioning separately instead of skipping evidence.
