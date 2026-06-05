@@ -88,18 +88,26 @@ One task's attempts are a same-role lineage:
 
 Default authority:
 
-- one integration writer
+- one integration owner
 - independent read-only reviewers
-- multiple writers only with explicit authorization, disjoint roots, and one
-  integration owner
+- multiple writers only with explicit authorization, attributable effects,
+  relevant peer awareness, and one integration owner
 - human gates only for outcome, acceptance, authority, privacy, publication,
   cost, production, safety, or irreversible boundaries
 
 When parallel writers are not authorized, a ready writer waits while a current
 writer is still running. Do not recommend a second dispatch and rely on later
-validation to detect the overlap.
-Treat ambiguous exclusive authority the same way, and normalize slash and `.`
-segments before judging whether write roots are disjoint.
+validation to detect the overlap. Treat ambiguous exclusive authority the same
+way.
+
+When parallel writers are authorized, a shared tree, write root, file, or
+mixed commit does not by itself invalidate authority. Keep each effect
+attributable, name the integration owner, expose relevant collaborators and
+shared hotspots through their Sets, and let affected Agents coordinate
+directly. Preserve valid work and continue outside the conflict cone. Pause
+only the affected work for an actual incompatible edit or unclear intent;
+fence or escalate for stale or unauthorized writers, dangerous history
+mutation, or unknown irreversible effects.
 
 Resolve the integration owner from represented current writer identities. If
 any current writers are running, the integration writer is one of their

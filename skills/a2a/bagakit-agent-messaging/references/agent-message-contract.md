@@ -57,6 +57,13 @@ Agent is, what result it should produce, material action boundaries, where the
 result returns, and how it sends A2A messages. Do not turn these suggestions
 into required fields, headings, ordering, or validation keywords.
 
+For authorized multi-Agent work, include only directly relevant collaborators,
+the current integration owner, and known shared hotspots or handoff boundaries.
+Tell the Agent to refresh relevant peer state through a Host capability or A2A
+before a potentially conflicting action, coordinate routine overlap directly,
+and report an unresolved conflict or material boundary change. This is local
+awareness, not a static roster or mandatory alignment ceremony.
+
 Let an aligned Agent act immediately. Re-send only on derivation, a material
 assignment or boundary change, or recovery when the Set is missing. Do not
 build a static full-team roster into the message.

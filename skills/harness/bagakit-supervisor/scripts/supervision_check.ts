@@ -845,17 +845,12 @@ function validateRelations(receipt: ReceiptView, final: boolean, issues: Issue[]
   if (receipt.route.assurance === "audit") {
     const auditors = receipt.tasks.filter((task) => task.attempts.some((attempt) => attempt.role === "auditor"));
     if (auditors.length === 0) addIssue(issues, "error", "route.audit_missing", "$.tasks", "audit assurance requires at least one auditor task");
-    const protectedScopes = auditors.flatMap((task) => task.sourceScope);
-    for (const { attempt } of currentEligibleWriters) {
-      if (protectedScopes.some((scope) => pathsOverlap(scope, attempt.writeRoot))) addIssue(issues, "error", "authority.audit_writer_overlap", "$.tasks", "audit synthesis writer must not overlap protected source scope");
-    }
   }
   if (receipt.route.assurance === "blocking_review" && !receipt.tasks.some((task) => task.requiresReview)) addIssue(issues, "error", "route.blocking_review_missing", "$.tasks", "blocking-review assurance requires at least one review-required task");
 
-  if (runningWriters.length > 1 && !receipt.allowParallelWriters) addIssue(issues, "error", "authority.parallel_writers", "$.tasks", "multiple running writers require explicit isolated-writer authority");
+  if (runningWriters.length > 1 && !receipt.allowParallelWriters) addIssue(issues, "error", "authority.parallel_writers", "$.tasks", "multiple running writers require explicit parallel-writer authority");
   if (runningWriters.length > 1 && receipt.allowParallelWriters) {
-    const roots = runningWriters.map(({ attempt }) => attempt.writeRoot);
-    if (receipt.integrationWriter === "" || !runningWriters.some(({ attempt }) => attempt.workerId === receipt.integrationWriter) || roots.some((root) => root === "") || roots.some((root, index) => roots.slice(index + 1).some((other) => pathsOverlap(root, other)))) addIssue(issues, "error", "authority.writer_roots_overlap", "$.tasks", "authorized parallel writers require a current running integration writer and distinct non-empty write roots");
+    if (receipt.integrationWriter === "" || !runningWriters.some(({ attempt }) => attempt.workerId === receipt.integrationWriter)) addIssue(issues, "error", "authority.integration_writer_not_current", "$.authority.integration_writer", "authorized parallel writers require one current running integration writer");
   }
   if (receipt.integrationWriter !== "" && receipt.reviewers.includes(receipt.integrationWriter)) addIssue(issues, "error", "authority.writer_reviewer_overlap", "$.authority", "integration writer cannot also be a declared reviewer");
   if (runningWriters.length === 0 && currentEligibleWriters.length > 0 && (receipt.integrationWriter === "" || !currentEligibleWriters.some(({ attempt }) => attempt.workerId === receipt.integrationWriter))) addIssue(issues, "error", "authority.integration_writer_not_current", "$.authority.integration_writer", "must name a current succeeded writer identity when no writer is running");
@@ -895,10 +890,6 @@ function pathContains(boundary: string, child: string): boolean {
   const inner = normalizeLogicalPath(child);
   if (outer === "") return true;
   return inner === outer || inner.startsWith(`${outer}/`);
-}
-
-function pathsOverlap(left: string, right: string): boolean {
-  return pathContains(left, right) || pathContains(right, left);
 }
 
 function detectCycles(tasks: TaskView[], issues: Issue[]): void {
@@ -1007,7 +998,7 @@ function decide(receipt: ReceiptView, issues: Issue[]): JsonRecord {
   const errors = issues.filter((issue) => issue.severity === "error");
   const isCloseError = (issue: Issue): boolean => issue.code.startsWith("close.") || issue.code.startsWith("run.") || issue.code.startsWith("final.") || issue.code === "artifact.accepted_not_current";
   const closeErrors = errors.some(isCloseError);
-  const globalAuthoritySafetyCodes = new Set(["authority.parallel_writers", "authority.writer_roots_overlap", "authority.integration_writer_not_current", "authority.writer_mismatch", "authority.audit_writer_overlap"]);
+  const globalAuthoritySafetyCodes = new Set(["authority.parallel_writers", "authority.integration_writer_not_current", "authority.writer_mismatch"]);
   const recoverableAuthorityCodes = new Set([...globalAuthoritySafetyCodes, "attempt.replacement_unfenced", "authority.cancelled_writer_active"]);
   const recoverableAuthorityError = (issue: Issue): boolean => {
     if (recoverableAuthorityCodes.has(issue.code)) return true;
@@ -1019,7 +1010,7 @@ function decide(receipt: ReceiptView, issues: Issue[]): JsonRecord {
   const taskActions: JsonRecord[] = [];
   const globalAuthorityFreeze = errors.some((issue) => globalAuthoritySafetyCodes.has(issue.code));
   if (globalAuthorityFreeze) {
-    taskActions.push({ task_id: "", action: "freeze_and_rebind", reason: "writer authority overlaps or exceeds the declared isolation contract" });
+    taskActions.push({ task_id: "", action: "freeze_and_rebind", reason: "writer authority is unauthorized or lacks a current integration owner" });
   }
   const newSharedDomains = sharedFailureDomains(receipt);
   const openDomains = new Set(receipt.circuits.filter((circuit) => circuit.status === "open").map((circuit) => circuit.domain));

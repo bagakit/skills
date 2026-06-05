@@ -59,10 +59,10 @@ oracle = "Receipts require owner revision and freshness evidence; blocked and pl
 does_not_prove = "The checker cannot query whether an external owner revision is actually current."
 
 [[guard]]
-id = "SINGLE_WRITER_AUTHORITY"
-protects = "Concurrent mutation has one integration writer unless write roots and merge ownership are explicitly isolated."
-oracle = "Receipt validation rejects overlapping running writers and a missing integration owner; decision fixtures hold a second ready writer while exclusive authority is occupied."
-does_not_prove = "Declared roots and identities do not enforce host filesystem isolation."
+id = "CONTROLLED_PARALLEL_WRITER_AUTHORITY"
+protects = "Concurrent mutation keeps explicit writer authority and one current integration owner without treating shared paths as authority loss; stale, unauthorized, or ambiguous writers still fail closed."
+oracle = "Receipt validation rejects unauthorized parallel writers and a missing current integration owner, permits explicitly authorized writers with overlapping roots, and keeps stale or ambiguous writer fixtures fenced."
+does_not_prove = "Declared identities and authority do not prevent a live content collision, prove peer coordination, or enforce host capabilities."
 
 [[guard]]
 id = "CURRENT_ATTEMPT_FENCE"

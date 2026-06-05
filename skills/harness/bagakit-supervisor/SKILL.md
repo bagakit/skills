@@ -54,13 +54,16 @@ alone.
    decomposition, diagnosis, patch design, and ordinary debugging with the
    capable Worker. Give it an invariant and proof condition, not a second
    implementation author.
-4. **Pipeline proof beside productive work.** Preserve one integration Writer
-   while identity-bound read-only review and verification run on stable
-   checkpoints. Do not serialize independent Owner-authorized development
-   behind nonblocking assurance; do not count broad results from moving WIP as
-   final proof. Convert stable work into current artifacts, gate dispositions,
-   bounded blockers, or checkpoints, then rejoin every mandatory result on the
-   exact current candidate. A barrier or control repair stops when its last
+4. **Pipeline proof beside productive work.** Preserve one integration owner
+   while identity-bound review and verification run on stable checkpoints and
+   authorized contributors advance independent work. Multiple Writers may
+   work in parallel when their authority, effects, relevant peers, shared
+   hotspots, and integration path are clear; shared paths are collision risk,
+   not proof of authority failure. Do not serialize independent
+   Owner-authorized development behind nonblocking assurance. Convert stable
+   work into current artifacts, gate dispositions, bounded blockers, or
+   checkpoints, then rejoin every mandatory result on the exact current
+   candidate. A barrier or control repair stops when its last
    decision-changing unknown closes.
 5. **Control by exception; close by effect.** Aligned work receives no
    correction. Suspected drift receives bounded inspection; confirmed drift
@@ -122,15 +125,21 @@ user revision, route failure, or apparent requirement conflict. Use saved
 packets as indexes; invalidate stale judgments.
 
 Prefer direct execution when supervision cannot credibly improve outcome or
-risk. Keep one integration writer unless the Owner and Host prove isolated
-write roots, merge ownership, and fencing. Keep reviewers evidentially or
-mechanically read-only.
+risk. Default to one Writer when authority, attribution, or integration is
+unclear. Explicitly authorized Writers may share a tree or write scope when
+the Host can keep their identities and effects attributable, one current
+integration owner is named, and affected Agents have a direct coordination and
+recovery path. Keep reviewers evidentially or mechanically read-only.
 
 Before an Agent derived by any mechanism acts, send it the L1
 `agent-set-v1` Set. Inherit context; never inherit authority. Keep the body as
 natural-language guidance rather than a field schema, and let the latest valid
 Set govern that Agent's local identity, assignment, material boundaries,
 return path, and A2A convention. Do not build or broadcast a static team map.
+For parallel work, include only directly relevant collaborators, the
+integration owner, and known shared hotspots or handoff boundaries. Let Agents
+refresh peer state and align directly before a potentially conflicting action;
+do not make the Supervisor relay routine coordination.
 Re-send the Set only for derivation, a material assignment or boundary change,
 or recovery when it is missing.
 
@@ -152,8 +161,9 @@ not request timed status chatter.
 2. Before changing team topology, inspect only the relevant current roles and
    choose reuse, one useful independent lane, narrowing, stale-role inspection,
    safe replacement, or no fan-out. Set every newly derived Agent before it
-   acts. Confirm bounded goal assimilation from material work and let a clear,
-   aligned Worker act immediately.
+   acts. When Writers run in parallel, make relevant peers and hotspots visible
+   and let them coordinate directly. Confirm bounded goal assimilation from
+   material work and let a clear, aligned Worker act immediately.
 3. Select the highest-priority unresolved control question and name the
    decision it gates, current-candidate closure target, minimal evidence needed,
    and stop or preemption condition. Do not start a substantial review without
@@ -188,6 +198,11 @@ not request timed status chatter.
    Use L1 `bagakit-agent-messaging` for Agent recipients and
    `bagakit-user-communication` for the user. Host authority and current human
    or Owner priority remain external.
+   A shared file, mixed commit, or overlapping write scope alone does not earn
+   a steer or freeze. Preserve valid work, let unrelated work continue, and
+   coordinate only the affected conflict cone unless evidence shows stale or
+   unauthorized authority, incompatible intent, unsafe history mutation, or
+   an unknown irreversible effect.
 8. Finish the review round with one conclusion, then report it to the user in
    plain language through the current communication binding. Lead with real
    result and progress, say honestly when none is verifiable, and state the

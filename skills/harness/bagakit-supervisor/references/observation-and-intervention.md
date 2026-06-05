@@ -60,9 +60,11 @@ in front of all independent development:
   result on the exact current candidate; a green predecessor checkpoint is
   historical evidence, not current proof
 
-Serialize only when the next step would cross a real boundary: shared mutation
-conflict, an invalidated premise, ambiguous authority, unknown or irreversible
-effect, a required blocking verdict, or a concrete blocker. Do not invent the
+Serialize only when the next step would cross a real boundary: an actual
+incompatible mutation, an invalidated premise, ambiguous authority, unknown or
+irreversible effect, a required blocking verdict, or a concrete blocker. A
+shared path, shared tree, or mixed commit is evidence to inspect and coordinate,
+not a global stop condition by itself. Do not invent the
 Worker's task breakdown, patch, or ordering to create throughput. Inspect and
 steer the control-level friction: unnecessary waiting, repeated assurance,
 unbounded exploration, stale evidence, or process ceremony that has displaced
@@ -195,14 +197,30 @@ The portable Supervisor owns the topology decision. The Host owns live role
 identity, capability, liveness, load, cancellation, and fencing. Task and
 assignment truth stay with their existing planner or lifecycle owner.
 
+For explicitly authorized parallel Writers, keep one current integration owner
+and make each Writer aware only of peers whose work can conflict with or feed
+its result. Known shared hotspots and handoff boundaries belong in their Sets.
+Let those Agents refresh relevant peer state through the Host or A2A and align
+directly before a potentially conflicting action. The Supervisor observes
+unresolved conflict or boundary changes; it does not relay routine peer
+coordination or freeze unrelated work.
+
+Treat possible overlap, actual content collision, and authority loss as three
+different facts. Preserve valid effects and continue outside the affected
+conflict cone. Pause or fence only the affected work when semantic intent
+cannot yet be reconciled, and escalate globally only for stale or unauthorized
+authority, dangerous history mutation, or unknown irreversible effect.
+
 ## Worker Goal Assimilation
 
 Before any Agent derived by any mechanism acts, send it the L1
 `agent-set-v1` Set. Inherit context; never inherit authority. State in natural
 language whatever is useful about its local identity, result, material
 boundaries, return path, and A2A convention. Do not impose body fields or build
-a static roster. The latest valid Set governs, subject to Host and Owner
-authority.
+a static roster. In parallel work, name only relevant collaborators, the
+integration owner, and known shared hotspots, and tell the Agent to coordinate
+directly before a conflicting action. The latest valid Set governs, subject to
+Host and Owner authority.
 
 After a new dispatch, confirm the smallest Worker goal model that makes its
 first action trustworthy. Prefer natural language over a fixed form. A useful

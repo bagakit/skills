@@ -19,7 +19,7 @@
       "id": "single-agent-running-host-identity",
       "title": "Single-Agent execution accepts a host-native worker identity",
       "fixture": "direct_running",
-      "guard": "SINGLE_WRITER_AUTHORITY",
+      "guard": "CONTROLLED_PARALLEL_WRITER_AUTHORITY",
       "expected_action": "observe_on_next_condition",
       "expected_issues": [],
       "expected_exit": 0,
@@ -332,7 +332,7 @@
       "id": "parallel-writers-freeze-authority",
       "title": "Unauthorized parallel writers freeze before observation",
       "fixture": "parallel_writers",
-      "guard": "SINGLE_WRITER_AUTHORITY",
+      "guard": "CONTROLLED_PARALLEL_WRITER_AUTHORITY",
       "expected_action": "freeze_and_rebind",
       "expected_task_action_views": [
         { "task_id": "", "action": "freeze_and_rebind" }
@@ -343,14 +343,32 @@
       "forbidden_actions": ["observe_on_next_condition", "dispatch_task"],
       "expected_issue": "authority.parallel_writers",
       "expected_exit": 1,
-      "proves": "Two current writers without explicit isolated-writer authority produce a freeze action rather than ordinary observation of both attempts.",
+      "proves": "Two current writers without explicit parallel-writer authority produce a freeze action rather than ordinary observation of both attempts.",
       "does_not_prove": "The portable checker cannot revoke either writer capability at the host boundary."
     },
     {
-      "id": "parallel-writer-dot-alias-overlap-exact",
-      "title": "Canonical path aliases cannot fake isolated writer roots",
+      "id": "authorized-parallel-writer-overlap-continues-exact",
+      "title": "Authorized parallel writers may share a normalized write root",
       "fixture": "parallel_alias_writers",
-      "guard": "SINGLE_WRITER_AUTHORITY",
+      "guard": "CONTROLLED_PARALLEL_WRITER_AUTHORITY",
+      "command": "decide",
+      "expected_action": "observe_on_next_condition",
+      "expected_task_action_views": [
+        { "task_id": "task-1", "action": "observe_on_next_condition" },
+        { "task_id": "task-2", "action": "observe_on_next_condition" }
+      ],
+      "expected_safety_lock_views": [],
+      "forbidden_actions": ["freeze_and_rebind"],
+      "expected_issues": [],
+      "expected_exit": 0,
+      "proves": "Explicitly authorized current writers with one represented integration owner are not globally frozen merely because their normalized write roots overlap.",
+      "does_not_prove": "The receipt cannot prove live peer coordination, content compatibility, or collision-free filesystem behavior."
+    },
+    {
+      "id": "parallel-writer-needs-current-integration-owner-exact",
+      "title": "Authorized parallel writers still need a current integration owner",
+      "fixture": "parallel_missing_integration",
+      "guard": "CONTROLLED_PARALLEL_WRITER_AUTHORITY",
       "command": "decide",
       "expected_action": "freeze_and_rebind",
       "expected_task_action_views": [
@@ -360,16 +378,16 @@
         { "task_id": "", "action": "freeze_and_rebind" }
       ],
       "forbidden_actions": ["observe_on_next_condition", "dispatch_task"],
-      "expected_issues": ["authority.writer_roots_overlap"],
+      "expected_issues": ["authority.integration_writer_not_current"],
       "expected_exit": 1,
-      "proves": "Writer roots that differ only by a dot segment normalize to the same protected path and force authority repair.",
-      "does_not_prove": "Logical normalization does not prove host filesystem isolation or symlink behavior."
+      "proves": "Parallel authority remains fail-closed when the named integration owner is not one of the current writers.",
+      "does_not_prove": "The receipt cannot grant or revoke the represented Host writer capabilities."
     },
     {
       "id": "ambiguous-authority-blocks-secondary-writer-exact",
       "title": "Ambiguous writer authority cannot coexist with secondary dispatch",
       "fixture": "ambiguous_authority_sibling",
-      "guard": "SINGLE_WRITER_AUTHORITY",
+      "guard": "CONTROLLED_PARALLEL_WRITER_AUTHORITY",
       "command": "decide",
       "expected_action": "freeze_and_rebind",
       "expected_task_action_views": [
@@ -587,23 +605,22 @@
       "does_not_prove": "The case cannot identify the real external effect."
     },
     {
-      "id": "audit-synthesis-overlap-freezes-exact",
-      "title": "Audit synthesis cannot write inside protected source scope",
+      "id": "audit-source-overlap-does-not-freeze-exact",
+      "title": "Audit source overlap relies on identity binding instead of global freeze",
       "fixture": "audit_overlap",
       "guard": "READ_ONLY_SOURCE_STABILITY",
       "command": "decide",
-      "expected_action": "freeze_and_rebind",
+      "expected_action": "observe_on_next_condition",
       "expected_task_action_views": [
-        { "task_id": "", "action": "freeze_and_rebind" }
+        { "task_id": "task-audit", "action": "observe_on_next_condition" },
+        { "task_id": "task-synthesis", "action": "observe_on_next_condition" }
       ],
-      "expected_safety_lock_views": [
-        { "task_id": "", "action": "freeze_and_rebind" }
-      ],
-      "forbidden_actions": ["observe_on_next_condition"],
-      "expected_issues": ["authority.audit_writer_overlap"],
-      "expected_exit": 1,
-      "proves": "An audit synthesis writer overlapping any protected audit source scope freezes global writer authority.",
-      "does_not_prove": "Declared logical paths do not enforce filesystem permissions."
+      "expected_safety_lock_views": [],
+      "forbidden_actions": ["freeze_and_rebind"],
+      "expected_issues": [],
+      "expected_exit": 0,
+      "proves": "A running audit and Writer may overlap logical scope without a global authority freeze; the audit verdict must still bind a stable before-and-after identity before it can close anything.",
+      "does_not_prove": "The running receipt does not prove the eventual audit identity remains stable or that the Writer and auditor use isolated snapshots."
     },
     {
       "id": "missing-observation-predicate-exact",
@@ -664,7 +681,7 @@
       "id": "exclusive-writer-occupancy-forbids-second-dispatch",
       "title": "Occupied exclusive writer authority delays another writer",
       "fixture": "exclusive_writer_occupied",
-      "guard": "SINGLE_WRITER_AUTHORITY",
+      "guard": "CONTROLLED_PARALLEL_WRITER_AUTHORITY",
       "command": "decide",
       "expected_action": "observe_on_next_condition",
       "expected_task_action_views": [

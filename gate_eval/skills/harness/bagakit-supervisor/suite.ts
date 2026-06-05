@@ -380,6 +380,11 @@ function fixture(name: string): JsonRecord {
       tasks: [first, second],
     });
   }
+  if (name === "parallel_missing_integration") {
+    const value = fixture("parallel_alias_writers");
+    value.authority = { integration_writer: "worker-ghost", reviewers: [], allow_parallel_writers: true };
+    return value;
+  }
   if (name === "ambiguous_authority_sibling") {
     const first = task({ attempts: [attempt({ failure: failure({ authority_state: "ambiguous", evidence_refs: ["host://authority/ambiguous"] }) })] });
     const second = task({ task_id: "task-2", status: "ready", mutation_boundary: ["second/"], required_artifacts: ["second/result.md"], current_attempt_id: "", attempts: [], next_observation_condition: "" });

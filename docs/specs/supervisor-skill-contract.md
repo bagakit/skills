@@ -416,6 +416,13 @@ free-form natural language; useful content includes who the Agent is, its
 result, material boundaries, return path, and messaging convention, but these
 are not fields or a roster schema.
 
+For authorized parallel work, a Set names only directly relevant
+collaborators, the current integration owner, and known shared hotspots or
+handoff boundaries. It asks the Agent to refresh relevant peer state through
+the Host or A2A before a potentially conflicting action and to coordinate
+routine overlap directly with the affected peer. This does not create a full
+roster, startup meeting, or new authority.
+
 After a new Worker dispatch, confirm the smallest goal assimilation that makes
 the first action trustworthy. Natural language or the first material action is
 sufficient when it exposes:
@@ -544,15 +551,24 @@ Required fields:
 - `allow_parallel_writers`
 
 Default behavior allows one running writer. Parallel writers require explicit
-authorization, a named integration writer, and non-overlapping write roots.
+authorization, a named integration writer, attributable effects, and a
+coordination and recovery path. Their write roots may overlap.
 Reviewer identities must not overlap writer identities.
 
 A ready writer is not dispatchable while another current writer remains
 running under exclusive authority. Wait for the owner transition or rebind;
 do not create overlap and depend on later validation to catch it.
-The same hold applies while exclusive writer authority is ambiguous. Normalize
-slash and `.` path aliases before comparing write roots; textual aliases do not
-prove isolation.
+The same hold applies while exclusive writer authority is ambiguous.
+
+Under explicit parallel authority, distinguish possible scope overlap, an
+actual edit collision, and authority loss. A shared tree, write root, file, or
+mixed commit is a coordination risk, not a global authority failure. Each
+Writer receives relevant peer and hotspot awareness through its Set and aligns
+directly before potentially conflicting work. Preserve valid effects and let
+unrelated work continue. Pause only the affected conflict cone for
+incompatible semantic intent or uncertain integration; fence or escalate for
+stale or unauthorized writers, dangerous history mutation, or unknown
+irreversible effect.
 
 Derive integration-writer membership only from current writer attempts. When
 one or more current writers are running, `integration_writer` must equal the

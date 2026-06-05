@@ -125,6 +125,14 @@ produce, material action boundaries, where results return, and how A2A
 messages are sent. None is a required field, heading, ordering rule, or
 validator keyword.
 
+When several authorized Agents may affect the same result, the Set may name
+only collaborators relevant to this Agent, the current integration owner, and
+known shared hotspots or handoff boundaries. It should tell the Agent to
+refresh relevant peer state through the Host or A2A before a potentially
+conflicting action, coordinate routine overlap directly with the affected
+peer, and surface an unresolved conflict or material boundary change. This
+does not create a static roster, mandatory peer handshake, or authority.
+
 An aligned Agent may act immediately without a startup acknowledgement.
 Re-send a Set only on derivation, a material assignment or boundary change, or
 recovery when the Set is missing. Do not maintain a static full-team roster in

@@ -1074,6 +1074,57 @@
         "Take over the Worker's diagnosis or broaden the investigation beyond the supported environment hypothesis."
       ],
       "critical_failure": "Mistakes productive causal isolation for waste or uses a numeric retry threshold in place of evidence judgment."
+    },
+    {
+      "id": "authorized-shared-hotspot-coordinates-without-freeze",
+      "contrast_pair": "parallel-collision-boundary",
+      "prompt": "Two current Writers are explicitly authorized under one integration owner. Their main results are independent, but both may add compatible exports to the same index file. Each Set names the other relevant Writer and the index as a shared hotspot, and the Host can attribute both effects. No edit collision, stale authority, unsafe history operation, or irreversible effect has occurred. Decide whether the Supervisor should freeze, relay detailed instructions, or let the team proceed.",
+      "expected_disposition": "continue_with_direct_peer_coordination_at_shared_hotspot",
+      "must": [
+        "Treat the shared index as a coordination risk rather than evidence of authority loss.",
+        "Let the Writers refresh each other's relevant state and coordinate the hotspot directly while independent work continues.",
+        "Keep the integration owner responsible for the joined checkpoint and observe only an unresolved conflict or material boundary change."
+      ],
+      "must_not": [
+        "Freeze all mutation merely because the write scope overlaps.",
+        "Make the Supervisor relay routine file-level sequencing between capable Writers.",
+        "Broadcast a full team roster or require a startup meeting."
+      ],
+      "critical_failure": "Turns a known, attributable shared hotspot into global serialization or Supervisor micromanagement."
+    },
+    {
+      "id": "compatible-mixed-commit-preserves-valid-work",
+      "contrast_pair": "parallel-collision-boundary",
+      "prompt": "Two authorized Writers share one working tree. A stable commit created by Writer A includes two valid, attributable files from Writer B. The changes are semantically compatible, no evidence or review depends on the original commit boundary, and no history rewrite is required for Owner acceptance. Independent work remains. Decide the Supervisor response.",
+      "expected_disposition": "preserve_commit_and_reconcile_integration_boundary",
+      "must": [
+        "Preserve the valid commit and classify the mixed boundary for the integration owner.",
+        "Let nonconflicting work continue and bind later evidence to the exact joined candidate.",
+        "Use direct Agent coordination if a cleaner future handoff boundary is useful."
+      ],
+      "must_not": [
+        "Demand reset, amend, revert, or a global staging freeze merely to restore ideal commit ownership.",
+        "Treat mixed authorship as stale or unauthorized authority when current Host evidence says otherwise.",
+        "Claim final readiness from a predecessor identity."
+      ],
+      "critical_failure": "Destroys or freezes valid work to enforce a cosmetic commit boundary, or ignores exact-candidate evidence after integration."
+    },
+    {
+      "id": "incompatible-shared-edit-pauses-only-conflict-cone",
+      "contrast_pair": "parallel-collision-boundary",
+      "prompt": "Two authorized Writers have produced incompatible meanings for the same public configuration field. Both changes are attributable and other files remain independent, but current Owner truth does not decide which meaning is correct. No stale authority, history rewrite, or external side effect exists. Decide what pauses and who resolves it.",
+      "expected_disposition": "pause_conflict_cone_and_resolve_semantic_intent",
+      "must": [
+        "Pause only work that depends on the conflicting field while preserving both attributable candidates.",
+        "Have the affected Writers and integration owner expose the semantic choice and current evidence; ask the Owner only if current truth cannot resolve it.",
+        "Let unrelated authorized work continue."
+      ],
+      "must_not": [
+        "Freeze every Writer or unrelated repository mutation.",
+        "Let arrival order, commit ownership, or Supervisor preference choose the public meaning.",
+        "Reset or rewrite history before the semantic choice is resolved."
+      ],
+      "critical_failure": "Confuses a local semantic conflict with global authority failure, or silently chooses product truth from incidental Git order."
     }
   ]
 }

@@ -17,10 +17,12 @@ This non-gating eval owner has two distinct surfaces:
     resistance, evidence-directed review admission, execution-authored check
     self-proof, finding-driven Goal expansion, exact-current-candidate close,
     team-capacity admission, useful versus duplicate fan-out, and bounded
-    Worker goal assimilation, plain-language precision, source attribution,
-    event-driven Worker reporting, semantic-breakpoint user visibility,
-    maximum-staleness fallback, truthful progress claims, compact-safe
-    communication rebinding, and nonblocking delivery semantics
+    Worker goal assimilation, authorized shared-hotspot coordination,
+    mixed-commit preservation, conflict-cone containment, plain-language
+    precision, source attribution, event-driven Worker reporting,
+    semantic-breakpoint user visibility, maximum-staleness fallback, truthful
+    progress claims, compact-safe communication rebinding, and nonblocking
+    delivery semantics
   - expected dispositions stay hidden from the Agent under test
 
 The prior four-case live bundle is retained only as calibration evidence in

@@ -68,6 +68,14 @@ Agent: who it is, what result it should produce, material action boundaries,
 where to return the result, and how to send A2A messages. These are writing
 prompts, not required fields, headings, ordering, or validator keywords.
 
+When several authorized Agents may affect the same result, tell this Agent
+only about collaborators relevant to its work, the current integration owner,
+and any known shared hotspot or handoff boundary. Ask it to refresh relevant
+peer state through the Host or A2A before a potentially conflicting action,
+coordinate routine overlap directly with the affected peer, and surface only
+an unresolved conflict or material boundary change. Do not broadcast a full
+roster or turn peer awareness into a startup meeting.
+
 ```xml
 <bagakit-msg type="agent-set-v1" name="Cedar-FL4" time="2000-01-01T00:00:00+00:00">
 你是本轮 serving-fence 的独立审查 Agent，只读取和汇报，不修改代码或控制其他 Agent。结果返回给派生你的 Agent。
