@@ -1,5 +1,5 @@
 version = 1
-skill = "bagakit-visual-explainer"
+skill = "bagakit-explain"
 trigger = "A user wants a zero-background, visual-first explanation delivered as an HTML artifact."
 do = "Build a low-text HTML explanation in the user's language, preserving an architecture map and root-level mechanism."
-see = "skills/human-improvement/bagakit-visual-explainer/SKILL.md"
+see = "skills/human-improvement/bagakit-explain/SKILL.md"

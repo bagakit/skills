@@ -1,0 +1,43 @@
+version = 2
+
+[[suite]]
+id = "bagakit-explain-layout"
+owner = "skills/human-improvement/bagakit-explain"
+description = "Require the canonical installable layout for bagakit-explain."
+default = true
+proof_mode = "structural"
+protects = ["bagakit-explain installable layout, discovery metadata, frontdoor declaration, CLI declaration, and validation registration"]
+oracle = ["filesystem checks require the family index, public skill, UI metadata, frontdoor declaration, CLI declaration, operator, and owner-local validation"]
+exercised_surface = ["skills/human-improvement/bagakit-explain runtime directory", "gate_validation/skills/human-improvement/bagakit-explain registration"]
+proves = ["The explain runtime and discovery surfaces exist as one installable skill directory."]
+does_not_prove = ["Layout does not prove explanation depth, visual quality, learner understanding, or stochastic Agent compliance."]
+validation_class = "structure"
+groups = ["skills", "human-improvement", "explain", "structure"]
+
+[suite.runner]
+kind = "fs"
+required_dirs = [
+  "skills/human-improvement",
+  "skills/human-improvement/bagakit-explain",
+  "skills/human-improvement/bagakit-explain/agents",
+  "skills/human-improvement/bagakit-explain/references",
+  "skills/human-improvement/bagakit-explain/scripts",
+  "gate_validation/skills/human-improvement",
+  "gate_validation/skills/human-improvement/bagakit-explain",
+]
+required_files = [
+  "skills/human-improvement/README.md",
+  "skills/human-improvement/bagakit-explain/SKILL.md",
+  "skills/human-improvement/bagakit-explain/agents/openai.yaml",
+  "skills/human-improvement/bagakit-explain/references/frontdoor-rule.toml",
+  "skills/human-improvement/bagakit-explain/references/skill-cli.toml",
+  "skills/human-improvement/bagakit-explain/scripts/bagakit-explain-cli.sh",
+  "gate_validation/skills/human-improvement/README.md",
+  "gate_validation/skills/human-improvement/bagakit-explain/validation.toml",
+]
+forbidden_paths = [
+  "skills/human-improvement/bagakit-explain/SKILL_PAYLOAD.json",
+  "skills/human-improvement/bagakit-explain/README.md",
+  "skills/human-improvement/bagakit-explain/assets",
+  "skills/human-improvement/bagakit-explain/docs",
+]

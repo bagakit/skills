@@ -9,7 +9,7 @@ Current skills:
   - turns source material into bounded mastery contracts, diagnostic course
     routes, active practice, transfer checks, support fading, retention plans,
     learner-copy review through Writing Core, and optional HITL course handoffs
-- `bagakit-visual-explainer`
+- `bagakit-explain`
   - turns unfamiliar or complex topics into visual-first HTML explanations that
     start from zero assumed knowledge, preserve a reusable architecture map,
     descend to causal roots, and use the learner's language

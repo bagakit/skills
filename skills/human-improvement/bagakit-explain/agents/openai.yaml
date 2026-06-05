@@ -1,0 +1,4 @@
+interface:
+  display_name: "Explain"
+  short_description: "Explain complex topics visually from zero context"
+  default_prompt: "Use $bagakit-explain to introduce this topic from zero context as a low-text visual HTML artifact in my language, with an architecture map and causal depth."

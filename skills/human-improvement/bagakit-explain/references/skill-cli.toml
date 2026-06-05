@@ -1,0 +1,20 @@
+version = 1
+skill = "bagakit-explain"
+cli_id = "bagakit-explain"
+entrypoint = "scripts/bagakit-explain-cli.sh"
+runner = "shell"
+usage = "sh scripts/bagakit-explain-cli.sh <command>"
+summary = "Inspect and validate the explain skill assets."
+surface_refs = []
+
+[[command]]
+name = "describe"
+summary = "Print the explain ownership boundary."
+
+[[command]]
+name = "list-references"
+summary = "List shipped contract and discovery references."
+
+[[command]]
+name = "validate"
+summary = "Check required skill files and references."

@@ -5,10 +5,10 @@ skill_root="$(dirname "$script_dir")"
 
 usage() {
   cat <<'EOF'
-usage: bagakit-visual-explainer-cli <command>
+usage: bagakit-explain-cli <command>
 
 Commands:
-  describe          Print the visual-explainer ownership boundary.
+  describe          Print the explain ownership boundary.
   list-references   List references shipped by this skill.
   validate          Check required skill files and references.
 EOF
@@ -16,7 +16,7 @@ EOF
 
 case "${1:-}" in
   describe)
-    printf '%s\n' "bagakit-visual-explainer: novice-first visual HTML explanations with architecture maps, causal depth, and user-language delivery."
+    printf '%s\n' "bagakit-explain: novice-first visual HTML explanations with architecture maps, causal depth, and user-language delivery."
     ;;
   list-references)
     find "$skill_root/references" -type f | sed "s#^$skill_root/##" | sort
@@ -26,8 +26,7 @@ case "${1:-}" in
     test -f "$skill_root/agents/openai.yaml"
     test -f "$skill_root/references/frontdoor-rule.toml"
     test -f "$skill_root/references/skill-cli.toml"
-    test -f "$skill_root/references/visual-explanation-contract.toml"
-    printf '%s\n' "ok: bagakit-visual-explainer skill assets are complete"
+    printf '%s\n' "ok: bagakit-explain skill assets are complete"
     ;;
   ""|-h|--help|help)
     usage
