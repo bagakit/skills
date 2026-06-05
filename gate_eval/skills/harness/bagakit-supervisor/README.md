@@ -17,7 +17,8 @@ This non-gating eval owner has two distinct surfaces:
     resistance, evidence-directed review admission, execution-authored check
     self-proof, finding-driven Goal expansion, exact-current-candidate close,
     team-capacity admission, useful versus duplicate fan-out, and bounded
-    Worker goal assimilation, authorized shared-hotspot coordination,
+    Worker goal assimilation, multi-Agent convergence-frontier control,
+    task-shaped quiet cadence, authorized shared-hotspot coordination,
     mixed-commit preservation, conflict-cone containment, plain-language
     precision, source attribution, event-driven Worker reporting,
     semantic-breakpoint user visibility, maximum-staleness fallback, truthful

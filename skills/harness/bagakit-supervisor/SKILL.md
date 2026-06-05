@@ -131,6 +131,14 @@ the Host can keep their identities and effects attributable, one current
 integration owner is named, and affected Agents have a direct coordination and
 recovery path. Keep reviewers evidentially or mechanically read-only.
 
+If the Owner did not choose a semantic-review interval, set the maximum
+staleness to the longest safe blind interval before a wrong direction could
+cause material rework or cross an authority, safety, or irreversible boundary.
+Fit it to a natural evidence-producing work unit; ordinary coding commonly
+starts around ten to twenty minutes. Lengthen stable bounded work, shorten
+temporarily near risky transitions or after drift and recovery, and let
+material events wake review earlier. This is not a Worker-contact timer.
+
 Before an Agent derived by any mechanism acts, send it the L1
 `agent-set-v1` Set. Inherit context; never inherit authority. Keep the body as
 natural-language guidance rather than a field schema, and let the latest valid
@@ -162,14 +170,18 @@ not request timed status chatter.
    choose reuse, one useful independent lane, narrowing, stale-role inspection,
    safe replacement, or no fan-out. Set every newly derived Agent before it
    acts. When Writers run in parallel, make relevant peers and hotspots visible
-   and let them coordinate directly. Confirm bounded goal assimilation from
-   material work and let a clear, aligned Worker act immediately.
+   and let them coordinate directly. For multiple Agents, maintain one current
+   convergence frontier: only roles whose next result can change the critical
+   path, a mandatory gate, or the highest-priority exception enter this review.
+   Confirm bounded goal assimilation from material work and let a clear,
+   aligned Worker act immediately.
 3. Select the highest-priority unresolved control question and name the
    decision it gates, current-candidate closure target, minimal evidence needed,
    and stop or preemption condition. Do not start a substantial review without
    that causal outlet.
-4. Observe on a material Host event, external predicate, milestone, or bounded
-   assurance deadline. Parallelize only independent reads that answer the
+4. Observe the current convergence frontier on a material Host event, external
+   predicate, milestone, or bounded assurance deadline. Do not round-robin
+   poll every Agent. Parallelize only independent reads that answer the
    selected question. Defer adjacent findings and stop when evidence is
    sufficient.
 5. Compare work with premise, scope, convergence, authority, method boundaries,
@@ -198,6 +210,9 @@ not request timed status chatter.
    Use L1 `bagakit-agent-messaging` for Agent recipients and
    `bagakit-user-communication` for the user. Host authority and current human
    or Owner priority remain external.
+   A `continue` conclusion defaults to no Worker message. Contact an Agent only
+   when its action or reply can change the current decision; a completed review
+   or user update is not itself a reason to interrupt it.
    A shared file, mixed commit, or overlapping write scope alone does not earn
    a steer or freeze. Preserve valid work, let unrelated work continue, and
    coordinate only the affected conflict cone unless evidence shows stale or

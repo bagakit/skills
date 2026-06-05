@@ -211,6 +211,22 @@ conflict cone. Pause or fence only the affected work when semantic intent
 cannot yet be reconciled, and escalate globally only for stale or unauthorized
 authority, dangerous history mutation, or unknown irreversible effect.
 
+### Multi-Agent Convergence Frontier
+
+Supervise multiple Agents as one outcome-directed convergence frontier, not as
+a round-robin roster. At each review, include only roles whose next result can
+change the current critical path, close a mandatory gate, resolve the selected
+control question, or contain the highest-priority exception. Several Agent
+events may feed that one decision; aligned lanes remain at their declared
+result or maximum-staleness predicates without a status ping.
+
+Recompute the frontier when a result, blocker, authority change, candidate
+change, or urgent risk lands. Let Agents resolve routine local coordination
+through A2A. Contact only the Agent whose action or reply can change the
+current decision, and send at most the bounded message that decision needs.
+The Supervisor does not relay ordinary peer updates or score itself by how
+many Agents it contacted.
+
 ## Worker Goal Assimilation
 
 Before any Agent derived by any mechanism acts, send it the L1
@@ -309,6 +325,28 @@ method impossibility independently admits that correction.
 
 Choose assurance policy explicitly from Owner need and Host capability. Do not
 silently replace an Owner-selected policy with a cheaper one.
+
+### Task-shaped cadence
+
+When the Owner does not set a fixed maximum semantic-review staleness, choose
+the longest safe blind interval before an undetected wrong direction could
+plausibly create material rework or cross an authority, safety, or irreversible
+boundary. Fit the interval to a natural evidence-producing work unit so review
+does not repeatedly cut through the Worker's reasoning. Ordinary coding often
+starts around ten to twenty minutes; this is a reference, not a mode or fixed
+timer.
+
+Lengthen the interval for stable bounded work with declared predicates, such as
+a long deterministic test. Shorten it temporarily after confirmed drift,
+compact or recovery, authority or candidate changes, or near an irreversible
+transition. Material events always wake review earlier. If no decision can
+change before a declared terminal predicate, observe that predicate instead of
+running empty semantic reviews.
+
+Semantic-review cadence, Worker-contact cadence, and user maximum silence are
+separate. A `continue` review defaults to no Worker message. A user silence
+bound may require an honest interim update without interrupting the Worker or
+pretending that a semantic review completed.
 
 ### Owner-periodic assurance
 

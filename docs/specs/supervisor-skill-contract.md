@@ -351,16 +351,27 @@ evidence may guide further work but becomes historical for close-readiness.
 Every required verification, review, and acceptance predicate must rejoin on
 the exact current candidate before readiness is reported.
 
-Serialization is warranted when continuing would cross a shared write
-conflict, an invalidated premise, ambiguous authority, unknown or irreversible
-effect, a required blocking verdict, or a concrete blocker. Waiting for a
-nonblocking lane is not made correct merely by calling it strictness.
+Serialization is warranted when continuing would cross an actual incompatible
+write conflict, an invalidated premise, ambiguous authority, unknown or
+irreversible effect, a required blocking verdict, or a concrete blocker.
+Waiting for a nonblocking lane is not made correct merely by calling it
+strictness.
 
 A periodic assurance deadline bounds semantic-review staleness. It is not a
 quota for commits, tests, deletions, or code. At the boundary, require evidence
 of material progress toward the current Owner outcome or name the concrete
 predicate preventing it. This protects deep diagnosis while rejecting process
 theater and avoids rewarding visible but low-value activity.
+
+When the Owner does not set that deadline, choose the longest safe blind
+interval before an undetected wrong direction could cause material rework or
+cross an authority, safety, or irreversible boundary, fitted to a natural
+evidence-producing work unit. Ordinary coding commonly starts around ten to
+twenty minutes, but stable bounded work may use a longer event-bound interval
+and risky transitions or recovery may temporarily use a shorter one. Material
+events wake review earlier. Semantic-review cadence, Worker-contact cadence,
+and user maximum silence remain distinct; `continue` defaults to no Worker
+message.
 
 ## Runtime Surface
 
@@ -398,6 +409,16 @@ replace only after authority is safe, or decline fan-out. Do not optimize role
 count, utilization, or visible busyness. A role name, spawn receipt,
 acknowledgement, running process, or process completion does not satisfy its
 result predicate.
+
+For multiple Agents, derive one current convergence frontier rather than
+round-robin polling the roster. The frontier contains only roles whose next
+result can change the critical path, close a mandatory gate, answer the one
+current control question, or contain the highest-priority exception. Aligned
+roles remain at their declared result or maximum-staleness predicates. Rebuild
+the frontier when a material result, blocker, authority or candidate change,
+or urgent risk lands. Routine peer coordination stays direct through A2A; the
+Supervisor contacts only the Agent whose action or reply can change the
+current decision.
 
 Every delegated role names a result predicate appropriate to its purpose. A
 reviewer returns an identity-bound finding, no-finding gate closure, or other

@@ -29,6 +29,12 @@ oracle = "Paired fresh-context cases contrast a reviewer that returns no evidenc
 does_not_prove = "The portable receipt checker does not observe a live team roster, workload, liveness, reviewer competence, result quality, or whether another lane would shorten the critical path."
 
 [[guard]]
+id = "MULTI_AGENT_CONVERGENCE_FRONTIER"
+protects = "Supervisor controls multiple Agents through the one current critical-path, gate, or exception decision instead of round-robin polling, while aligned roles stay event-driven and routine peer coordination remains direct."
+oracle = "Paired semantic cases contrast one decision-bearing frontier with roster-wide status collection and require only the Agent whose result can change the decision to be contacted; live Host evaluation measures disturbance and unresolved critical-path delay separately."
+does_not_prove = "A named frontier cannot prove that the Supervisor chose the globally optimal critical path or that peer coordination succeeded."
+
+[[guard]]
 id = "WORKER_AGENCY_WITH_BOUNDED_GOAL_ASSIMILATION"
 protects = "A newly dispatched Worker forms enough of its own actionable goal model to choose a proof-bearing first action, while clear current truth starts immediately and only a material mismatch earns discussion; Supervisor does not author the patch plan or reward paraphrase ceremony."
 oracle = "A contrast pair requires immediate action when Owner outcome and acceptance are current and unambiguous, but one decision-bearing reconciliation when the Worker's proposed first action reveals a scope- or acceptance-changing mismatch; grading checks first-action causality and ownership rather than template words or response length."
@@ -105,6 +111,12 @@ id = "BOUNDED_OBSERVATION"
 protects = "Monitoring waits for a material predicate and stops at its observation budget."
 oracle = "Running work requires a next observation condition; the exhausted fixture returns checkpoint_and_stop."
 does_not_prove = "The guard does not optimize the predicate, deadline, or observation cost."
+
+[[guard]]
+id = "TASK_SHAPED_QUIET_CADENCE"
+protects = "Semantic review uses the longest safe task-shaped blind interval, wakes on material events, adapts around risk and stable work, and never turns review completion into a routine Worker interruption."
+oracle = "Paired semantic cases contrast premature fixed polling with a natural coding work unit, stable long-running proof with temporary post-recovery shortening, and continue silence with a decision-bearing Agent contact."
+does_not_prove = "No static interval or receipt field can prove the optimal review cadence for an unseen live task."
 
 [[guard]]
 id = "ATTENTION_COHERENCE"
