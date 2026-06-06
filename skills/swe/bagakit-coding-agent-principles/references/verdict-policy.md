@@ -17,9 +17,45 @@ action.
 - `blocked`
   - ask the user or gather missing evidence before implementation
 
+## Finding Priority And Delivery
+
+The coding layer consumes project-owner or reviewer-assigned priority to decide
+whether the current candidate may proceed. Use the project severity policy when
+one exists. When the Coding Layer Reviewer owns classification and no project
+policy resolves it, classify by consequence, affected reach, urgency,
+recoverability, and confidence:
+
+- `P0` or `P1`
+  - the finding invalidates the protected goal, owner contract, required proof,
+    or an owner-defined critical boundary
+  - block the current candidate and fix immediately before it proceeds, commits,
+    or claims completion
+- `P2`
+  - important but bounded defect or maintainability risk that does not invalidate
+    the protected goal, owner contract, or required proof
+  - the closed primary intent may commit; emit an independent-repair handoff for
+    the owning supervision or planning workflow to schedule in parallel when
+    appropriate
+- `P3`
+  - low-impact local quality, cleanup, or optimization issue whose residual risk
+    is acceptable
+  - the current candidate may commit; disclose it when decision-relevant, and
+    propose combining it with future related owner work instead of forcing a
+    standalone task
+
+Priority measures consequence and urgency, not repair effort. Do not downgrade
+a finding because the fix is expensive, the deadline is near, or a compensating
+workaround hides the symptom. A credible unresolved risk that could be `P0` or
+`P1` remains blocking until bounded evidence lowers or confirms it.
+
+This policy owns coding-candidate admission and handoff only. It does not
+redefine host alert or incident severities, assign Agents, schedule parallel
+work, or mutate project-planning truth.
+
 ## Blocking Findings
 
-Treat these as blocking:
+Treat these as at least `P1` for the current candidate unless direct evidence
+establishes a genuinely bounded case:
 
 - level mismatch
 - unconfirmed protected goal that changes implementation direction
@@ -43,7 +79,7 @@ Treat these as blocking:
 
 ## Advisory Findings
 
-Treat these as advisory unless they affect the protected goal or proof:
+Treat these as `P2` or `P3` unless they affect the protected goal or proof:
 
 - local readability improvement
 - minor DRY opportunity
@@ -64,6 +100,13 @@ Treat these as advisory unless they affect the protected goal or proof:
   more code.
 - For `reroute`, stop coding and switch to the named branch.
 - For `blocked`, ask or gather evidence. Do not invent certainty.
+- For `P0` or `P1`, do not return `pass` or `pass_with_advisory`; correct the
+  issue immediately or block/reroute the current candidate.
+- For `P2`, allow the closed primary intent to commit only when the finding does
+  not weaken required behavior or proof, then hand repair to the owning
+  supervision or planning workflow.
+- For `P3`, keep only decision-relevant residual risk and combine it with future
+  related owner work when the planning owner accepts that route.
 - If the issue is compensatory complexity runaway, prefer `needs_correction`
   or `reroute` over another small coding patch unless the patch reduces the
   compensating stack or repairs the owning contract.
@@ -76,9 +119,9 @@ Treat these as advisory unless they affect the protected goal or proof:
 
 ```text
 Review verdict:
-Blocking:
-Advisory:
-Correction made:
-Residual risk:
+Findings: # each tagged P0-P3 with evidence
+Immediate correction:
+Parallel-repair handoff:
+Deferred or residual:
 Next action:
 ```

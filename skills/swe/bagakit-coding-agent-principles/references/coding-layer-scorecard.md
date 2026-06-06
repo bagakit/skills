@@ -95,13 +95,22 @@ not score them again or create work merely to fill every lens.
   required owner contract or public-behavior risk
 - engineering risk affects safety, data, production, or accessibility
 
+## Finding Priority
+
+After scoring, label every concrete finding `P0`, `P1`, `P2`, or `P3` using the
+project severity policy and `verdict-policy.md`. Score totals do not determine
+priority mechanically, and the main coding agent must not downgrade reviewer
+priority to admit the candidate.
+
 ## Output
 
 ```text
 scores:
-blocking_findings:
-advisory_findings:
+blocking_findings: # each tagged P0 or P1
+advisory_findings: # each tagged P2 or P3
 required_corrections:
+parallel_repair_handoffs:
+deferred_or_residual:
 optimization_suggestions:
 residual_risk:
 ```
