@@ -27,6 +27,8 @@ This skill owns the technical article delivery envelope:
 - `review_report.md`
 - technical profile budgets and hard gates
 - engineering evidence, baseline regression, and source-parentage reporting
+- controlled-technical activation for execution-bearing procedures and
+  appendices, without applying procedure style to article rationale
 
 Standalone-first rule: if `bagakit-writing-core` is unavailable, continue with
 the bundled local references and checker, then record that the core composition
@@ -170,6 +172,14 @@ Follow `docs/specs/output-discipline.md` for writing deliverables.
 - Execution appendix defines how to run, verify, and recover.
 - If process fields are needed for traceability, write them only in appendix/report.
 
+7.5. Review execution-bearing prose for procedural precision.
+- Read `references/procedural-precision.md` for procedures, runbooks,
+  installation steps, recovery actions, or a `controlled_technical` Intake
+  route.
+- Record text class, terminology source, actor/action mapping, sequence, and
+  accepted deviations in `execution_appendix.md` and `review_report.md`.
+- Keep article narrative and design rationale outside this stricter mode.
+
 8. Run program hard gate checks.
 - Run `python3 scripts/check-article.py --input <article.md> --strict --profile <profile> --report <review_report.md>`.
 - Fix all `errors` before publishing.
@@ -253,6 +263,7 @@ python3 scripts/check-article.py --input <article.md> --strict --profile <...> -
 
 - `references/start-here.md`
 - `references/quality-gates.md`
+- `references/procedural-precision.md`
 - `references/writing-techniques.md`
 - `references/human-writing-patterns.md`
 - `references/markdown-formatting.md`

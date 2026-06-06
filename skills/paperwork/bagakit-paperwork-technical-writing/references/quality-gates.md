@@ -41,6 +41,9 @@ Warning gates do not auto-block release, but cannot be silently ignored.
 | brainstorm sampling metadata weak | missing one or more of sampling object / sample size / window / review role |补齐采样协议元信息，避免“可执行但不可运营” |
 | mechanical short-sequence style | repeated short sequence sentences (for example continuous `先X。再Y。`) | merge/expand with causal evidence sentence to avoid robotic cadence |
 | fragment sentence dense | too many fragment-like short lines in body | clean residual fragments and restore coherent sentence flow |
+| procedure action overload | one numbered step carries multiple primary actions or obscures their order | split or regroup the step while preserving preconditions and expected signals |
+| procedure actor or referent ambiguity | a pronoun, passive form, or omitted actor makes responsibility uncertain | name the actor or repeat the precise referent; record a justified deviation when the actor is irrelevant |
+| procedure terminology drift | one concept cycles through undeclared synonyms or a technical name is paraphrased | restore one stable term and preserve exact domain or API identity |
 
 Weighted score formula note:
 

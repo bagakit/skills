@@ -4,8 +4,9 @@
 non-gating eval slice for
 `skills/paperwork/bagakit-paperwork-technical-writing/`.
 
-It checks that source-parentage and counterevidence review surfaces are visible
-through the skill CLI and compatible with the owned article validator.
+It checks that source-parentage, counterevidence, and controlled-technical
+procedure surfaces are visible through the skill CLI and compatible with the
+owned article validator.
 
 Primary entrypoint:
 

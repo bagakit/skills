@@ -22,6 +22,18 @@
 | --- | --- | --- |
 |  |  |  |
 
+## Procedural precision
+
+- Active route: `ordinary` | `core_clarity` | `controlled_technical`
+- Text class: `procedure` | `description` | `rationale` | `mixed`
+- Reader language proficiency: `fluent` | `working` | `limited` | `mixed` | `unknown`
+- Misunderstanding consequence: `low` | `moderate` | `high` | `safety_critical`
+- Terminology source: glossary, specification, code/API identity, or none
+
+| Step or block | Primary action | Actor | Preconditions | Expected signal | Deviation |
+| --- | --- | --- | --- | --- | --- |
+|  |  |  |  |  |  |
+
 ## Verification
 
 - Command:

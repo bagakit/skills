@@ -47,6 +47,15 @@
 - Human judgment:
 - Follow-up required: `yes` | `no`
 
+## Procedural Precision Review
+
+- Applied: `yes` | `no`
+- Route and text class:
+- Terminology stable: `yes` | `no` | `not-applicable`
+- Actor, referent, and action order reviewed: `yes` | `no` | `not-applicable`
+- Accepted deviations and reason:
+- Remaining ambiguity:
+
 ## Source Parentage And Counterevidence
 
 - source_parentage:

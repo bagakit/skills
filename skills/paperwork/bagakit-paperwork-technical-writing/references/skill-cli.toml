@@ -5,7 +5,7 @@ entrypoint = "scripts/bagakit-paperwork-technical-writing-cli.sh"
 runner = "shell"
 usage = "bash scripts/bagakit-paperwork-technical-writing-cli.sh <command> [args...]"
 summary = "Inspect, validate, and check technical-writing article artifacts."
-surface_refs = []
+surface_refs = ["references/review-packet-template.md", "references/procedural-precision.md"]
 
 [[command]]
 name = "describe"
@@ -30,3 +30,7 @@ summary = "Run bagakit-writing-core CLI when available."
 [[command]]
 name = "print-review-packet-template"
 summary = "Print the technical-writing review packet template."
+
+[[command]]
+name = "print-procedural-precision"
+summary = "Print the execution-bearing procedural precision guide."

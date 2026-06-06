@@ -50,9 +50,11 @@ def main() -> int:
     check_script = SKILL_DIR / "scripts/check-article.py"
     review_template = SKILL_DIR / "references/review-packet-template.md"
     report_template = SKILL_DIR / "references/tpl/review-report-template.md"
+    execution_template = SKILL_DIR / "references/tpl/execution-appendix-template.md"
+    procedural_reference = SKILL_DIR / "references/procedural-precision.md"
     spec = Path("docs/specs/review-packet-contract.md")
 
-    for path in [cli, readme, check_script, review_template, report_template, spec]:
+    for path in [cli, readme, check_script, review_template, report_template, execution_template, procedural_reference, spec]:
         require((root / path).is_file(), f"missing required file: {path}", failures)
 
     if failures:
@@ -86,6 +88,16 @@ def main() -> int:
     ]:
         require(token in template_proc.stdout, f"review packet template missing token: {token}", failures)
 
+    procedural_proc = run(["bash", str(cli), "print-procedural-precision"], root)
+    require(procedural_proc.returncode == 0, "print-procedural-precision failed", failures)
+    for token in [
+        "controlled_technical",
+        "instruction-primary-action",
+        "reader-burden-bounds-complexity",
+        "does not ship the controlled",
+    ]:
+        require(token in procedural_proc.stdout, f"procedural precision guide missing token: {token}", failures)
+
     report_text = (root / report_template).read_text(encoding="utf-8")
     for token in [
         "Source Parentage And Counterevidence",
@@ -94,6 +106,10 @@ def main() -> int:
         "Review packet path",
     ]:
         require(token in report_text, f"review report template missing token: {token}", failures)
+
+    execution_text = (root / execution_template).read_text(encoding="utf-8")
+    for token in ["Procedural precision", "Primary action", "Preconditions", "Expected signal", "Deviation"]:
+        require(token in execution_text, f"execution appendix template missing token: {token}", failures)
 
     with tempfile.TemporaryDirectory(prefix="paperwork-gate-") as tmp_dir:
         valid_report = Path(tmp_dir) / "valid-report.md"

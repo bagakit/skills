@@ -105,6 +105,43 @@ export const SUITE: EvalSuiteDefinition = {
         }
       },
     },
+    {
+      id: "execution-appendix-exposes-procedural-precision",
+      title: "Execution Appendix Exposes Procedural Precision",
+      summary: "The public CLI and appendix template should activate stronger clarity for procedures without claiming universal STE compliance.",
+      focus: ["procedure", "terminology", "actor-action", "scope-boundary"],
+      run: (context): EvalCaseResult => {
+        const cliRel = "skills/paperwork/bagakit-paperwork-technical-writing/scripts/bagakit-paperwork-technical-writing-cli.sh";
+        const appendixRel = "skills/paperwork/bagakit-paperwork-technical-writing/references/tpl/execution-appendix-template.md";
+        const guideRel = "skills/paperwork/bagakit-paperwork-technical-writing/references/procedural-precision.md";
+        const cli = path.join(context.repoRoot, cliRel);
+        const guide = runCommand("bash", [cli, "print-procedural-precision"], { cwd: context.repoRoot });
+        expectOk(guide, "print-procedural-precision");
+        const appendix = readRepoFile(context.repoRoot, appendixRel);
+        for (const token of ["controlled_technical", "instruction-primary-action", "reader-burden-bounds-complexity"]) {
+          assert.ok(guide.stdout.includes(token), `precision guide should expose ${token}`);
+        }
+        for (const token of ["Primary action", "Actor", "Preconditions", "Expected signal", "Deviation"]) {
+          assert.ok(appendix.includes(token), `execution appendix should expose ${token}`);
+        }
+        assert.ok(guide.stdout.includes("does not ship the controlled"));
+        assert.ok(guide.stdout.includes("Do not apply this mode to article narrative"));
+
+        return {
+          assertions: [
+            "procedural precision is reachable through the public technical-writing CLI",
+            "execution appendix records actor, action, order, signal, and deviations",
+            "strict procedure mode excludes article narrative and makes no STE compliance claim",
+          ],
+          commands: [`bash ${cliRel} print-procedural-precision`],
+          artifacts: [
+            { label: "execution-appendix-template", path: appendixRel },
+            { label: "procedural-precision-guide", path: guideRel },
+          ],
+          outputs: { route: "controlled_technical", enforcement: "review" },
+        };
+      },
+    },
   ],
 };
 

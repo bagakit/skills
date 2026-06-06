@@ -48,6 +48,8 @@ Commands:
   core              Run bagakit-writing-core CLI when available.
   print-review-packet-template
                     Print the technical-writing review packet template.
+  print-procedural-precision
+                    Print the execution-bearing procedural precision guide.
 EOF
 }
 
@@ -62,6 +64,7 @@ case "${1:-}" in
     test -f "$skill_root/SKILL.md"
     test -f "$skill_root/references/start-here.md"
     test -f "$skill_root/references/quality-gates.md"
+    test -f "$skill_root/references/procedural-precision.md"
     test -f "$skill_root/references/review-packet-template.md"
     test -f "$skill_root/scripts/check-article.py"
     ;;
@@ -79,6 +82,9 @@ case "${1:-}" in
     ;;
   print-review-packet-template)
     cat "$skill_root/references/review-packet-template.md"
+    ;;
+  print-procedural-precision)
+    cat "$skill_root/references/procedural-precision.md"
     ;;
   ""|-h|--help|help)
     usage
