@@ -262,6 +262,28 @@ def main() -> int:
     args = parser.parse_args()
 
     root = Path(args.root).resolve()
+
+    qihan_cli = root / "skills/paperwork/qihan-writing/scripts/qihan-writing-cli.sh"
+    north_star = subprocess.run(
+        ["bash", str(qihan_cli), "print-style-north-star"],
+        cwd=root,
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    if north_star.returncode != 0:
+        raise AssertionError(f"qihan style north star command failed: {north_star.stderr.strip()}")
+    for token in [
+        "terminology-stability-one-concept",
+        "referent-actor-action-visible",
+        "instruction-primary-action",
+        "reader-burden-bounds-complexity",
+        "继承的是关系正确，不是受控语言口吻",
+        "不宣称 STE compliance",
+    ]:
+        if token not in north_star.stdout:
+            raise AssertionError(f"qihan style north star missed boundary token: {token}")
     skill_dir = root / "skills/paperwork/qihan-writing"
 
     qihan_cli = skill_dir / "scripts/qihan-writing-cli.sh"

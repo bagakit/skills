@@ -49,6 +49,8 @@ Commands:
   core              Run bagakit-writing-core CLI when available.
   print-review-packet-template
                     Print the qihan-writing review packet template.
+  print-style-north-star
+                    Print the qihan style and controlled-clarity boundary.
 EOF
 }
 
@@ -63,6 +65,7 @@ case "${1:-}" in
     test -f "$skill_root/SKILL.md"
     test -f "$skill_root/references/workflow/OPERATING_SURFACE_MATRIX.md"
     test -f "$skill_root/references/writing/VOICE.md"
+    test -f "$skill_root/references/writing/STYLE_NORTH_STAR.md"
     test -f "$skill_root/references/review/REVIEW_PACKET_TEMPLATE.md"
     test -f "$skill_root/scripts/qihan_write_lint.py"
     test -f "$skill_root/scripts/qihan_route_tools.py"
@@ -85,6 +88,9 @@ case "${1:-}" in
     ;;
   print-review-packet-template)
     cat "$skill_root/references/review/REVIEW_PACKET_TEMPLATE.md"
+    ;;
+  print-style-north-star)
+    cat "$skill_root/references/writing/STYLE_NORTH_STAR.md"
     ;;
   ""|-h|--help|help)
     usage

@@ -171,12 +171,35 @@ qihan 的写作不是更狠，而是更清醒：句子要有密度，判断要�
 - 不要为了警醒去写“该做 vs 不该做”“老路 vs 新路”“大多数人”这类
   借冲突感制造张力的句子。
 
+## 受控清晰度边界
+
+qihan 继承 `bagakit-writing-core` 的四条通用精度规则：
+
+- `terminology-stability-one-concept`
+- `referent-actor-action-visible`
+- `instruction-primary-action`
+- `reader-burden-bounds-complexity`
+
+继承的是关系正确，不是受控语言口吻：
+
+- 同一概念默认保持同一术语；为了节奏轮换近义词，不能让概念边界变模糊。
+- “前者 / 后者 / 它 / 该对象”需要读者回看时，宁可重复对象名；指代清楚时不必机械展开。
+- 被动语态隐藏责任时写出主体；主体无关、未知且已标明，或被动更符合焦点时可以保留。
+- 一动作一指令只约束步骤、runbook 和执行附录，不约束文章叙事、架构理由和权衡分析。
+- 长句的判断标准是关系是否清楚、读者是否喘得上气、限定词是否完整，不是统一字数。
+- 隐喻、留白和有意复沓可以保留，但不能改变术语、角色、顺序、因果或责任。
+
+当 `clarity_routing.precision_route` 是 `controlled_technical`，把严格程序
+检查交给 `bagakit-paperwork-technical-writing`。qihan overlay 不复制 STE
+词典，不宣称 STE compliance，也不把个人风格变成维护手册语言。
+
 ## Review Checklist
 
-长文终稿 review 时，用这五个问题快速扫一遍：
+长文终稿 review 时，用这六个问题快速扫一遍：
 
 1. Density：有没有短而薄的句子，或者长而空的句子？
 2. Mechanism：核心判断是否说明了原因、边界、后果或反例？
 3. Mapping：如果出现隐喻，它是否真的解释机制？如果没有隐喻，是否是因为 literal prose 更清楚？
 4. Agency：内容达到中性及以上时，是否给了可信的行动出口？有没有口号或宣传感？
 5. Alertness：警醒是否来自具体风险和早期信号，而不是恐吓、拉踩或二元对立？
+6. Precision：术语、指代、主体、顺序和限定词是否保持稳定？是否为了简短把叙事误改成步骤？

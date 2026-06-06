@@ -1,6 +1,5 @@
 ---
 name: qihan-writing
-version: 0.9.2
 description: |
   写作与改写技能（qihan 风格）：用于把技术、研究、计划类内容写得“精炼、有深度、有可承重隐喻、给人希望、让人警醒”，同时保持客观、严谨、低 AI 味，并适配飞书云文档排版。
 
@@ -27,6 +26,8 @@ Use `bagakit-writing-core` for generic writing mechanics:
 - prose-mechanics lint
 - evidence architecture and review packet shape
 - rewrite feedback abstraction
+- terminology stability, referent and actor clarity, instruction atomicity,
+  and reader-burden review
 
 This skill owns the qihan overlay:
 
@@ -143,7 +144,7 @@ rewrite examples remain the local overlay.
 
 ### B. 起草与改写
 - **Step 2：套用 qihan 风格约束**
-  按 `references/writing/VOICE.md` 和 `references/writing/STYLE_NORTH_STAR.md` 执行，默认要求句子短、结论前置、可证据化，并持续追问“这句话是否有 density、mechanism、mapping、agency 或 alertness 的真实增量”。
+  按 `references/writing/VOICE.md` 和 `references/writing/STYLE_NORTH_STAR.md` 执行，默认要求句子短、结论前置、可证据化，并持续追问“这句话是否有 density、mechanism、mapping、agency 或 alertness 的真实增量”。涉及术语、指代、动作主体、程序步骤或高误读后果时，同时应用 north star 的“受控清晰度边界”：继承 Core 精度，不继承说明书口吻。
 - **Step 2.5：吸收用户改写并生成可复用规则**
   按 `references/workflow/REWRITE_FEEDBACK_LOOP.md` 执行；先记录原句与改写句，再做四维分析、抽规则、回扫全文。需要找成熟句型时，先查 `references/knowledge/REWRITE_CASEBOOK.md`。
 - **Step 3：去 AI 味**

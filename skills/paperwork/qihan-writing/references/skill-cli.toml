@@ -5,7 +5,7 @@ entrypoint = "scripts/qihan-writing-cli.sh"
 runner = "shell"
 usage = "bash scripts/qihan-writing-cli.sh <command> [args...]"
 summary = "Inspect, validate, route, and lint qihan-writing artifacts."
-surface_refs = []
+surface_refs = ["references/writing/STYLE_NORTH_STAR.md"]
 
 [[command]]
 name = "describe"
@@ -34,3 +34,7 @@ summary = "Run bagakit-writing-core CLI when available."
 [[command]]
 name = "print-review-packet-template"
 summary = "Print the qihan-writing review packet template."
+
+[[command]]
+name = "print-style-north-star"
+summary = "Print the qihan style and controlled-clarity boundary."
