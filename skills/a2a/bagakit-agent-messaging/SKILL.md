@@ -21,6 +21,9 @@ owns why a message is sent and what control decision it carries. The Host owns
 sender authentication, authority, target binding, delivery, deduplication,
 consumption, and effect.
 
+For a host-local identity registry and mail pipe that transports this envelope
+unchanged, compose with `bagakit-agent-post`; this skill remains transport-free.
+
 This is Bagakit's local L1 Agent-messaging protocol. It does not claim
 compatibility with an external network A2A standard.
 

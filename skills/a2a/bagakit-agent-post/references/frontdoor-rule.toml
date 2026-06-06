@@ -1,0 +1,6 @@
+version = 1
+skill = "bagakit-agent-post"
+trigger = "A host needs fixed user-rooted Agent identities and a local attributable pipe for validated bagakit-msg envelopes."
+do = "Register or derive an active identity, then use the token-gated send/receive commands and preserve delivery versus consumption receipts."
+see = "skills/a2a/bagakit-agent-post/SKILL.md"
+fallback = "Use the Host's native authenticated messaging channel when it already owns identity, transport, delivery, and consumption for the exchange."

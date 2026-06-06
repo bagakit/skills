@@ -1,0 +1,41 @@
+version = 2
+
+[[suite]]
+id = "bagakit-agent-post-layout"
+owner = "skills/a2a/bagakit-agent-post"
+description = "Require the installable local A2A identity and mail-pipe payload, contract, CLI declaration, and validation registration."
+default = true
+proof_mode = "structural"
+protects = ["agent-post installable payload boundary and canonical local A2A contract"]
+oracle = ["filesystem and narrow content checks require the public skill files, the eight-command CLI declaration, the contract, and no README or payload manifest inside the installable skill"]
+exercised_surface = ["skills/a2a/bagakit-agent-post", "docs/specs/agent-post-contract.md", "gate_validation/skills/a2a/bagakit-agent-post"]
+proves = ["The agent-post skill and its owner validation surfaces exist with the declared layout and contract anchors."]
+does_not_prove = ["Layout does not prove identity authorization, transport behavior, receipts, or Agent compliance."]
+validation_class = "structure"
+groups = ["skills", "a2a", "agent-post", "structure"]
+timeout_seconds = 30
+
+[suite.runner]
+kind = "python_script"
+script = "gate_validation/skills/a2a/bagakit-agent-post/check-agent-post.py"
+args = ["--root", "{repo_root}", "--layout-only"]
+
+[[suite]]
+id = "bagakit-agent-post-runtime"
+owner = "skills/a2a/bagakit-agent-post"
+description = "Exercise the public identity registry and local mail pipe in isolated temporary roots."
+default = true
+proof_mode = "runtime"
+protects = ["token-gated identity derivation, ordered send admission, unchanged envelope delivery, per-recipient sequencing, deduplication, consumption receipts, strict cascade revocation, and validator fallback"]
+oracle = ["the public Python CLI is driven end to end and every rejection is checked for nonzero stderr-only failure and unchanged host state"]
+exercised_surface = ["skills/a2a/bagakit-agent-post/scripts/agent_post.py public CLI", ".bagakit/agent-post runtime surface", "bagakit/a2a-identity/v1 and bagakit/a2a-mail/v1 records"]
+proves = ["The CLI implements the declared local identity and mail-pipe behavior for the tested paths."]
+does_not_prove = ["The runtime suite does not prove malice resistance, process isolation, receiver wake-up, message semantic quality, or real-world effect."]
+timeout_seconds = 60
+validation_class = "smoke"
+groups = ["skills", "a2a", "agent-post", "runtime"]
+
+[suite.runner]
+kind = "python_script"
+script = "gate_validation/skills/a2a/bagakit-agent-post/check-agent-post.py"
+args = ["--root", "{repo_root}"]

@@ -1,0 +1,40 @@
+version = 1
+skill = "bagakit-agent-post"
+cli_id = "bagakit-agent-post"
+entrypoint = "scripts/agent_post.py"
+runner = "python"
+usage = "python3 scripts/agent_post.py --root <repo-root> <command> [args...]"
+summary = "Manage user-rooted Agent identities and the local attributable mail pipe."
+surface_refs = [".bagakit/agent-post"]
+
+[[command]]
+name = "register"
+summary = "Register one user-granted root identity and issue its token once."
+
+[[command]]
+name = "derive"
+summary = "Derive one child identity from an active parent token."
+
+[[command]]
+name = "revoke"
+summary = "Revoke one identity and cascade to all descendants."
+
+[[command]]
+name = "send"
+summary = "Validate and deliver one bagakit-msg envelope to a recipient inbox."
+
+[[command]]
+name = "recv"
+summary = "Read unread or all records for one recipient, optionally with Host stamps."
+
+[[command]]
+name = "ack"
+summary = "Acknowledge one recipient inbox record as consumed."
+
+[[command]]
+name = "whoami"
+summary = "Resolve the active identity holding one token."
+
+[[command]]
+name = "list-agents"
+summary = "List registered identities without token material."

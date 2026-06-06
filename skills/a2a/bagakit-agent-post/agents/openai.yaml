@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bagakit Agent Post"
+  short_description: "User-rooted Agent identity and local mail pipe"
+  default_prompt: "Use $bagakit-agent-post to register or derive a fixed Agent identity, send a validated bagakit-msg envelope, inspect an inbox, acknowledge consumption, or revoke a grant chain."
