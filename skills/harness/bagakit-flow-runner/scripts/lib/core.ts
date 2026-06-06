@@ -828,12 +828,14 @@ export function appendCheckpoint(
   nextAction: string,
   cleanState: CleanState,
   itemStatusOverride?: ItemStatus,
+  taskRef?: string,
 ): CheckpointPayload {
   const paths = new FlowRunnerPaths(root);
   ensureRunnerExists(paths);
   const state = loadItemState(paths.itemState(itemId));
   const sourceStatus = state.source_kind === "feature-tracker" ? trackerMirrorSourceStatus(root, state) : undefined;
   const mutation = recordCheckpoint(state, {
+    task_ref: taskRef,
     stage,
     session_status: sessionStatus,
     objective,
@@ -982,6 +984,9 @@ function validateCheckpointEntries(filePath: string, itemId: string, issues: str
       if (String(record.item_id ?? "") !== itemId) {
         issues.push(`checkpoint item_id drift in ${filePath} at line ${index + 1}`);
       }
+      if (record.task_ref !== undefined && typeof record.task_ref !== "string") {
+        issues.push(`checkpoint task_ref must be a string in ${filePath} at line ${index + 1}`);
+      }
     }
     return count;
   } catch (error) {
@@ -1013,6 +1018,9 @@ function validateProgressEntries(filePath: string, itemId: string, issues: strin
       }
       if (String(record.item_id ?? "") !== itemId) {
         issues.push(`progress item_id drift in ${filePath} at line ${index + 1}`);
+      }
+      if (record.task_ref !== undefined && typeof record.task_ref !== "string") {
+        issues.push(`progress task_ref must be a string in ${filePath} at line ${index + 1}`);
       }
     }
     return count;

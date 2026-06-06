@@ -26,6 +26,32 @@ source "$LIB_DIR/feature-tracker-testlib.sh"
 feature_tracker_init_temp_repo "$TMP_DIR"
 
 bash "$SKILL_DIR/scripts/feature-tracker.sh" initialize-tracker --root "$TMP_DIR"
+python3 - "$SKILL_DIR" <<'PY'
+import argparse
+import importlib.util
+import re
+import sys
+from pathlib import Path
+
+skill_dir = Path(sys.argv[1])
+spec = importlib.util.spec_from_file_location(
+    "bagakit_feature_tracker",
+    skill_dir / "scripts" / "feature-tracker.py",
+)
+module = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = module
+spec.loader.exec_module(module)
+parser = module.build_parser()
+subparsers = next(
+    action for action in parser._actions if isinstance(action, argparse._SubParsersAction)
+)
+runtime_commands = set(subparsers.choices)
+inventory = (skill_dir / "references" / "skill-cli.toml").read_text(encoding="utf-8")
+declared_commands = set(
+    re.findall(r'\[\[command\]\]\s+name = "([^"]+)"', inventory)
+)
+assert declared_commands == runtime_commands, (declared_commands, runtime_commands)
+PY
 ISSUER_NAMESPACE_BEFORE="$(python3 - "$TMP_DIR" <<'PY'
 import json
 import sys
@@ -207,6 +233,7 @@ fi
 grep -F "human status output must stay outside tracker state" "$TMP_DIR/feature-status-invalid-path.err" >/dev/null
 python3 - "$TMP_DIR" "$FEATURE_ID" <<'PY'
 from html.parser import HTMLParser
+import re
 import sys
 from pathlib import Path
 
@@ -244,6 +271,15 @@ assert feature_id in overview
 assert "In progress" in overview
 assert "T-001" in overview
 assert "Current plan" in detail
+assert detail.count('<article class="feature-card"') == 2
+assert detail.count('<details class="feature-review" open>') == 1
+assert re.search(
+    rf'<article class="feature-card" id="{re.escape(feature_id)}">.*?'
+    r'<details class="feature-review" open>',
+    detail,
+    re.S,
+)
+assert "Handoff feature" in detail
 assert overview.index("<h2>Proposal</h2>") < overview.index("<h2>In progress</h2>")
 assert '<summary class="feature-summary">' in overview
 assert "Review" in overview
@@ -251,19 +287,19 @@ assert "file://" in detail
 assert "prefers-color-scheme:dark" not in overview
 assert "&lt;literal&gt;" in detail
 assert "<literal>" not in detail
-assert overview.count("<script>") == 1
-assert detail.count("<script>") == 1
+assert overview.count("<script>") == 2
+assert detail.count("<script>") == 2
 assert "Agent 认领" in overview
 assert "复制认领消息" in overview
 parser = ClaimDraftParser()
 parser.feed(detail)
-assert len(parser.messages) == 1
-claim = parser.messages[0]
+assert len(parser.messages) == 2
+claim = next(message for message in parser.messages if "Feature name: Demo feature" in message)
 assert '<bagakit-msg type="agent-set-v1"' in claim
 assert "Feature name: Demo feature" in claim
 assert "Worktree: none" in claim
 assert "Branch: none" in claim
-assert "Progress snapshot: status=in_progress; current_task=T-001; todo=0, in_progress=1, done=0, blocked=0" in claim
+assert "Progress snapshot: status=in_progress; active_tasks=T-001; runnable_tasks=none; todo=0, in_progress=1, done=0, blocked=0" in claim
 assert f".bagakit/feature-tracker/features/{feature_id}/owner-receipt.json" in claim
 assert f".bagakit/feature-tracker/features/{feature_id}/state.json" in claim
 assert f".bagakit/feature-tracker/features/{feature_id}/tasks.json" in claim
@@ -333,6 +369,7 @@ assert tasks_payload["plan_status"] == "reviewed"
 assert tasks_payload["plan_revision"] == 1
 task = tasks_payload["tasks"][0]
 assert task["objective"] == "Ship the demo feature through a reviewed task plan with <literal> input."
+assert task["depends_on"] == []
 for key in ("last_gate_at", "started_at", "finished_at", "updated_at", "last_commit_hash"):
     assert key not in task
 assert issuer_payload["namespace"] == feature_id[5:7]
@@ -364,114 +401,141 @@ test -f "$TMP_DIR/.bagakit/feature-tracker/features/$FEATURE_ID/verification.md"
 
 mkdir -p "$TMP_DIR/.bagakit/feature-tracker/test-bin"
 printf 'exit 0\n' > "$TMP_DIR/.bagakit/feature-tracker/test-bin/ok.sh"
-set_gate_policy() {
-  local project_type="$1"
-  local verification_policy="$2"
-  local commands_field="$3"
-  local commands_json="$4"
-  python3 - "$TMP_DIR" "$project_type" "$verification_policy" "$commands_field" "$commands_json" <<'PY'
-import json
-import sys
-from pathlib import Path
 
-policy_path = Path(sys.argv[1]) / ".bagakit" / "feature-tracker" / "runtime-policy.json"
-policy = json.loads(policy_path.read_text(encoding="utf-8"))
-gate = policy.get("gate")
-if not isinstance(gate, dict):
-    gate = {}
-    policy["gate"] = gate
-gate["project_type"] = sys.argv[2]
-gate["verification_policy"] = sys.argv[3]
-gate[sys.argv[4]] = json.loads(sys.argv[5])
-policy_path.write_text(json.dumps(policy, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-PY
-}
-
-assert_failed_gate() {
-  local expected_records_json="$1"
-  local required_log_text="$2"
-  python3 - "$TMP_DIR" "$FEATURE_ID" "$expected_records_json" "$required_log_text" <<'PY'
+# Task verification owns completion evidence. Runtime policy does not select task commands.
+TASK_GATE_STATE="$TMP_DIR/task-gate-state.py"
+cat >"$TASK_GATE_STATE" <<'PY'
 import json
 import sys
 from pathlib import Path
 
 root = Path(sys.argv[1])
 feature_id = sys.argv[2]
-expected_records = json.loads(sys.argv[3])
-required_log_text = sys.argv[4]
+expected_result = sys.argv[3]
+expected_records = json.loads(sys.argv[4])
+required_log_text = sys.argv[5]
 feature_dir = root / ".bagakit" / "feature-tracker" / "features" / feature_id
 state = json.loads((feature_dir / "state.json").read_text(encoding="utf-8"))
 tasks = json.loads((feature_dir / "tasks.json").read_text(encoding="utf-8"))
 task = next(item for item in tasks["tasks"] if item["id"] == "T-001")
-assert state["gate"]["last_result"] == "fail"
+assert state["gate"]["last_result"] == expected_result
 assert state["gate"]["last_check_commands"] == expected_records
-assert task["gate_result"] == "fail"
+assert task["gate_result"] == expected_result
 assert task["last_gate_commands"] == expected_records
 log = (root / state["gate"]["last_log_path"]).read_text(encoding="utf-8")
-assert "result=fail" in log
+assert f"result={expected_result}" in log
 assert required_log_text in log
 PY
+
+assert_gate() {
+  local expected_result="$1"
+  local expected_records_json="$2"
+  local required_log_text="$3"
+  python3 "$TASK_GATE_STATE" "$TMP_DIR" "$FEATURE_ID" \
+    "$expected_result" "$expected_records_json" "$required_log_text"
 }
 
-set_gate_policy ui never ui_commands '[]'
-if bash "$SKILL_DIR/scripts/feature-tracker.sh" run-task-gate \
-  --root "$TMP_DIR" --feature "$FEATURE_ID" --task T-001 \
-  >"$TMP_DIR/empty-ui-gate.out" 2>"$TMP_DIR/empty-ui-gate.err"; then
-  echo "empty UI task gate unexpectedly passed" >&2
-  exit 1
-fi
-grep -F "no UI gate command available" "$TMP_DIR/empty-ui-gate.err" >/dev/null
-assert_failed_gate '[]' "no UI gate command available"
-if bash "$SKILL_DIR/scripts/feature-tracker.sh" finish-task \
-  --root "$TMP_DIR" --feature "$FEATURE_ID" --task T-001 --result done \
-  >"$TMP_DIR/finish-after-empty-ui.out" 2>"$TMP_DIR/finish-after-empty-ui.err"; then
-  echo "task with empty UI gate unexpectedly finished done" >&2
-  exit 1
-fi
-grep -F "cannot finish task as done without gate pass" \
-  "$TMP_DIR/finish-after-empty-ui.err" >/dev/null
-
-set_gate_policy non_ui never non_ui_commands '[]'
-if bash "$SKILL_DIR/scripts/feature-tracker.sh" run-task-gate \
-  --root "$TMP_DIR" --feature "$FEATURE_ID" --task T-001 \
-  >"$TMP_DIR/empty-non-ui-gate.out" 2>"$TMP_DIR/empty-non-ui-gate.err"; then
-  echo "empty non-UI task gate unexpectedly passed" >&2
-  exit 1
-fi
-grep -F "no non-ui gate command available" "$TMP_DIR/empty-non-ui-gate.err" >/dev/null
-assert_failed_gate '[]' "no non-ui gate command available"
-
-set_gate_policy ui never ui_commands '["true", "   "]'
-if bash "$SKILL_DIR/scripts/feature-tracker.sh" run-task-gate \
-  --root "$TMP_DIR" --feature "$FEATURE_ID" --task T-001 \
-  >"$TMP_DIR/malformed-ui-gate.out" 2>"$TMP_DIR/malformed-ui-gate.err"; then
-  echo "malformed UI command list unexpectedly passed" >&2
-  exit 1
-fi
-grep -F "no UI gate command available" "$TMP_DIR/malformed-ui-gate.err" >/dev/null
-assert_failed_gate '[]' "no UI gate command available"
-
-PASSING_UI_COMMAND="sh .bagakit/feature-tracker/test-bin/ok.sh"
-PASSING_UI_RECORDS='[{"command":"sh .bagakit/feature-tracker/test-bin/ok.sh","exit_code":0,"status":"pass"}]'
-set_gate_policy ui required ui_commands '["sh .bagakit/feature-tracker/test-bin/ok.sh"]'
+POLICY_PATH="$TMP_DIR/.bagakit/feature-tracker/runtime-policy.json"
+cp "$POLICY_PATH" "$TMP_DIR/runtime-policy.saved.json"
 rm -f "$TMP_DIR/.bagakit/feature-tracker/features/$FEATURE_ID/verification.md"
-if bash "$SKILL_DIR/scripts/feature-tracker.sh" run-task-gate \
-  --root "$TMP_DIR" --feature "$FEATURE_ID" --task T-001 \
-  >"$TMP_DIR/ui-verification-fail.out" 2>"$TMP_DIR/ui-verification-fail.err"; then
-  echo "UI gate unexpectedly ignored missing required verification evidence" >&2
-  exit 1
-fi
-grep -F "missing verification file:" "$TMP_DIR/ui-verification-fail.err" >/dev/null
-assert_failed_gate "$PASSING_UI_RECORDS" "$PASSING_UI_COMMAND => pass (0)"
+
+bash "$SKILL_DIR/scripts/feature-tracker.sh" run-task-gate \
+  --root "$TMP_DIR" --feature "$FEATURE_ID" --task T-001 >/dev/null
+PASSING_TASK_RECORDS='[{"command":"true","exit_code":0,"status":"pass"}]'
+assert_gate pass "$PASSING_TASK_RECORDS" "true => pass (0)"
+
+# A failing Task proof must fail even when the workspace itself has no profile command.
+python3 - "$TMP_DIR" "$FEATURE_ID" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+feature_id = sys.argv[2]
+path = root / ".bagakit" / "feature-tracker" / "features" / feature_id / "tasks.json"
+payload = json.loads(path.read_text(encoding="utf-8"))
+task = next(item for item in payload["tasks"] if item["id"] == "T-001")
+task["verification"][0]["ref"] = "false"
+task["gate_result"] = "pass"
+task["last_gate_commands"] = [{"command": "true", "exit_code": 0, "status": "pass"}]
+path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
 if bash "$SKILL_DIR/scripts/feature-tracker.sh" finish-task \
   --root "$TMP_DIR" --feature "$FEATURE_ID" --task T-001 --result done \
-  >"$TMP_DIR/finish-after-ui-verification-fail.out" \
-  2>"$TMP_DIR/finish-after-ui-verification-fail.err"; then
-  echo "task with failing verification aggregate unexpectedly finished done" >&2
+  >"$TMP_DIR/stale-task-gate.out" 2>"$TMP_DIR/stale-task-gate.err"; then
+  echo "stale Task gate receipt unexpectedly authorized completion" >&2
   exit 1
 fi
-grep -F "cannot finish task as done without gate pass" \
-  "$TMP_DIR/finish-after-ui-verification-fail.err" >/dev/null
+grep -F "gate receipt does not match the current Task verification commands" \
+  "$TMP_DIR/stale-task-gate.err" >/dev/null
+if bash "$SKILL_DIR/scripts/feature-tracker.sh" run-task-gate \
+  --root "$TMP_DIR" --feature "$FEATURE_ID" --task T-001 \
+  >"$TMP_DIR/task-proof-fail.out" 2>"$TMP_DIR/task-proof-fail.err"; then
+  echo "failing Task verification unexpectedly passed" >&2
+  exit 1
+fi
+FAILING_TASK_RECORDS='[{"command":"false","exit_code":1,"status":"fail"}]'
+assert_gate fail "$FAILING_TASK_RECORDS" "task verification command failed: false"
+grep -F "task verification command failed: false" "$TMP_DIR/task-proof-fail.err" >/dev/null
+
+# A reviewed Task with no executable command cannot be completed by a generic profile.
+python3 - "$TMP_DIR" "$FEATURE_ID" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+feature_id = sys.argv[2]
+path = root / ".bagakit" / "feature-tracker" / "features" / feature_id / "tasks.json"
+payload = json.loads(path.read_text(encoding="utf-8"))
+task = next(item for item in payload["tasks"] if item["id"] == "T-001")
+task["verification"] = [{
+    "kind": "artifact",
+    "ref": "tasks.json",
+    "proves": "The canonical task state is available for inspection.",
+}]
+path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+if bash "$SKILL_DIR/scripts/feature-tracker.sh" run-task-gate \
+  --root "$TMP_DIR" --feature "$FEATURE_ID" --task T-001 \
+  >"$TMP_DIR/no-task-command.out" 2>"$TMP_DIR/no-task-command.err"; then
+  echo "Task without command verification unexpectedly passed" >&2
+  exit 1
+fi
+grep -F "reviewed Task gate requires at least one verification mapping with kind=command" \
+  "$TMP_DIR/no-task-command.err" >/dev/null
+assert_gate fail '[]' "reviewed Task gate requires at least one verification mapping with kind=command"
+
+# Restore the executable Task proof and exercise optional Feature-level verification evidence.
+python3 - "$TMP_DIR" "$FEATURE_ID" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+feature_id = sys.argv[2]
+path = root / ".bagakit" / "feature-tracker" / "features" / feature_id / "tasks.json"
+payload = json.loads(path.read_text(encoding="utf-8"))
+task = next(item for item in payload["tasks"] if item["id"] == "T-001")
+task["verification"] = [{
+    "kind": "command",
+    "ref": "true",
+    "proves": "The public lifecycle behavior under test passes.",
+}]
+path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+policy_path = root / ".bagakit" / "feature-tracker" / "runtime-policy.json"
+policy = json.loads(policy_path.read_text(encoding="utf-8"))
+policy.setdefault("gate", {})["verification_policy"] = "required"
+policy_path.write_text(json.dumps(policy, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+if bash "$SKILL_DIR/scripts/feature-tracker.sh" run-task-gate \
+  --root "$TMP_DIR" --feature "$FEATURE_ID" --task T-001 \
+  >"$TMP_DIR/missing-feature-verification.out" 2>"$TMP_DIR/missing-feature-verification.err"; then
+  echo "required Feature verification unexpectedly passed" >&2
+  exit 1
+fi
+grep -F "missing verification file:" "$TMP_DIR/missing-feature-verification.err" >/dev/null
+assert_gate fail "$PASSING_TASK_RECORDS" "missing verification file:"
 
 cat > "$TMP_DIR/.bagakit/feature-tracker/features/$FEATURE_ID/verification.md" <<'EOF'
 # Verification Evidence
@@ -494,13 +558,13 @@ if bash "$SKILL_DIR/scripts/feature-tracker.sh" run-task-gate \
   exit 1
 fi
 grep -F "blank verification evidence field" "$TMP_DIR/blank-verification.err" >/dev/null
-assert_failed_gate "$PASSING_UI_RECORDS" "blank verification evidence field"
+assert_gate fail "$PASSING_TASK_RECORDS" "blank verification evidence field"
 
 cat > "$TMP_DIR/.bagakit/feature-tracker/features/$FEATURE_ID/verification.md" <<'EOF'
 # Verification Evidence
 
 ## Automated Checks
-- Command: sh .bagakit/feature-tracker/test-bin/ok.sh
+- Command: true
 - Result: [TBD]
 
 ## Manual Checks
@@ -512,22 +576,19 @@ cat > "$TMP_DIR/.bagakit/feature-tracker/features/$FEATURE_ID/verification.md" <
 EOF
 if bash "$SKILL_DIR/scripts/feature-tracker.sh" run-task-gate \
   --root "$TMP_DIR" --feature "$FEATURE_ID" --task T-001 \
-  >"$TMP_DIR/placeholder-verification.out" \
-  2>"$TMP_DIR/placeholder-verification.err"; then
+  >"$TMP_DIR/placeholder-verification.out" 2>"$TMP_DIR/placeholder-verification.err"; then
   echo "placeholder verification evidence unexpectedly passed" >&2
   exit 1
 fi
-grep -F "requires a substantive Result or Outcome" \
-  "$TMP_DIR/placeholder-verification.err" >/dev/null
-grep -F "requires an explicit residual-risk disposition" \
-  "$TMP_DIR/placeholder-verification.err" >/dev/null
-assert_failed_gate "$PASSING_UI_RECORDS" "requires a substantive Result or Outcome"
+grep -F "requires a substantive Result or Outcome" "$TMP_DIR/placeholder-verification.err" >/dev/null
+grep -F "requires an explicit residual-risk disposition" "$TMP_DIR/placeholder-verification.err" >/dev/null
+assert_gate fail "$PASSING_TASK_RECORDS" "requires a substantive Result or Outcome"
 
 cat > "$TMP_DIR/.bagakit/feature-tracker/features/$FEATURE_ID/verification.md" <<'EOF'
 # Verification Evidence
 
 ## Automated Checks
-- Command: sh .bagakit/feature-tracker/test-bin/ok.sh
+- Command: true
 - Result: Passed with exit code 0.
 
 ## Manual Checks
@@ -539,109 +600,99 @@ cat > "$TMP_DIR/.bagakit/feature-tracker/features/$FEATURE_ID/verification.md" <
 EOF
 bash "$SKILL_DIR/scripts/feature-tracker.sh" run-task-gate \
   --root "$TMP_DIR" --feature "$FEATURE_ID" --task T-001 >/dev/null
+assert_gate pass "$PASSING_TASK_RECORDS" "true => pass (0)"
 
-set_gate_policy non_ui never non_ui_commands '"true"'
-if bash "$SKILL_DIR/scripts/feature-tracker.sh" run-task-gate \
-  --root "$TMP_DIR" --feature "$FEATURE_ID" --task T-001 \
-  >"$TMP_DIR/malformed-non-ui-gate.out" 2>"$TMP_DIR/malformed-non-ui-gate.err"; then
-  echo "malformed non-UI command configuration unexpectedly passed" >&2
-  exit 1
-fi
-grep -F "gate.non_ui_commands must be a list of non-empty commands" \
-  "$TMP_DIR/malformed-non-ui-gate.err" >/dev/null
-assert_failed_gate '[]' "gate.non_ui_commands must be a list"
-
-set_gate_policy non_ui never non_ui_commands '["sh .bagakit/feature-tracker/test-bin/ok.sh"]'
-bash "$SKILL_DIR/scripts/feature-tracker.sh" run-task-gate --root "$TMP_DIR" --feature "$FEATURE_ID" --task T-001 >/dev/null
-
-python3 - "$TMP_DIR" <<'PY'
+# Old profile command fields are rejected instead of silently becoming a second gate.
+python3 - "$POLICY_PATH" <<'PY'
 import json
 import sys
 from pathlib import Path
 
-policy_path = Path(sys.argv[1]) / ".bagakit" / "feature-tracker" / "runtime-policy.json"
-policy = json.loads(policy_path.read_text(encoding="utf-8"))
-policy["gate"] = []
-policy_path.write_text(json.dumps(policy, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+path = Path(sys.argv[1])
+policy = json.loads(path.read_text(encoding="utf-8"))
+policy.setdefault("gate", {})["non_ui_commands"] = ["true"]
+path.write_text(json.dumps(policy, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 PY
 if bash "$SKILL_DIR/scripts/feature-tracker.sh" run-task-gate \
   --root "$TMP_DIR" --feature "$FEATURE_ID" --task T-001 \
-  >"$TMP_DIR/malformed-gate-object.out" 2>"$TMP_DIR/malformed-gate-object.err"; then
-  echo "malformed top-level gate unexpectedly preserved pass" >&2
+  >"$TMP_DIR/retired-profile.out" 2>"$TMP_DIR/retired-profile.err"; then
+  echo "retired profile command unexpectedly passed" >&2
   exit 1
 fi
-grep -F "runtime policy gate must be an object" "$TMP_DIR/malformed-gate-object.err" >/dev/null
-assert_failed_gate '[]' "runtime policy gate must be an object"
-if bash "$SKILL_DIR/scripts/feature-tracker.sh" finish-task \
-  --root "$TMP_DIR" --feature "$FEATURE_ID" --task T-001 --result done \
-  >"$TMP_DIR/finish-after-malformed-gate.out" 2>"$TMP_DIR/finish-after-malformed-gate.err"; then
-  echo "task with malformed gate policy unexpectedly finished done" >&2
-  exit 1
-fi
-grep -F "cannot finish task as done without gate pass" \
-  "$TMP_DIR/finish-after-malformed-gate.err" >/dev/null
+grep -F "gate.non_ui_commands are retired" "$TMP_DIR/retired-profile.err" >/dev/null
+assert_gate fail '[]' "gate.non_ui_commands are retired"
+cp "$TMP_DIR/runtime-policy.saved.json" "$POLICY_PATH"
 
-cp "$TMP_DIR/.bagakit/feature-tracker/runtime-policy.json" "$TMP_DIR/runtime-policy.saved.json"
-printf '{\n' > "$TMP_DIR/.bagakit/feature-tracker/runtime-policy.json"
+# Malformed policy is still fail-closed, but no stale or profile command is recorded.
+cp "$POLICY_PATH" "$TMP_DIR/runtime-policy.saved.json"
+printf '{\n' > "$POLICY_PATH"
 if bash "$SKILL_DIR/scripts/feature-tracker.sh" run-task-gate \
   --root "$TMP_DIR" --feature "$FEATURE_ID" --task T-001 \
   >"$TMP_DIR/invalid-policy-json.out" 2>"$TMP_DIR/invalid-policy-json.err"; then
-  echo "invalid runtime-policy JSON unexpectedly preserved pass" >&2
+  echo "invalid runtime-policy JSON unexpectedly passed" >&2
   exit 1
 fi
 grep -F "invalid runtime policy JSON" "$TMP_DIR/invalid-policy-json.err" >/dev/null
-assert_failed_gate '[]' "invalid runtime policy JSON"
-mv "$TMP_DIR/runtime-policy.saved.json" "$TMP_DIR/.bagakit/feature-tracker/runtime-policy.json"
-
-cp "$TMP_DIR/.bagakit/feature-tracker/runtime-policy.json" "$TMP_DIR/runtime-policy.saved.json"
-printf '\377' > "$TMP_DIR/.bagakit/feature-tracker/runtime-policy.json"
-if bash "$SKILL_DIR/scripts/feature-tracker.sh" run-task-gate \
-  --root "$TMP_DIR" --feature "$FEATURE_ID" --task T-001 \
-  >"$TMP_DIR/invalid-policy-utf8.out" 2>"$TMP_DIR/invalid-policy-utf8.err"; then
-  echo "invalid UTF-8 runtime policy unexpectedly preserved pass" >&2
-  exit 1
-fi
-grep -F "invalid runtime policy JSON" "$TMP_DIR/invalid-policy-utf8.err" >/dev/null
-assert_failed_gate '[]' "invalid runtime policy JSON"
-if bash "$SKILL_DIR/scripts/feature-tracker.sh" finish-task \
-  --root "$TMP_DIR" --feature "$FEATURE_ID" --task T-001 --result done \
-  >"$TMP_DIR/finish-after-invalid-utf8.out" 2>"$TMP_DIR/finish-after-invalid-utf8.err"; then
-  echo "invalid UTF-8 policy left stale passing task evidence" >&2
-  exit 1
-fi
-grep -F "cannot finish task as done without gate pass" \
-  "$TMP_DIR/finish-after-invalid-utf8.err" >/dev/null
-mv "$TMP_DIR/runtime-policy.saved.json" "$TMP_DIR/.bagakit/feature-tracker/runtime-policy.json"
+assert_gate fail '[]' "invalid runtime policy JSON"
+cp "$TMP_DIR/runtime-policy.saved.json" "$POLICY_PATH"
 
 printf '\377' > "$TMP_DIR/.bagakit/feature-tracker/test-bin/invalid-utf8.bin"
-set_gate_policy non_ui never non_ui_commands \
-  '["cat .bagakit/feature-tracker/test-bin/invalid-utf8.bin; exit 1"]'
+python3 - "$TMP_DIR" "$FEATURE_ID" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+feature_id = sys.argv[2]
+path = root / ".bagakit" / "feature-tracker" / "features" / feature_id / "tasks.json"
+payload = json.loads(path.read_text(encoding="utf-8"))
+task = next(item for item in payload["tasks"] if item["id"] == "T-001")
+task["verification"][0]["ref"] = "cat .bagakit/feature-tracker/test-bin/invalid-utf8.bin; exit 1"
+path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
 if bash "$SKILL_DIR/scripts/feature-tracker.sh" run-task-gate \
   --root "$TMP_DIR" --feature "$FEATURE_ID" --task T-001 \
   >"$TMP_DIR/invalid-command-utf8.out" 2>"$TMP_DIR/invalid-command-utf8.err"; then
-  echo "non-UTF-8 failing gate command unexpectedly passed" >&2
+  echo "non-UTF-8 failing Task command unexpectedly passed" >&2
   exit 1
 fi
 if grep -F "Traceback" "$TMP_DIR/invalid-command-utf8.err" >/dev/null; then
-  echo "non-UTF-8 gate command leaked a decoder traceback" >&2
+  echo "non-UTF-8 Task command leaked a decoder traceback" >&2
   exit 1
 fi
 INVALID_UTF8_COMMAND='cat .bagakit/feature-tracker/test-bin/invalid-utf8.bin; exit 1'
 INVALID_UTF8_RECORDS='[{"command":"cat .bagakit/feature-tracker/test-bin/invalid-utf8.bin; exit 1","exit_code":1,"status":"fail"}]'
-assert_failed_gate "$INVALID_UTF8_RECORDS" "command failed: $INVALID_UTF8_COMMAND"
-if bash "$SKILL_DIR/scripts/feature-tracker.sh" finish-task \
-  --root "$TMP_DIR" --feature "$FEATURE_ID" --task T-001 --result done \
-  >"$TMP_DIR/finish-after-invalid-command-utf8.out" \
-  2>"$TMP_DIR/finish-after-invalid-command-utf8.err"; then
-  echo "non-UTF-8 gate output left stale passing task evidence" >&2
-  exit 1
-fi
-grep -F "cannot finish task as done without gate pass" \
-  "$TMP_DIR/finish-after-invalid-command-utf8.err" >/dev/null
+assert_gate fail "$INVALID_UTF8_RECORDS" "task verification command failed: $INVALID_UTF8_COMMAND"
 
-set_gate_policy non_ui never non_ui_commands '["sh .bagakit/feature-tracker/test-bin/ok.sh"]'
-bash "$SKILL_DIR/scripts/feature-tracker.sh" run-task-gate --root "$TMP_DIR" --feature "$FEATURE_ID" --task T-001 >/dev/null
-bash "$SKILL_DIR/scripts/feature-tracker.sh" finish-task --root "$TMP_DIR" --feature "$FEATURE_ID" --task T-001 --result done >/dev/null
+python3 - "$TMP_DIR" "$FEATURE_ID" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+feature_id = sys.argv[2]
+path = root / ".bagakit" / "feature-tracker" / "features" / feature_id / "tasks.json"
+payload = json.loads(path.read_text(encoding="utf-8"))
+task = next(item for item in payload["tasks"] if item["id"] == "T-001")
+task["verification"][0]["ref"] = "true"
+path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+rm -f "$TMP_DIR/.bagakit/feature-tracker/features/$FEATURE_ID/verification.md"
+python3 - "$POLICY_PATH" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+policy = json.loads(path.read_text(encoding="utf-8"))
+policy.setdefault("gate", {})["verification_policy"] = "on_demand"
+path.write_text(json.dumps(policy, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+bash "$SKILL_DIR/scripts/feature-tracker.sh" run-task-gate \
+  --root "$TMP_DIR" --feature "$FEATURE_ID" --task T-001 >/dev/null
+assert_gate pass "$PASSING_TASK_RECORDS" "true => pass (0)"
+bash "$SKILL_DIR/scripts/feature-tracker.sh" finish-task \
+  --root "$TMP_DIR" --feature "$FEATURE_ID" --task T-001 --result done >/dev/null
 bash "$SKILL_DIR/scripts/feature-tracker.sh" show-feature-status --root "$TMP_DIR" --format html --output "$STATUS_PAGE_REL" >"$TMP_DIR/feature-status-page-refreshed.out"
 cmp "$TMP_DIR/feature-status-page.out" "$TMP_DIR/feature-status-page-refreshed.out"
 python3 - "$STATUS_PAGE" "$FEATURE_ID" <<'PY'
@@ -654,7 +705,6 @@ assert feature_id in page
 assert "<h2>Needs closeout</h2>" in page
 assert "Current task" not in page
 PY
-
 python3 - "$TMP_DIR" "$FEATURE_ID" "$SKILL_DIR" <<'PY'
 import json
 import subprocess
@@ -753,7 +803,7 @@ bash "$SKILL_DIR/scripts/feature-tracker.sh" closeout-feature --root "$TMP_DIR" 
 grep -F "plan: feature-tracker.sh finish-task" "$TMP_DIR/closeout-plan.out" >/dev/null
 grep -F "closeout review checklist:" "$TMP_DIR/closeout-plan.out" >/dev/null
 bash "$SKILL_DIR/scripts/feature-tracker.sh" diagnose-tracker --root "$TMP_DIR" --closeout-plan >"$TMP_DIR/doctor-closeout-plan.out"
-grep -F "$CLOSEOUT_FEATURE_ID: task T-001 gate passed; review and close with" "$TMP_DIR/doctor-closeout-plan.out" >/dev/null
+grep -F "$CLOSEOUT_FEATURE_ID: task T-001 gate passed; finish with" "$TMP_DIR/doctor-closeout-plan.out" >/dev/null
 bash "$SKILL_DIR/scripts/feature-tracker.sh" closeout-feature --root "$TMP_DIR" --feature "$CLOSEOUT_FEATURE_ID" --task T-001 --execute \
   "${FEATURE_TRACKER_CLOSEOUT_REVIEW_ARGS[@]}" >/dev/null
 test -f "$TMP_DIR/.bagakit/feature-tracker/features-archived/$CLOSEOUT_FEATURE_ID/summary.md"

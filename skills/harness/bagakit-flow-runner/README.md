@@ -70,7 +70,8 @@ bash "$BAGAKIT_FLOW_RUNNER_SKILL_DIR/scripts/flow-runner.sh" checkpoint \
   --attempted "Read entry docs" \
   --result "Ready to plan" \
   --next-action "Run one bounded session" \
-  --clean-state yes
+  --clean-state yes \
+  --task-ref T-001
 
 bash "$BAGAKIT_FLOW_RUNNER_SKILL_DIR/scripts/flow-runner.sh" open-incident \
   --root . \
@@ -79,6 +80,10 @@ bash "$BAGAKIT_FLOW_RUNNER_SKILL_DIR/scripts/flow-runner.sh" open-incident \
   --summary "Need a decision" \
   --recommended-resume stay_blocked
 ```
+
+`--task-ref` is optional. It is a stable upstream work-item binding for
+read-only consumers such as Feature Tracker's status page; omitting it keeps
+the report at the runner item/Feature level.
 
 ## Runtime State
 

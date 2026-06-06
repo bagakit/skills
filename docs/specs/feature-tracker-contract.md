@@ -71,8 +71,9 @@ Stable local issuer surfaces are:
 - `goal.md`, when present, owns one feature's stable long-running Agent control
   contract: final outcome, invariants, final acceptance, authority, durable
   orchestration principles, and bounded context references.
-- `runtime-policy.json` owns tracker policy defaults, gate policy, and doctor
-  thresholds.
+- `runtime-policy.json` owns tracker policy defaults, Feature-level
+  verification policy, project classification, and doctor thresholds; it does
+  not own Task completion commands.
 - `show-feature-dag` computes a read-only dependency projection on demand from
   canonical feature state; no projection file owns additional truth.
 - archive and discard directories own closed feature records after closeout.
@@ -90,11 +91,11 @@ Implications:
   `bagakit-set-loop-goal` concerns
 - Goal must not own a second lifecycle, task plan, dependency graph, blocker,
   event stream, completion evidence, review state, or archive
-- `state.json` may also carry runtime-owner semantics such as `runtime_role`,
-  `blocked_reason_class`, `blocked_reason`, and `runtime_relations`; when present,
-  `index/features.json` should project the role, blocker class, and relations
-  as read-optimized index state rather than inventing them independently;
-  blocker prose remains out of the index
+- `state.json` may also carry runtime-owner semantics such as `runtime_role`
+  and `runtime_relations`; when present, `index/features.json` should project
+  them as read-optimized index state rather than inventing them independently
+- Task blocker class and prose remain in `tasks.json.last_blocker`; neither is
+  copied into the index
 - root-level helper markdown files such as `proposal.md`, `spec-delta.md`, and
   `verification.md` are optional operator aids, not authoritative task state
 - local issuer state may help create new ids but may not redefine tracked
@@ -142,15 +143,6 @@ Stable runtime-owner fields:
   - `frontdoor_context`
   - `execution_owner`
   - `foreground_owner`
-- `state.json.blocked_reason_class`
-  - `none`
-  - `external_blocker`
-  - `internal_blocker`
-  - `parked_context`
-- `state.json.blocked_reason`
-  - non-empty human-readable reason owned by the same blocked transition
-- `state.json.blocked_task_id`
-  - task id whose `last_blocker` is the evidence for the current live blocker
 - `state.json.runtime_relations`
   - list of typed feature-to-feature runtime links
   - stable relation values:
@@ -159,22 +151,21 @@ Stable runtime-owner fields:
 
 Projection rule:
 
-- `state.json` remains canonical for these runtime-owner fields
-- `index/features.json` projects `blocked_reason_class`, but not
-  `blocked_reason`, for list/read surfaces
-- the execution-owner receipt projects the exact current blocker class and
-  reason when the Feature is blocked
+- `state.json` remains canonical for runtime role and relation fields
+- each blocked Task owns its exact blocker in `tasks.json.last_blocker`
+- `index/features.json` does not copy blocker truth
+- the execution-owner receipt derives every current blocker from blocked Tasks
+  only when the whole Feature frontier is stalled
 - dependency projection output must not carry them because they are not
   dependency truth
 
 Required invariants:
 
-- `status = blocked` requires a non-`none` `blocked_reason_class` and a
-  non-empty `blocked_reason`, plus a canonical `blocked_task_id` whose blocked
-  task carries the exact pair as `last_blocker`
-- every non-blocked status requires `blocked_reason_class = none` and no
-  `blocked_reason` or `blocked_task_id`
-- `parked_context` requires `runtime_role = frontdoor_context`
+- `status = blocked` means unfinished current-plan Tasks exist while no Task is
+  active or runnable
+- every blocked Task carries one canonical `last_blocker`; non-blocked current
+  Tasks do not become Feature-level blocker mirrors
+- a `parked_context` Task blocker requires `runtime_role = frontdoor_context`
 - `frontdoor_context` features may only point outward with
   `runtime_relations[].relation = frontdoor_for`
 - `execution_owner` features may only point outward with
@@ -186,26 +177,20 @@ Required invariants:
 
 These fields describe runtime ownership posture only.
 
-`finish-task --result blocked` is the only task-finish transition that creates
-Feature blocker truth. It requires both `--blocked-reason-class` and
-`--blocked-reason`, writes the exact pair to the blocked task's terminal
-`last_blocker`, records that task as `blocked_task_id`, projects the pair as
-the current Feature blocker, and derives the index and execution-owner receipt
-from that state. Reblocking a restarted task replaces its `last_blocker` with
-the new terminal result. Historical task records retain `last_blocker`; it is
-task evidence, not a second current Feature blocker. History prose is audit
-context only and must not be parsed as blocker authority.
+`finish-task --result blocked` requires both `--blocked-reason-class` and
+`--blocked-reason` and writes the exact pair to that Task's terminal
+`last_blocker`. Reblocking a restarted Task replaces its `last_blocker` with
+the new terminal result. Historical Task records retain `last_blocker`.
+History prose is audit context only and must not be parsed as blocker authority.
 
-`--result done` rejects blocker arguments. Restarting a blocked task, finishing
-it as done, or replacing a blocked/done Plan with executable todo work clears
-the current Feature blocker projection. Dependency replanning alone does not.
-Archiving or discarding a blocked Feature also clears the live projection;
-the blocked task retains its exact `last_blocker`, while the closed owner
-receipt has no current blocker.
+`--result done` rejects blocker arguments. A blocked Task does not block
+independent runnable work. The Feature becomes blocked only when no current
+Task is active or runnable; archiving or discarding keeps historical Task
+blocker evidence while the closed owner receipt has no current blockers.
 
-Owner receipts must project the exact canonical blocker and must not invent a
-default class or reason. A blocked Feature with missing or contradictory
-blocker facts or without attributable task-level blocker evidence is invalid.
+Owner receipts must project exact canonical Task blockers and must not invent a
+default class or reason. A blocked Feature without attributable Task-level
+blocker evidence is invalid.
 Canonical blocker class and reason strings must not carry surrounding
 whitespace.
 They do not replace dependency truth, task truth, or closeout state.
@@ -270,6 +255,8 @@ requirements or treat implementation discoveries as user-authorized scope.
 Each reviewed task requires:
 
 - `id`, `title`, `objective`, and `outcome`
+- optional `depends_on`; omission is canonically equivalent to `[]` and means
+  the Task is a graph root
 - non-empty acceptance statements
 - non-empty verification mappings with `kind`, repo-relative `ref`, and
   `proves`
@@ -284,12 +271,25 @@ Required behavior:
 - workspace assignment and task start fail closed without canonical reviewed
   version 2 task truth
 - a task may be started only when it belongs to the latest reviewed plan
+- Task array order and Task id order carry no execution-order meaning
+- `depends_on` is the only within-Feature ordering truth; every dependency
+  names a distinct current-plan Task, self-dependencies and cycles are invalid
+- a `todo` Task is runnable only when every direct dependency is `done`
+- `start-task` atomically claims one runnable Task by moving it to
+  `in_progress`; different runnable Tasks may be active at the same time
+- every `in_progress`, `blocked`, or `done` current-plan Task requires all of
+  its direct dependencies to remain `done`
+- `runnable`, active, waiting, blocked-frontier, and completed Task sets are
+  derived from `tasks.json` and must not be persisted in `state.json`
 - a task already superseded by a later plan cannot be restarted
 - plan replacement is rejected while a task is `in_progress`
 - an accidentally started task may return to `todo` only when it has no gate
   evidence or prior blocked/done completion, its persisted owner receipt is
   current, its assigned execution worktree is clean, and its current Git HEAD
   matches the caller's expected HEAD
+- restarting a blocked Task clears its latest gate result and command summary;
+  prior logs and blocker evidence remain historical, and `done` requires a
+  fresh passing gate
 - blocked or done task records with execution evidence remain immutable and
   attributable when later plans supersede them
 - later revisions compare against the immediately prior current-plan task ids,
@@ -310,13 +310,14 @@ Required behavior:
 - `repair-reviewed-task-plan` is the only canonical repair path for this
   corruption class; it requires exact SHA-256 guards for current state,
   tasks, optional Goal, and receipt plus a complete canonical replacement
-- repair preserves `state.json` and the identity of any active current task;
+- repair preserves `state.json` and the exact set of active Tasks;
   it never lowers the observed plan revision; the explicitly reviewed
   replacement owns repaired task semantics and evidence, and publication
   replaces only `tasks.json` plus the derived receipt in one rollback-safe
   boundary
 
-Normal `set-task-plan` replacement remains forbidden while a task is active.
+Normal `set-task-plan` replacement remains forbidden while any Task is active.
+Executed Task dependency semantics are immutable across revisions.
 
 Review, source, verification, and evidence references are portable
 repo-relative paths. They must reject repository escape, URI paths, drive
@@ -325,6 +326,10 @@ absolute paths, and UNC paths.
 Feature Tracker owns semantic planning truth and task gate evidence. It does
 not own Flow Runner checkpoints, repeated execution scheduling, or normalized
 outer-loop work-item history.
+
+Its human status projection may read the latest Flow Runner progress receipt as
+an informational overlay. Only an explicit receipt `task_ref` may bind that
+overlay to a Task; it never mutates or substitutes `tasks.json` truth.
 
 ## Execution Owner Receipt
 
@@ -343,13 +348,15 @@ Feature Tracker requirements:
 - `evidence_hashes` bind each evidence ref to the SHA-256 digest of its final
   canonical file bytes
 - `semantic_revision` is the SHA-256 digest of the compact canonical JSON over
-  owner identity, lifecycle, continuation, current item, blocker,
+  owner identity, lifecycle, continuation, active items, blockers,
   replacement ref, and `evidence_hashes`
 - `save_feat` writes canonical state and tasks before refreshing the derived
   receipt
 - a missing required receipt, stale receipt, or evidence hash drift fails
   closed
 - `ready` and valid `in_progress` state map to `continue`
+- active item ids and Task blockers are derived from `tasks.json`; runnable ids
+  stay out of the receipt because it is not an execution plan
 - missing reviewed plan or missing workspace maps to blocked continuation
 - a replacement points to the repo-relative replacement owner receipt, not a
   bare feature id
@@ -490,6 +497,18 @@ Required invariants:
 - `proposal_only` carries no dedicated branch or worktree assignment
 - `current_tree` carries no dedicated branch or worktree assignment
 - `worktree` carries branch, worktree name, and worktree path together
+- `assign-feature-workspace --workspace-mode worktree` creates a new dedicated
+  worktree; it does not adopt an existing one
+- `adopt-feature-worktree` is the only Tracker transition that binds an
+  already registered Git worktree or replaces a stale worktree assignment
+- worktree adoption requires a reviewed Task plan, a current owner receipt, no
+  active Task, an existing registered worktree under the same Git repository,
+  and an exact checked-out branch match
+- worktree adoption only updates canonical workspace state, history, index, and
+  the derived owner receipt; it must not create, delete, move, clean, check out,
+  or otherwise modify the adopted Git worktree
+- adopted worktree paths are stored relative to the tracker root so canonical
+  Tracker truth does not retain a machine-local absolute path
 
 Workspace assignment determines the execution root for task gates:
 
@@ -514,12 +533,28 @@ Required behavior:
 - task-gate commands must capture the feature workspace assignment
   before executing external commands and revalidate that assignment before
   writing results back to tracker state
-- a task gate with no non-empty command must record `fail`; an empty UI or
-  non-UI command list is never passing evidence
+- a task gate must execute the current Task's non-empty `verification` entries
+  with `kind = command`; a Task with no executable verification must record
+  `fail`
+- new reviewed plans must include at least one executable command mapping per
+  Task; existing reviewed plans with only artifact, manual, or owner-receipt
+  mappings remain readable but fail closed when that Task is started or gated
+  until the plan is revised
+- historical completed Tasks and their earlier gate receipts remain readable;
+  the new receipt match is enforced on the `finish-task` transition rather
+  than by retroactively invalidating or migrating closed Task evidence
+- `state.json.gate.last_check_commands` and the Task's `last_gate_commands`
+  must contain exactly those declared Task commands, in declaration order
+- runtime-policy command profiles (`gate.ui_commands` and
+  `gate.non_ui_commands`) are retired and rejected; they cannot authorize a
+  Task or form a second completion standard
+- `finish-task --result done` rejects a stale or mismatched gate receipt even
+  when `gate_result` was manually left as `pass`; rerunning the Task gate is
+  required after its verification commands change
 - workspace assignment must not be changed while a feature has an `in_progress`
   task
-- feature discard must not close or clean up a feature while a task is
-  `in_progress`; the active task must be finished first
+- feature discard must not close or clean up a feature while any Task is
+  `in_progress`; all active Tasks must be finished first
 - worktree execution must verify that the assigned worktree path is a registered
   Git worktree and that its checked-out branch matches feature state
 
@@ -528,9 +563,11 @@ files. They are separate atomic file replacements, not a crash-atomic
 multi-file transaction; receipt/hash drift and validation fail closed after an
 interrupted publication.
 
-Concurrency does not mean multiple simultaneous implementation tasks inside one
-feature. A feature still has at most one `current_task_id`; parallel work should
-be represented as independent features or independent worktrees.
+One Feature may have multiple simultaneous `in_progress` Tasks. Tracker owns
+their atomic status transitions, but not Worker assignment, concurrency limits,
+Task worktrees, merge order, or shared-tree conflict resolution. One Feature
+workspace remains the integrated candidate truth; a Task becomes `done` only
+after its result is integrated there and its gate passes.
 
 ## Optional Artifact Rule
 
@@ -551,7 +588,8 @@ Rules:
   at the feature root
 - the default gate policy is `verification_policy = on_demand`, which means
   `verification.md` is only checked when the file exists unless a stricter
-  policy is configured
+  policy is configured; this Feature-level evidence is supplemental and never
+  replaces the current Task's declared command gate
 - checked verification evidence must not retain blank template fields; it must
   include a substantive automated result or manual outcome and an explicit
   residual-risk disposition
@@ -646,7 +684,8 @@ Stable closeout expectations:
 - archive and discard must validate the post-closeout active DAG before they
   move the feature directory
 - archive and discard must construct and validate the complete deterministic
-  closed Feature state, including removal of the live blocker projection,
+  closed Feature state, including Task evidence and the absence of live
+  cursor or blocker mirrors,
   derived index and owner receipt, canonical summary, and preserved-root
   projection before the directory move
 - closeout stages the complete closed Feature directory before a short
@@ -658,7 +697,7 @@ Stable closeout expectations:
 - an assigned worktree that still exists must be registered and clean at
   closeout; a missing unregistered worktree is accepted as already cleaned,
   while a missing registered worktree fails closed for ordinary Git repair
-- only archive closeout of an `in_progress` task may consume `--task`,
+- only archive closeout of an `in_progress` Task may consume `--task`,
   `--result`, or blocker arguments; discard and non-active closeout reject
   those unused arguments
 - `current_tree` archive may proceed with unrelated non-harness repo changes
@@ -666,6 +705,11 @@ Stable closeout expectations:
   implementation files
 - `current_tree` discard must still fail closed on non-harness repo changes
   because Tracker closeout must not hide unpreserved work
+- `discard-feature --reason invalid` is the narrow exception for a readable,
+  active, but contract-invalid Feature: the command must reject a valid Feature,
+  preserve every original Feature-root entry under
+  `artifacts/invalid-source/`, publish a minimal discarded tombstone through
+  the existing staged closeout transaction, and leave Git workspaces unchanged
 - archive/discard idempotent reruns must fail closed when directory placement
   disagrees with the claimed closed status
 - idempotent reruns reuse and validate the already published closeout review;

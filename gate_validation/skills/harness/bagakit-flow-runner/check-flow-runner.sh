@@ -104,7 +104,7 @@ PY
 
 bash "$FLOW_RUNNER_DIR/scripts/flow-runner.sh" snapshot --root "$TMP_DIR" --item "$ITEM_ID" --label "../../../escape" --json >/dev/null
 test ! -d "$TMP_DIR/.bagakit/flow-runner/escape"
-bash "$FLOW_RUNNER_DIR/scripts/flow-runner.sh" checkpoint --root "$TMP_DIR" --item "$ITEM_ID" --stage inspect --session-status progress --objective "Inspect" --attempted "Read runtime" --result "Ready" --next-action "Run one bounded session" --clean-state yes --json >/dev/null
+bash "$FLOW_RUNNER_DIR/scripts/flow-runner.sh" checkpoint --root "$TMP_DIR" --item "$ITEM_ID" --stage inspect --session-status progress --objective "Inspect" --attempted "Read runtime" --result "Ready" --next-action "Run one bounded session" --clean-state yes --task-ref T-001 --json >/dev/null
 RECEIPTS="$TMP_DIR/.bagakit/flow-runner/items/$ITEM_ID/mutation-receipts.ndjson"
 CHECKPOINTS="$TMP_DIR/.bagakit/flow-runner/items/$ITEM_ID/checkpoints.ndjson"
 PROGRESS="$TMP_DIR/.bagakit/flow-runner/items/$ITEM_ID/progress.ndjson"
@@ -123,6 +123,15 @@ checkpoint_receipts = [entry for entry in entries if entry["mutation"] == "check
 assert checkpoint_receipts
 assert checkpoint_receipts[-1]["authority"] == "runner_local"
 assert len({entry["receipt_id"] for entry in entries}) == len(entries)
+PY
+python3 - "$CHECKPOINTS" "$PROGRESS" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+for path in sys.argv[1:]:
+    records = [json.loads(line) for line in Path(path).read_text(encoding="utf-8").splitlines() if line.strip()]
+    assert records[-1]["task_ref"] == "T-001"
 PY
 
 BEFORE_COUNTS="$(python3 - "$RECEIPTS" "$CHECKPOINTS" "$PROGRESS" <<'PY'

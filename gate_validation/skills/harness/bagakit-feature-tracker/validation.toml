@@ -45,6 +45,7 @@ required_files = [
   "gate_validation/skills/harness/bagakit-feature-tracker/check-feature-tracker-semantic-task-truth.sh",
   "gate_validation/skills/harness/bagakit-feature-tracker/check-feature-tracker-task-plan-repair.sh",
   "gate_validation/skills/harness/bagakit-feature-tracker/check-feature-tracker-state-contract.sh",
+  "gate_validation/skills/harness/bagakit-feature-tracker/check-feature-tracker-task-dag.sh",
   "gate_validation/skills/harness/bagakit-feature-tracker/lib/feature-tracker-testlib.sh",
 ]
 forbidden_paths = [
@@ -71,13 +72,13 @@ forbidden_paths = [
 [[suite]]
 id = "bagakit-feature-tracker-smoke"
 owner = "skills/harness/bagakit-feature-tracker"
-description = "Run the canonical lifecycle, materialize a refreshable human status snapshot outside tracker state, and fail closed when gate commands or verification evidence are missing or invalid."
+description = "Run the canonical lifecycle, materialize a refreshable human status snapshot outside tracker state, keep the full Feature overview visible when one Feature is focused, and fail closed when Task-declared gate commands or Feature verification evidence are missing or invalid."
 default = true
 proof_mode = "runtime"
 protects = ["feature-tracker public lifecycle for initialization, feature creation, workspace assignment, task start, replan state, and disposable human status materialization"]
-oracle = ["smoke script drives feature-tracker CLI commands in a temporary repo, checks canonical state, proves one stable human status file is atomically regenerated outside tracker state, and proves command success cannot override missing verification evidence or invalid gate configuration"]
+oracle = ["smoke script drives feature-tracker CLI commands in a temporary repo, checks canonical state, proves one stable human status file is atomically regenerated outside tracker state, proves a focused HTML Feature expands while the complete active board remains visible, proves gate receipts mirror Task verification commands, and proves stale receipts, retired profile commands, missing Task commands, missing Feature verification evidence, or invalid policy cannot authorize completion"]
 exercised_surface = ["feature-tracker CLI", ".bagakit/feature-tracker state files", "gate_validation feature-tracker smoke fixture"]
-proves = ["bagakit-feature-tracker-smoke proves the canonical lifecycle, stable human status output refresh, tracker-state output rejection, and gate aggregate rejection of empty or malformed command sets and required-verification failures."]
+proves = ["bagakit-feature-tracker-smoke proves the canonical lifecycle, stable human status output refresh, tracker-state output rejection, Task-owned command gate recording, stale-receipt rejection, retired-profile rejection, and required-verification failures."]
 does_not_prove = ["bagakit-feature-tracker-smoke does not prove live browser refresh, Host delivery, user consumption, stochastic agent quality, or unrelated repository surfaces."]
 timeout_seconds = 300
 validation_class = "smoke"
@@ -94,13 +95,13 @@ args = [
 [[suite]]
 id = "bagakit-feature-tracker-closeout-review"
 owner = "skills/harness/bagakit-feature-tracker"
-description = "Require explicit documentation, execution-learning, and principle-conformant promotion choices before Feature closeout while keeping requirement authority separate from Agent learning."
+description = "Require explicit documentation, execution-learning, and principle-conformant promotion choices before Feature closeout while keeping requirement authority separate from Agent learning and preserving invalid source truth."
 default = true
 proof_mode = "state_machine"
-protects = ["feature-tracker closeout review completeness, confirmed requirement authority, Agent-learning separation, option consistency, atomic publication, summary projection, and existing receipt binding"]
-oracle = ["public CLI fixture rejects missing or contradictory review choices without mutating active control truth, checks archive guidance, closes reviewed and unreviewed Features, proves summaries omit Feature Goal reinterpretation and expose only reviewed plan authority, and inspects final tasks and receipt hashes"]
+protects = ["feature-tracker closeout review completeness, confirmed requirement authority, Agent-learning separation, option consistency, atomic publication, invalid-source preservation, summary projection, and existing receipt binding"]
+oracle = ["public CLI fixture rejects missing or contradictory review choices without mutating active control truth, checks archive guidance, closes reviewed and unreviewed Features, rejects invalid disposition for valid state, preserves contract-invalid source files during discard, proves summaries omit Feature Goal reinterpretation and expose only reviewed plan authority, and inspects final tasks and receipt hashes"]
 exercised_surface = ["feature-tracker closeout-feature, archive-feature, discard-feature, and validate-tracker commands", "final tasks.json closeout_review, summary.md, and owner-receipt.json"]
-proves = ["bagakit-feature-tracker-closeout-review proves all public closeout paths require three resolved review items, publish one canonical review atomically, avoid rewriting Feature Goal as requirements, expose reviewed-plan confirmation authority, label Agent-authored execution learning, and bind final task truth through the existing receipt."]
+proves = ["bagakit-feature-tracker-closeout-review proves all public closeout paths require three resolved review items, publish one canonical review atomically, reject invalid disposition for valid Features, preserve invalid original state in the closed Feature, avoid rewriting Feature Goal as requirements, expose reviewed-plan confirmation authority, label Agent-authored execution learning, and bind final task truth through the existing receipt."]
 does_not_prove = ["bagakit-feature-tracker-closeout-review does not authenticate that a review ref corresponds to a real user-confirmation event, prove that a rationale is insightful, prove that a document is semantically complete, or prove that a promoted lesson generalizes beyond its evidence."]
 timeout_seconds = 300
 validation_class = "quality"
@@ -117,13 +118,13 @@ args = [
 [[suite]]
 id = "bagakit-feature-tracker-semantic-task-truth"
 owner = "skills/harness/bagakit-feature-tracker"
-description = "Require reviewed semantic task plans before workspace execution and expose a current execution-owner receipt."
+description = "Require reviewed semantic Task plans before workspace execution and expose a content-bound execution-owner receipt."
 default = true
 proof_mode = "state_machine"
-protects = ["feature-tracker reviewed v2 task-plan execution gate, canonical blocker lifecycle, owner-bound current versus historical supersession lineage, evidence-safe task unstart, portable reference boundary, and content-bound owner receipt freshness"]
+protects = ["feature-tracker reviewed v2 task-plan execution gate, canonical Task blocker lifecycle, owner-bound current versus historical supersession lineage, evidence-safe task unstart, portable reference boundary, and content-bound owner receipt freshness"]
 oracle = ["public CLI fixture creates a draft proposal, proves assign/start rejection, rejects unsafe references and invalid blocker transitions without control-file writes, preserves exact task-level blocker evidence across restart and plan revision, prevents retired id reuse and supersession owner drift, rejects unsafe unstart attempts, and rejects missing or stale receipts"]
 exercised_surface = ["feature-tracker create-feature, set-task-plan, assign-feature-workspace, start-task, unstart-task, finish-task, get-owner-receipt, and validate-tracker commands", ".bagakit/feature-tracker feature tasks and owner receipt state"]
-proves = ["bagakit-feature-tracker-semantic-task-truth proves draft or non-v2 plans cannot execute, blocked finish requires exact class and reason with attributable task evidence, restart and reviewed replan clear only the live blocker, reviewed plans preserve newly removed versus owner-bound historical supersession lineage, only evidence-free active tasks can be safely unstarted, unsafe refs fail closed, and owner receipts bind canonical state bytes."]
+proves = ["bagakit-feature-tracker-semantic-task-truth proves draft or non-v2 plans cannot execute, blocked finish requires exact class and reason with attributable Task evidence, restart and reviewed replan preserve historical blocker evidence without Feature-state mirrors, reviewed plans preserve newly removed versus owner-bound historical supersession lineage, only evidence-free active Tasks can be safely unstarted, unsafe refs fail closed, and owner receipts bind canonical state bytes."]
 does_not_prove = ["bagakit-feature-tracker-semantic-task-truth does not prove task decomposition quality, specification completeness, Flow Runner execution history, or external Goal adapter behavior."]
 timeout_seconds = 300
 validation_class = "quality"
@@ -138,13 +139,36 @@ args = [
 ]
 
 [[suite]]
+id = "bagakit-feature-tracker-task-dag"
+owner = "skills/harness/bagakit-feature-tracker"
+description = "Prove one Feature can expose an explicit Task DAG with multiple active roots, partial blockage, and ordinary fan-in without implicit array ordering."
+default = true
+proof_mode = "state_machine"
+protects = ["Task dependency SSOT, derived runnable frontier, expanded human Task-topology projection, atomic parallel claims, Task-local blockers, ordinary convergence, and cycle rejection"]
+oracle = ["public CLI fixture stores omitted dependencies as roots, renders a diamond topology with node-to-detail anchors, fullscreen topology affordance, and runtime-state legend, serves a loopback live page whose JavaScript replaces only the status content and reports refresh state, rejects an early join, an unknown dependency, and a cyclic plan, claims two roots under the Tracker lock, derives active/runnable/waiting sets, keeps unrelated active work moving after one branch blocks, invalidates stale gate evidence on restart, and unlocks a join only after both predecessors finish"]
+exercised_surface = ["feature-tracker set-task-plan, show-feature-status, get-feature, get-owner-receipt, start-task, run-task-gate, finish-task, and validate-tracker commands", "tasks.json depends_on and Task states", "derived Task frontier, expanded HTML topology, and execution-owner receipt v2"]
+proves = ["bagakit-feature-tracker-task-dag proves missing depends_on means a root rather than an implicit predecessor, Task array order is not execution truth, expanded Feature review projects nodes and edges from the same Task SSOT, distinct roots may be active together, a blocked branch does not erase unrelated active work, Feature blockage is frontier-wide, and a normal dependency join converges the Feature."]
+does_not_prove = ["bagakit-feature-tracker-task-dag does not prove Worker assignment, Task-worktree isolation, merge conflict handling, automatic scheduling, or stochastic implementation quality."]
+timeout_seconds = 300
+validation_class = "quality"
+groups = ["skills", "harness", "feature-tracker", "quality", "task-dag"]
+
+[suite.runner]
+kind = "bash_script"
+script = "gate_validation/skills/harness/bagakit-feature-tracker/check-feature-tracker-task-dag.sh"
+args = [
+  "--root",
+  "{repo_root}",
+]
+
+[[suite]]
 id = "bagakit-feature-tracker-task-plan-repair"
 owner = "skills/harness/bagakit-feature-tracker"
 description = "Fail closed on invalid reviewed lineage and repair it under exact content guards without disturbing active execution."
 default = true
 proof_mode = "state_machine"
-protects = ["reviewed task-plan corruption detection, exact guarded repair, active task preservation, and rollback-safe receipt refresh"]
-oracle = ["public CLI fixture damages reviewed lineage, proves Goal mutation is byte-preserving fail-closed, rejects stale guards, injects receipt publication failure and verifies rollback, then repairs an active task and validates the refreshed receipt"]
+protects = ["reviewed task-plan corruption detection, exact guarded repair, active Task-set preservation, and rollback-safe receipt refresh"]
+oracle = ["public CLI fixture damages reviewed lineage, proves Goal mutation is byte-preserving fail-closed, rejects stale guards, injects receipt publication failure and verifies rollback, then repairs an active Task set and validates the refreshed receipt"]
 exercised_surface = ["feature-tracker set-feature-goal and repair-reviewed-task-plan commands", "feature state, reviewed tasks, Goal, and owner receipt content hashes"]
 proves = ["bagakit-feature-tracker-task-plan-repair proves invalid reviewed lineage cannot be hidden by a task_plan_missing receipt and one exact guarded repair restores canonical task truth without changing active state or task evidence."]
 does_not_prove = ["bagakit-feature-tracker-task-plan-repair does not infer missing plan semantics, authorize requirement changes, or repair unrelated lifecycle corruption."]
@@ -209,13 +233,13 @@ args = [
 [[suite]]
 id = "bagakit-feature-tracker-state-contract-regression"
 owner = "skills/harness/bagakit-feature-tracker"
-description = "Protect graph preflight, blocker-safe closeout publication, root-file boundaries, closeout preservation, and obsolete-layout rejection."
+description = "Protect registered-worktree adoption, graph preflight, blocker-safe closeout publication, root-file boundaries, closeout preservation, and obsolete-layout rejection."
 default = true
 proof_mode = "state_machine"
-protects = ["feature-tracker deterministic graph and closeout preflight, task-level blocker preservation, feature-root SSOT boundary, closeout preservation, and state-placement consistency"]
-oracle = ["public CLI scenarios inspect tracker-owned JSON and filesystem state before and after rejected graph mutations, blocker transition misuse, replans, and blocked archive/discard operations"]
-exercised_surface = ["feature-tracker create, replan, validate, archive, discard, and materialize commands", ".bagakit/feature-tracker canonical and closed state"]
-proves = ["bagakit-feature-tracker-state-contract-regression proves deterministic graph and closed-publication failures occur before metadata movement, blocked closeout clears live projection while retaining exact task evidence, unsupported feature-root truth is rejected, and closeout remains lossless and idempotent without mutating Git workspaces."]
+protects = ["feature-tracker registered-worktree adoption, deterministic graph and closeout preflight, task-level blocker preservation, feature-root SSOT boundary, closeout preservation, and state-placement consistency"]
+oracle = ["public CLI scenarios inspect tracker-owned JSON, owner receipts, registered Git worktrees, and filesystem state before and after accepted adoption and rebind plus rejected stale-receipt, active-task, unregistered-path, branch-mismatch, graph, blocker, replan, and closeout transitions"]
+exercised_surface = ["feature-tracker adopt-feature-worktree, create, replan, validate, archive, discard, and materialize commands", "registered Git worktree identity", ".bagakit/feature-tracker canonical and closed state"]
+proves = ["bagakit-feature-tracker-state-contract-regression proves existing registered worktrees can be adopted and rebound only with a reviewed plan, current receipt, no active Task, and exact branch while preserving both worktrees; it also proves deterministic graph and closed-publication failures occur before metadata movement, blocked closeout clears live projection while retaining exact task evidence, unsupported feature-root truth is rejected, and closeout remains lossless and idempotent without mutating Git workspaces."]
 does_not_prove = ["bagakit-feature-tracker-state-contract-regression does not prove stochastic task quality, live service behavior, or unrelated repository surfaces."]
 timeout_seconds = 300
 validation_class = "quality"

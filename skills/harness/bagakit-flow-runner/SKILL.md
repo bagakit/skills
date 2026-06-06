@@ -76,6 +76,12 @@ Follow `docs/specs/output-discipline.md` for runner-owned sidecars.
 - `flow-runner.sh archive-item`
 - `flow-runner.sh validate`
 
+`checkpoint` accepts an optional `--task-ref <upstream-item-id>`. For a
+Feature Tracker-sourced item, pass the exact Task id when a bounded session is
+about one Task; omit it when the report is Feature-wide or no binding is known.
+The runner stores this optional field in checkpoint and progress receipts but
+does not validate or change upstream Task truth.
+
 ## Runtime Contract
 
 Stable runtime surfaces:

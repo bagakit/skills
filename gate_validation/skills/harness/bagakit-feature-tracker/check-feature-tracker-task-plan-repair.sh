@@ -185,7 +185,7 @@ state = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
 assert tasks["plan_status"] == "reviewed"
 assert tasks["tasks"][0]["status"] == "in_progress"
 assert state["status"] == "in_progress"
-assert state["current_task_id"] == "T-001"
+assert "current_task_id" not in state
 PY
 
 echo "feature-tracker reviewed task-plan repair passed"

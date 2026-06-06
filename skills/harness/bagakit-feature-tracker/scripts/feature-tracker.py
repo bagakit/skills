@@ -15,12 +15,15 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import unicodedata
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Generator, Iterable
+from urllib.parse import parse_qs, urlparse
 
 sys.dont_write_bytecode = True
 
@@ -70,7 +73,7 @@ FEATURE_SUMMARY_FILENAME = "summary.md"
 FEATURE_OWNER_RECEIPT_FILENAME = "owner-receipt.json"
 LEGACY_UI_VERIFICATION_FILENAME = "ui-verification.md"
 TASK_PLAN_SCHEMA = "bagakit.feature-task-plan.v1"
-OWNER_RECEIPT_SCHEMA = "bagakit.execution-owner-receipt.v1"
+OWNER_RECEIPT_SCHEMA = "bagakit.execution-owner-receipt.v2"
 FEATURE_GOAL_SCHEMA = "bagakit.feature-goal.v1"
 FEATURE_CLOSEOUT_REVIEW_SCHEMA = "bagakit.feature-closeout-review.v1"
 TASK_PLAN_STATUSES = {"draft", "reviewed"}
@@ -91,6 +94,7 @@ FEATURE_OPTIONAL_ROOT_FILES = frozenset(
 FEATURE_CLOSEOUT_ROOT_FILES = frozenset({FEATURE_SUMMARY_FILENAME})
 FEATURE_ALLOWED_ROOT_DIRS = frozenset({"artifacts"})
 FEATURE_CLOSEOUT_PRESERVE_DIRNAME = "closeout-preserved-root"
+FEATURE_INVALID_SOURCE_DIRNAME = "invalid-source"
 FEATURE_ROOT_FILE_HINTS = {
     "prd.md": "route feature intent and scope to proposal.md or an upstream planning artifact instead",
     "changelog.md": "route change history to repo/release surfaces; use summary.md only for closeout narrative",
@@ -475,6 +479,11 @@ def parse_task_plan_candidate(
                     "proves": require_nonempty_string(mapping.get("proves"), f"{mapping_label}.proves"),
                 }
             )
+        if not any(mapping["kind"] == "command" for mapping in verification):
+            raise SystemExit(
+                f"error: {task_label}.verification must include at least one "
+                "kind=command mapping for the Task completion gate"
+            )
 
         supersedes = require_optional_string_list(task.get("supersedes"), f"{task_label}.supersedes")
         if len(set(supersedes)) != len(supersedes):
@@ -488,6 +497,7 @@ def parse_task_plan_candidate(
         tasks.append(
             {
                 "id": task_id,
+                "depends_on": canonical_task_dependencies(task, label=task_label),
                 "title": require_nonempty_string(task.get("title"), f"{task_label}.title"),
                 "objective": require_nonempty_string(task.get("objective"), f"{task_label}.objective"),
                 "outcome": require_nonempty_string(task.get("outcome"), f"{task_label}.outcome"),
@@ -497,6 +507,15 @@ def parse_task_plan_candidate(
                 "supersedes": supersedes,
             }
         )
+
+    current_plan_task_graph(
+        {
+            "plan_revision": 1,
+            "plan_history": [{"revision": 1, "task_ids": [task["id"] for task in tasks]}],
+            "tasks": tasks,
+        },
+        feat_id=label,
+    )
 
     return {
         "schema": schema,
@@ -511,27 +530,6 @@ def canonical_runtime_role(value: Any, *, feat_id: str) -> str:
     if raw not in RUNTIME_ROLES:
         raise SystemExit(
             f"error: {feat_id}: runtime_role must be one of {', '.join(sorted(RUNTIME_ROLES))}"
-        )
-    return raw
-
-
-def canonical_blocked_reason_class(value: Any, *, feat_id: str, status: str) -> str:
-    if value is None:
-        raw = "none"
-    elif not isinstance(value, str) or value != value.strip() or not value:
-        raise SystemExit(
-            f"error: {feat_id}: blocked_reason_class must be a canonical non-empty string"
-        )
-    else:
-        raw = value
-    if raw not in BLOCKED_REASON_CLASSES:
-        raise SystemExit(
-            "error: "
-            f"{feat_id}: blocked_reason_class must be one of {', '.join(sorted(BLOCKED_REASON_CLASSES))}"
-        )
-    if status != "blocked" and raw != "none":
-        raise SystemExit(
-            f"error: {feat_id}: blocked_reason_class `{raw}` requires state status=blocked"
         )
     return raw
 
@@ -580,41 +578,6 @@ def canonical_task_finish_blocker(
     return None, None
 
 
-def canonical_feature_blocker(
-    state: dict[str, Any],
-    *,
-    feat_id: str,
-) -> tuple[str, str | None]:
-    status = str(state.get("status") or "")
-    raw_reason = state.get("blocked_reason")
-    blocked_task_id = state.get("blocked_task_id")
-    if status == "blocked":
-        reason_class, raw_reason = canonical_blocker_pair(
-            state.get("blocked_reason_class"),
-            raw_reason,
-            class_label=f"{feat_id}: blocked_reason_class",
-            reason_label=f"{feat_id}: blocked_reason",
-        )
-        if not isinstance(blocked_task_id, str) or not TASK_ID_RE.fullmatch(blocked_task_id):
-            raise SystemExit(f"error: {feat_id}: blocked feature requires a canonical blocked_task_id")
-        runtime_role = canonical_runtime_role(state.get("runtime_role"), feat_id=feat_id)
-        if reason_class == "parked_context" and runtime_role != "frontdoor_context":
-            raise SystemExit(
-                f"error: {feat_id}: blocked_reason_class parked_context requires runtime_role=frontdoor_context"
-            )
-        return reason_class, raw_reason
-    reason_class = canonical_blocked_reason_class(
-        state.get("blocked_reason_class"),
-        feat_id=feat_id,
-        status=status,
-    )
-    if "blocked_reason" in state:
-        raise SystemExit(f"error: {feat_id}: blocked_reason requires state status=blocked")
-    if "blocked_task_id" in state:
-        raise SystemExit(f"error: {feat_id}: blocked_task_id requires state status=blocked")
-    return reason_class, None
-
-
 def canonical_task_last_blocker(
     task: dict[str, Any],
     *,
@@ -623,6 +586,8 @@ def canonical_task_last_blocker(
     task_id = str(task.get("id") or "<unknown>")
     raw = task.get("last_blocker")
     if raw is None:
+        if task.get("status") == "blocked":
+            raise SystemExit(f"error: {feat_id}/{task_id}: blocked task requires last_blocker")
         return None
     if task.get("status") == "todo":
         raise SystemExit(f"error: {feat_id}/{task_id}: todo task must not carry last_blocker")
@@ -647,26 +612,36 @@ def require_canonical_task_blockers(tasks: dict[str, Any], *, feat_id: str) -> N
             canonical_task_last_blocker(task, feat_id=feat_id)
 
 
-def require_current_blocker_task_evidence(
+def current_task_blockers(tasks: dict[str, Any], *, feat_id: str) -> list[dict[str, str]]:
+    current_ids = set(latest_plan_task_ids(tasks))
+    blockers: list[dict[str, str]] = []
+    for task in tasks.get("tasks", []):
+        if not isinstance(task, dict):
+            continue
+        task_id = str(task.get("id") or "")
+        if task_id not in current_ids or task.get("status") != "blocked":
+            continue
+        blocker = canonical_task_last_blocker(task, feat_id=feat_id)
+        assert blocker is not None
+        reason_class, reason = blocker
+        blockers.append(
+            {"item_id": task_id, "class": reason_class, "reason": reason}
+        )
+    return sorted(blockers, key=lambda item: item["item_id"])
+
+
+def require_task_blocker_runtime_role(
     state: dict[str, Any],
     tasks: dict[str, Any],
     *,
     feat_id: str,
 ) -> None:
-    reason_class, reason = canonical_feature_blocker(state, feat_id=feat_id)
-    if str(state.get("status") or "") != "blocked":
-        return
-    assert reason is not None
-    task_id = str(state["blocked_task_id"])
-    task = find_task(tasks, task_id)
-    if task.get("status") != "blocked":
-        raise SystemExit(
-            f"error: {feat_id}/{task_id}: current blocker task must remain blocked"
-        )
-    if canonical_task_last_blocker(task, feat_id=feat_id) != (reason_class, reason):
-        raise SystemExit(
-            f"error: {feat_id}/{task_id}: current blocker drifts from task last_blocker"
-        )
+    blockers = current_task_blockers(tasks, feat_id=feat_id)
+    if any(item["class"] == "parked_context" for item in blockers):
+        if canonical_runtime_role(state.get("runtime_role"), feat_id=feat_id) != "frontdoor_context":
+            raise SystemExit(
+                f"error: {feat_id}: parked_context Task blocker requires runtime_role=frontdoor_context"
+            )
 
 
 @dataclass(frozen=True)
@@ -696,19 +671,16 @@ def prepare_closed_feature_publication(
         raise SystemExit(f"error: unsupported closeout target status: {target_status}")
     current_status = str(state.get("status") or "")
     require_valid_feature_goal_contract(paths, state)
-    canonical_feature_blocker(state, feat_id=feat_id)
     require_canonical_task_blockers(tasks, feat_id=feat_id)
-    if current_status == "blocked":
-        require_current_blocker_task_evidence(state, tasks, feat_id=feat_id)
+    require_task_blocker_runtime_role(state, tasks, feat_id=feat_id)
+    if current_status == "blocked" and not current_task_blockers(tasks, feat_id=feat_id):
+        raise SystemExit(f"error: {feat_id}: blocked Feature requires Task blocker evidence")
 
     candidate_state = copy.deepcopy(state)
     candidate_tasks = copy.deepcopy(tasks)
     candidate_tasks["closeout_review"] = copy.deepcopy(closeout_review)
     candidate_state["closed_from_status"] = current_status
     candidate_state["status"] = target_status
-    candidate_state["blocked_reason_class"] = "none"
-    candidate_state.pop("blocked_reason", None)
-    candidate_state.pop("blocked_task_id", None)
     if target_status == "discarded":
         candidate_state["discard_reason"] = discard_reason
         candidate_state["replacement_feat_id"] = replacement_feat_id
@@ -718,8 +690,8 @@ def prepare_closed_feature_publication(
     normalize_state_payload(candidate_state)
     normalize_tasks_payload(candidate_tasks)
     normalize_feature_goal_ref(paths, candidate_state)
-    canonical_feature_blocker(candidate_state, feat_id=feat_id)
     require_canonical_task_blockers(candidate_tasks, feat_id=feat_id)
+    require_task_blocker_runtime_role(candidate_state, candidate_tasks, feat_id=feat_id)
 
     active_dir = paths.feat_dir(feat_id, status=current_status)
     root_moves = plan_closeout_root_entries(
@@ -767,6 +739,76 @@ def prepare_closed_feature_publication(
         index=index_candidate,
         receipt=receipt,
         summary=summary,
+        root_moves=root_moves,
+    )
+
+
+def prepare_invalid_discard_publication(
+    paths: HarnessPaths,
+    state: dict[str, Any],
+    *,
+    feat_id: str,
+    closeout_review: dict[str, Any],
+    source_issue_count: int,
+    replacement_feat_id: str | None,
+) -> CloseoutPublication:
+    current_status = str(state.get("status") or "")
+    raw_title = " ".join(str(state.get("title") or feat_id).split()) or feat_id
+    try:
+        slug = slugify(str(state.get("slug") or ""))
+    except SystemExit:
+        slug = slugify(feat_id)
+
+    candidate_state = {
+        "version": 1,
+        "feat_id": feat_id,
+        "title": raw_title,
+        "slug": slug,
+        "status": "discarded",
+        "workspace_mode": "proposal_only",
+        "base_ref": str(state.get("base_ref") or ""),
+        "branch": "",
+        "worktree_name": "",
+        "worktree_path": "",
+        "counters": {
+            "gate_fail_streak": 0,
+            "no_progress_rounds": 0,
+            "round_count": 0,
+        },
+        "closed_from_status": current_status,
+        "discard_reason": "invalid",
+        "replacement_feat_id": replacement_feat_id,
+        "history": [
+            history_event(
+                "feat_discarded",
+                "reason=invalid; "
+                f"source_issues={source_issue_count}; "
+                f"original root files preserved under artifacts/{FEATURE_INVALID_SOURCE_DIRNAME}",
+            )
+        ],
+    }
+    candidate_tasks = {
+        "version": 1,
+        "feat_id": feat_id,
+        "tasks": [],
+        "closeout_review": copy.deepcopy(closeout_review),
+    }
+    root_moves = plan_invalid_discard_root_entries(
+        paths.feat_dir(feat_id, status=current_status)
+    )
+    preserved_root_entries = [target for _, target in root_moves]
+    index_candidate = copy.deepcopy(load_index(paths))
+    upsert_feat_index_entry(index_candidate, candidate_state)
+    return CloseoutPublication(
+        state=candidate_state,
+        tasks=candidate_tasks,
+        index=index_candidate,
+        receipt=None,
+        summary=render_summary(
+            candidate_state,
+            candidate_tasks,
+            preserved_root_entries=preserved_root_entries,
+        ),
         root_moves=root_moves,
     )
 
@@ -1240,11 +1282,6 @@ def git_common_dir(root: Path) -> Path:
     return path if path.is_absolute() else (root / path).resolve()
 
 
-def command_exists(name: str) -> bool:
-    cp = run_cmd(["bash", "-lc", f"command -v {shlex.quote(name)} >/dev/null 2>&1"])
-    return cp.returncode == 0
-
-
 def current_branch(root: Path) -> str:
     cp = run_cmd(["git", "-C", str(root), "rev-parse", "--abbrev-ref", "HEAD"])
     if cp.returncode != 0:
@@ -1488,6 +1525,13 @@ def normalize_history(items: Any) -> list[dict[str, str]]:
 def normalize_state_payload(state: dict[str, Any]) -> None:
     for key in ("created_at", "updated_at", "archived_at", "discarded_at"):
         state.pop(key, None)
+    for key in (
+        "current_task_id",
+        "blocked_reason_class",
+        "blocked_reason",
+        "blocked_task_id",
+    ):
+        state.pop(key, None)
     gate = state.get("gate")
     if isinstance(gate, dict):
         gate.pop("last_checked_at", None)
@@ -1539,6 +1583,182 @@ def latest_plan_task_ids(tasks: dict[str, Any]) -> list[str]:
             return []
         out.append(task_id)
     return out
+
+
+def canonical_task_dependencies(task: dict[str, Any], *, label: str) -> list[str]:
+    raw = task.get("depends_on")
+    if raw is None:
+        return []
+    if not isinstance(raw, list):
+        raise SystemExit(f"error: {label}.depends_on must be a list of Task ids")
+    task_id = str(task.get("id") or "")
+    dependencies: list[str] = []
+    for index, item in enumerate(raw):
+        dependency = require_nonempty_string(item, f"{label}.depends_on[{index}]")
+        if not TASK_ID_RE.fullmatch(dependency):
+            raise SystemExit(f"error: {label}.depends_on[{index}] must match T-000")
+        if dependency == task_id:
+            raise SystemExit(f"error: {label} must not depend on itself")
+        if dependency in dependencies:
+            raise SystemExit(f"error: {label}.depends_on must not contain duplicates")
+        dependencies.append(dependency)
+    return sorted(dependencies)
+
+
+def current_plan_task_graph(
+    tasks: dict[str, Any],
+    *,
+    feat_id: str,
+) -> tuple[dict[str, dict[str, Any]], list[str]]:
+    current_ids = latest_plan_task_ids(tasks)
+    current_id_set = set(current_ids)
+    by_id = {
+        str(task.get("id")): task
+        for task in tasks.get("tasks", [])
+        if isinstance(task, dict) and str(task.get("id") or "") in current_id_set
+    }
+    missing = current_id_set - set(by_id)
+    if missing:
+        raise SystemExit(
+            f"error: {feat_id}: current Task graph references missing Tasks: "
+            + ", ".join(sorted(missing))
+        )
+
+    dependents_by_id: dict[str, list[str]] = {task_id: [] for task_id in current_ids}
+    indegree: dict[str, int] = {}
+    for task_id in current_ids:
+        dependencies = canonical_task_dependencies(
+            by_id[task_id],
+            label=f"{feat_id}/{task_id}",
+        )
+        unknown = set(dependencies) - current_id_set
+        if unknown:
+            raise SystemExit(
+                f"error: {feat_id}/{task_id}: depends_on references non-current Tasks: "
+                + ", ".join(sorted(unknown))
+            )
+        indegree[task_id] = len(dependencies)
+        for dependency in dependencies:
+            dependents_by_id[dependency].append(task_id)
+
+    ready = sorted(task_id for task_id, degree in indegree.items() if degree == 0)
+    topological_order: list[str] = []
+    while ready:
+        task_id = ready.pop(0)
+        topological_order.append(task_id)
+        for dependent in sorted(dependents_by_id[task_id]):
+            indegree[dependent] -= 1
+            if indegree[dependent] == 0:
+                ready.append(dependent)
+                ready.sort()
+    if len(topological_order) != len(current_ids):
+        cyclic = sorted(current_id_set - set(topological_order))
+        raise SystemExit(
+            f"error: {feat_id}: current Task dependencies contain a cycle: "
+            + ", ".join(cyclic)
+        )
+
+    return by_id, topological_order
+
+
+def task_topology_layers(
+    tasks: dict[str, Any],
+    *,
+    feat_id: str,
+) -> tuple[dict[str, dict[str, Any]], list[list[str]]]:
+    by_id, topological_order = current_plan_task_graph(tasks, feat_id=feat_id)
+    depth_by_id: dict[str, int] = {}
+    for task_id in topological_order:
+        dependencies = canonical_task_dependencies(
+            by_id[task_id],
+            label=f"{feat_id}/{task_id}",
+        )
+        depth_by_id[task_id] = (
+            max(depth_by_id[dependency] for dependency in dependencies) + 1
+            if dependencies
+            else 0
+        )
+    layers: list[list[str]] = []
+    for task_id in topological_order:
+        depth = depth_by_id[task_id]
+        while len(layers) <= depth:
+            layers.append([])
+        layers[depth].append(task_id)
+    return by_id, layers
+
+
+def task_frontier(tasks: dict[str, Any], *, feat_id: str) -> dict[str, list[str]]:
+    by_id, topological_order = current_plan_task_graph(tasks, feat_id=feat_id)
+    active: list[str] = []
+    runnable: list[str] = []
+    blocked: list[str] = []
+    waiting: list[str] = []
+    done: list[str] = []
+    for task_id in topological_order:
+        task = by_id[task_id]
+        status = str(task.get("status") or "")
+        dependencies = canonical_task_dependencies(
+            task,
+            label=f"{feat_id}/{task_id}",
+        )
+        unfinished_dependencies = [
+            dependency
+            for dependency in dependencies
+            if str(by_id[dependency].get("status") or "") != "done"
+        ]
+        if status in {"in_progress", "blocked", "done"} and unfinished_dependencies:
+            raise SystemExit(
+                f"error: {feat_id}/{task_id}: status={status} requires done dependencies: "
+                + ", ".join(unfinished_dependencies)
+            )
+        if status == "in_progress":
+            active.append(task_id)
+        elif status == "blocked":
+            blocked.append(task_id)
+        elif status == "done":
+            done.append(task_id)
+        elif status == "todo":
+            if not unfinished_dependencies:
+                runnable.append(task_id)
+            else:
+                waiting.append(task_id)
+    return {
+        "active": active,
+        "runnable": runnable,
+        "blocked": blocked,
+        "waiting": waiting,
+        "done": done,
+    }
+
+
+def feature_task_frontier(
+    state: dict[str, Any],
+    tasks: dict[str, Any],
+) -> dict[str, list[str]]:
+    if str(state.get("status") or "") not in CLOSED_FEAT_STATUS and has_reviewed_task_plan(tasks):
+        return task_frontier(tasks, feat_id=str(state.get("feat_id") or ""))
+    return {"active": [], "runnable": [], "blocked": [], "waiting": [], "done": []}
+
+
+def derived_feature_status(state: dict[str, Any], tasks: dict[str, Any]) -> str:
+    current = str(state.get("status") or "proposal")
+    if current in CLOSED_FEAT_STATUS:
+        return current
+    if workspace_mode_of(state) == "proposal_only" or not has_reviewed_task_plan(tasks):
+        return "proposal"
+    frontier = task_frontier(tasks, feat_id=str(state.get("feat_id") or ""))
+    current_count = len(latest_plan_task_ids(tasks))
+    if current_count > 0 and len(frontier["done"]) == current_count:
+        return "done"
+    if frontier["active"]:
+        return "in_progress"
+    if frontier["runnable"]:
+        return "ready"
+    return "blocked"
+
+
+def refresh_feature_status(state: dict[str, Any], tasks: dict[str, Any]) -> None:
+    state["status"] = derived_feature_status(state, tasks)
 
 
 def historical_task_first_revisions(tasks: dict[str, Any]) -> dict[str, int]:
@@ -1694,6 +1914,10 @@ def task_has_canonical_semantics(task: dict[str, Any]) -> bool:
         return False
     if len(set(supersedes)) != len(supersedes) or str(task.get("id")) in supersedes:
         return False
+    try:
+        canonical_task_dependencies(task, label=f"task {task.get('id')}")
+    except SystemExit:
+        return False
     verification = task.get("verification")
     if not isinstance(verification, list) or not verification:
         return False
@@ -1708,6 +1932,12 @@ def task_has_canonical_semantics(task: dict[str, Any]) -> bool:
             return False
         if not isinstance(mapping.get("proves"), str) or not str(mapping.get("proves")).strip():
             return False
+    # A reviewed plan may predate executable Task gates and still remain
+    # readable.  New plans are stricter at `parse_task_plan_candidate`, and
+    # execution/finish paths fail closed when the current Task has no command
+    # proof.  Keeping this structural predicate permissive avoids turning old
+    # reviewed history into an unreadable plan merely because its evidence was
+    # artifact- or manual-only.
     return True
 
 
@@ -1843,6 +2073,13 @@ def has_reviewed_task_plan(tasks: dict[str, Any]) -> bool:
         }
         if declared_by_task != latest_owner_map:
             return False
+    try:
+        current_plan_task_graph(
+            tasks,
+            feat_id=str(tasks.get("feat_id") or "<unknown>"),
+        )
+    except SystemExit:
+        return False
     return True
 
 
@@ -1993,6 +2230,14 @@ def build_reviewed_tasks_payload(
         previous_has_evidence = bool(previous_task and task_has_execution_evidence(previous_task))
         if previous_task and previous_has_evidence:
             changed = [field for field in semantic_fields if previous_task.get(field) != task.get(field)]
+            if canonical_task_dependencies(
+                previous_task,
+                label=f"{feat_id}/{task['id']}",
+            ) != canonical_task_dependencies(
+                task,
+                label=f"{feat_id}/{task['id']}",
+            ):
+                changed.append("depends_on")
             if changed:
                 raise SystemExit(
                     "error: executed task semantics are immutable across plan revisions: "
@@ -2329,7 +2574,6 @@ def feat_index_payload(state: dict[str, Any]) -> dict[str, Any]:
     feat_id = str(state["feat_id"])
     status = str(state.get("status") or "proposal")
     runtime_role = canonical_runtime_role(state.get("runtime_role"), feat_id=feat_id)
-    blocked_reason_class, _ = canonical_feature_blocker(state, feat_id=feat_id)
     runtime_relations = canonical_runtime_relations(state.get("runtime_relations"), feat_id=feat_id)
 
     payload = {
@@ -2342,8 +2586,6 @@ def feat_index_payload(state: dict[str, Any]) -> dict[str, Any]:
     }
     if runtime_role != "standalone" or "runtime_role" in state:
         payload["runtime_role"] = runtime_role
-    if blocked_reason_class != "none" or "blocked_reason_class" in state:
-        payload["blocked_reason_class"] = blocked_reason_class
     if runtime_relations or "runtime_relations" in state:
         payload["runtime_relations"] = runtime_relations
     return payload
@@ -2388,8 +2630,16 @@ def load_feat(paths: HarnessPaths, feat_id: str) -> tuple[dict[str, Any], dict[s
         raise SystemExit(f"error: missing feat state file: {state_file}")
     if not tasks_file.exists():
         raise SystemExit(f"error: missing feat tasks file: {tasks_file}")
-    state = load_json(state_file)
-    tasks = load_json(tasks_file)
+    # A malformed Feature record is a repairable record, not an internal fault.
+    # Reporting it as a tracker error lets the human projections isolate one bad
+    # record behind a repair-needed card instead of crashing the whole board.
+    try:
+        state = load_json(state_file)
+        tasks = load_json(tasks_file)
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise SystemExit(
+            f"error: unreadable feat record: {feat_id}: {normalize_error_text(exc)}"
+        ) from exc
     return state, tasks
 
 
@@ -2592,6 +2842,23 @@ def plan_closeout_root_entries(
     return moves
 
 
+def plan_invalid_discard_root_entries(feat_dir: Path) -> list[tuple[str, str]]:
+    preserve_dir = feat_dir / "artifacts" / FEATURE_INVALID_SOURCE_DIRNAME
+    if preserve_dir.exists():
+        raise SystemExit(
+            "error: invalid discard source already exists; inspect before retry: "
+            f"{preserve_dir}"
+        )
+    return [
+        (
+            child.name,
+            (Path("artifacts") / FEATURE_INVALID_SOURCE_DIRNAME / child.name).as_posix(),
+        )
+        for child in sorted(feat_dir.iterdir())
+        if child.name != "artifacts"
+    ]
+
+
 def materialize_feature_artifact(
     paths: HarnessPaths,
     skill_dir: Path,
@@ -2758,13 +3025,14 @@ def save_feat(
     normalize_state_payload(state)
     normalize_tasks_payload(tasks)
     require_canonical_reviewed_claim(tasks, feat_id=feat_id, action="saving Feature state")
+    refresh_feature_status(state, tasks)
     normalize_feature_goal_ref(paths, state)
     require_valid_feature_goal_contract(paths, state)
     status = str(state.get("status") or "")
-    canonical_feature_blocker(state, feat_id=feat_id)
     require_canonical_task_blockers(tasks, feat_id=feat_id)
-    if status == "blocked":
-        require_current_blocker_task_evidence(state, tasks, feat_id=feat_id)
+    require_task_blocker_runtime_role(state, tasks, feat_id=feat_id)
+    if status == "blocked" and not current_task_blockers(tasks, feat_id=feat_id):
+        raise SystemExit(f"error: {feat_id}: blocked Feature requires Task blocker evidence")
     save_json(paths.feat_state(feat_id, status=status), state)
     save_json(paths.feat_tasks(feat_id, status=status), tasks)
     receipt_path = paths.feat_owner_receipt(feat_id, status=status)
@@ -2778,33 +3046,36 @@ def save_feat(
 def owner_continuation(
     state: dict[str, Any],
     tasks: dict[str, Any],
-) -> tuple[str, dict[str, str] | None, str | None]:
+) -> tuple[str, list[dict[str, str | None]], str | None]:
     status = str(state.get("status") or "proposal")
     replacement = str(state.get("replacement_feat_id") or "").strip() or None
     if status in {"done", "archived"}:
-        return "complete", None, None
+        return "complete", [], None
     if status == "discarded":
         if replacement:
-            return "superseded", None, replacement
-        return "unavailable", None, None
+            return "superseded", [], replacement
+        return "unavailable", [], None
     if not has_reviewed_task_plan(tasks):
         return (
             "blocked",
-            {"class": "task_plan_missing", "reason": "Feature has no reviewed semantic task plan."},
+            [{"item_id": None, "class": "task_plan_missing", "reason": "Feature has no reviewed semantic task plan."}],
             None,
         )
     if status in {"ready", "in_progress"}:
-        return "continue", None, None
+        return "continue", [], None
     if status == "blocked":
-        reason_class, reason = canonical_feature_blocker(
-            state,
+        blockers = current_task_blockers(
+            tasks,
             feat_id=str(state.get("feat_id") or ""),
         )
-        assert reason is not None
-        return "blocked", {"class": reason_class, "reason": reason}, None
+        if not blockers:
+            raise SystemExit(
+                f"error: {state.get('feat_id')}: blocked Feature requires Task blocker evidence"
+            )
+        return "blocked", blockers, None
     return (
         "blocked",
-        {"class": "workspace_unassigned", "reason": "Feature has no assigned execution workspace."},
+        [{"item_id": None, "class": "workspace_unassigned", "reason": "Feature has no assigned execution workspace."}],
         None,
     )
 
@@ -2841,8 +3112,8 @@ def build_owner_receipt_payload(
 ) -> dict[str, Any]:
     feat_id = str(state.get("feat_id") or "")
     status = str(state.get("status") or "proposal")
-    current_item_id = str(state.get("current_task_id") or "").strip() or None
-    continuation, blocker, replacement_id = owner_continuation(state, tasks)
+    active_item_ids = feature_task_frontier(state, tasks)["active"]
+    continuation, blockers, replacement_id = owner_continuation(state, tasks)
     replacement_ref = None
     if replacement_id:
         replacement_status = feat_index_status(paths, replacement_id)
@@ -2856,8 +3127,8 @@ def build_owner_receipt_payload(
         "owner_id": feat_id,
         "lifecycle_status": status,
         "continuation": continuation,
-        "current_item_id": current_item_id,
-        "blocker": blocker,
+        "active_item_ids": active_item_ids,
+        "blockers": blockers,
         "replacement_ref": replacement_ref,
         "evidence_hashes": evidence_hashes,
     }
@@ -2871,8 +3142,8 @@ def build_owner_receipt_payload(
         "semantic_revision": semantic_revision,
         "lifecycle_status": status,
         "continuation": continuation,
-        "current_item_id": current_item_id,
-        "blocker": blocker,
+        "active_item_ids": active_item_ids,
+        "blockers": blockers,
         "replacement_ref": replacement_ref,
         "evidence_refs": evidence_refs,
         "evidence_hashes": evidence_hashes,
@@ -2913,6 +3184,17 @@ def count_tasks(tasks: dict[str, Any], status: str) -> int:
     return sum(1 for t in tasks.get("tasks", []) if t.get("status") == status)
 
 
+def count_current_tasks(tasks: dict[str, Any], status: str) -> int:
+    current_ids = set(latest_plan_task_ids(tasks))
+    return sum(
+        1
+        for task in tasks.get("tasks", [])
+        if isinstance(task, dict)
+        and task.get("status") == status
+        and (not current_ids or str(task.get("id") or "") in current_ids)
+    )
+
+
 def apply_task_finish_transition(
     state: dict[str, Any],
     tasks: dict[str, Any],
@@ -2926,19 +3208,18 @@ def apply_task_finish_transition(
     task = find_task(tasks, task_id)
     if task.get("status") != "in_progress":
         raise SystemExit(f"error: task is not in_progress: {task_id}")
-    if state.get("current_task_id") != task_id:
-        raise SystemExit("error: state current_task_id mismatch")
 
     reason_class, reason = canonical_task_finish_blocker(
         result=result,
         blocked_reason_class=blocked_reason_class,
         blocked_reason=blocked_reason,
     )
-    if result == "done" and task.get("gate_result") != "pass":
-        raise SystemExit("error: cannot finish task as done without gate pass")
+    if result == "done":
+        if task.get("gate_result") != "pass":
+            raise SystemExit("error: cannot finish task as done without gate pass")
+        require_task_gate_receipt(task, feat_id=feat_id)
 
     task["status"] = result
-    state["current_task_id"] = None
     state.setdefault("counters", {})["no_progress_rounds"] = 0
     state.setdefault("history", []).append(
         history_event("task_finished", f"{task_id} => {result}")
@@ -2947,25 +3228,11 @@ def apply_task_finish_transition(
     if result == "blocked":
         assert reason_class is not None and reason is not None
         task["last_blocker"] = {"class": reason_class, "reason": reason}
-        state["status"] = "blocked"
-        state["blocked_reason_class"] = reason_class
-        state["blocked_reason"] = reason
-        state["blocked_task_id"] = task_id
         state.setdefault("history", []).append(
-            history_event("blocked_reason_set", f"{task_id} => {reason_class}")
+            history_event("task_blocker_set", f"{task_id} => {reason_class}")
         )
-        canonical_feature_blocker(state, feat_id=feat_id)
         canonical_task_last_blocker(task, feat_id=feat_id)
-        return
-
-    state["blocked_reason_class"] = "none"
-    state.pop("blocked_reason", None)
-    state.pop("blocked_task_id", None)
-    if count_tasks(tasks, "todo") == 0 and count_tasks(tasks, "in_progress") == 0:
-        state["status"] = "done"
-    else:
-        state["status"] = "ready"
-    canonical_feature_blocker(state, feat_id=feat_id)
+    refresh_feature_status(state, tasks)
 
 
 def feature_scope_for_status(status: str) -> str:
@@ -3266,9 +3533,7 @@ def cmd_feat_new(args: argparse.Namespace) -> int:
         "branch": branch,
         "worktree_name": wt_name,
         "worktree_path": wt_rel,
-        "current_task_id": None,
         "runtime_role": "standalone",
-        "blocked_reason_class": "none",
         "runtime_relations": [],
         "counters": {
             "gate_fail_streak": 0,
@@ -3455,8 +3720,8 @@ def cmd_set_task_plan(args: argparse.Namespace) -> int:
     if status in CLOSED_FEAT_STATUS or status == "in_progress":
         eprint(f"error: task plan cannot be replaced while feature status is {status}")
         return 1
-    if state.get("current_task_id") is not None:
-        eprint("error: task plan cannot be replaced while current_task_id is set")
+    if count_tasks(tasks, "in_progress") > 0:
+        eprint("error: task plan cannot be replaced while Tasks are in_progress")
         return 1
 
     current_revision = tasks.get("plan_revision")
@@ -3490,9 +3755,6 @@ def cmd_set_task_plan(args: argparse.Namespace) -> int:
     )
     if count_tasks(tasks, "todo") > 0 and status in {"blocked", "done"}:
         state["status"] = "proposal" if workspace_mode_of(state) == "proposal_only" else "ready"
-        state["blocked_reason_class"] = "none"
-        state.pop("blocked_reason", None)
-        state.pop("blocked_task_id", None)
     state.setdefault("history", []).append(
         history_event(
             "task_plan_set",
@@ -3528,18 +3790,25 @@ def validate_repaired_task_plan(
             f"current {previous_revision}, replacement {replacement_revision}"
         )
     require_canonical_task_blockers(replacement, feat_id=feat_id)
-    current_task_id = state.get("current_task_id")
-    in_progress = [
+    previous_in_progress = sorted(
+        str(task.get("id"))
+        for task in previous.get("tasks", [])
+        if isinstance(task, dict) and task.get("status") == "in_progress"
+    )
+    replacement_in_progress = sorted(
         str(task.get("id"))
         for task in replacement.get("tasks", [])
         if isinstance(task, dict) and task.get("status") == "in_progress"
-    ]
-    if current_task_id is None:
-        if in_progress:
-            raise SystemExit("error: repaired task plan introduces an in_progress task without current_task_id")
-    elif in_progress != [current_task_id]:
+    )
+    if replacement_in_progress != previous_in_progress:
         raise SystemExit(
-            "error: repaired task plan must preserve the active current_task_id as the only in_progress task"
+            "error: repaired task plan must preserve the exact active Task set"
+        )
+    expected_status = derived_feature_status(state, replacement)
+    if str(state.get("status") or "") != expected_status:
+        raise SystemExit(
+            "error: repaired task plan must preserve Feature status aggregation; "
+            f"expected {state.get('status')}, replacement derives {expected_status}"
         )
 
 
@@ -3595,9 +3864,10 @@ def cmd_repair_reviewed_task_plan(args: argparse.Namespace) -> int:
     validate_repaired_task_plan(state, tasks, replacement, feat_id=args.feat)
     normalize_feature_goal_ref(paths, state)
     require_valid_feature_goal_contract(paths, state)
-    canonical_feature_blocker(state, feat_id=args.feat)
-    if status == "blocked":
-        require_current_blocker_task_evidence(state, replacement, feat_id=args.feat)
+    require_task_blocker_runtime_role(state, replacement, feat_id=args.feat)
+    if status == "blocked" and not current_task_blockers(replacement, feat_id=args.feat):
+        eprint(f"error: {args.feat}: blocked Feature requires Task blocker evidence")
+        return 1
 
     publish_repaired_task_plan(paths, state, replacement, feat_id=args.feat)
     print(
@@ -3619,7 +3889,7 @@ def cmd_get_owner_receipt(args: argparse.Namespace) -> int:
     print(f"semantic_revision: {receipt['semantic_revision']}")
     print(f"lifecycle_status: {receipt['lifecycle_status']}")
     print(f"continuation: {receipt['continuation']}")
-    print(f"current_item_id: {receipt['current_item_id'] or 'none'}")
+    print(f"active_item_ids: {','.join(receipt['active_item_ids']) or 'none'}")
     return 0
 
 
@@ -3704,6 +3974,97 @@ def cmd_assign_feat_workspace(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_adopt_feat_worktree(args: argparse.Namespace) -> int:
+    root = Path(args.root).resolve()
+    paths = HarnessPaths(root)
+    ensure_harness_exists(paths)
+    ensure_git_repo(root)
+
+    state, tasks = load_feat(paths, args.feat)
+    if str(state.get("status") or "") in CLOSED_FEAT_STATUS:
+        eprint(f"error: cannot adopt worktree for closed feat: {args.feat}")
+        return 1
+    try:
+        require_reviewed_task_plan(tasks, feat_id=args.feat, action="worktree adoption")
+        load_current_owner_receipt(paths, state, tasks)
+    except SystemExit as exc:
+        eprint(str(exc))
+        return 1
+
+    if count_tasks(tasks, "in_progress") > 0:
+        eprint(f"error: cannot adopt worktree while feat has active Tasks: {args.feat}")
+        return 1
+
+    raw_worktree_path = str(args.worktree_path or "").strip()
+    expected_branch = str(args.branch or "").strip()
+    if not raw_worktree_path:
+        eprint("error: --worktree-path must not be empty")
+        return 1
+    if not expected_branch:
+        eprint("error: --branch must not be empty")
+        return 1
+
+    worktree_abs = resolve_worktree_abs(root, raw_worktree_path).resolve()
+    if worktree_abs == root:
+        eprint("error: tracker root must use current_tree instead of worktree adoption")
+        return 1
+    if not worktree_abs.exists():
+        eprint(f"error: worktree path does not exist: {worktree_abs}")
+        return 1
+    if not worktree_abs.is_dir():
+        eprint(f"error: worktree path is not a directory: {worktree_abs}")
+        return 1
+    if worktree_abs not in git_worktree_paths(root):
+        eprint(f"error: worktree path is not registered under tracker root: {worktree_abs}")
+        return 1
+
+    actual_branch = current_branch(worktree_abs)
+    if actual_branch != expected_branch:
+        eprint(
+            "error: worktree branch mismatch: "
+            f"expected {expected_branch}, found {actual_branch or 'detached'}"
+        )
+        return 1
+
+    worktree_rel = Path(os.path.relpath(worktree_abs, root)).as_posix()
+    worktree_name = worktree_abs.name
+    current_mode = workspace_mode_of(state)
+    old_branch = str(state.get("branch") or "")
+    old_worktree_path = str(state.get("worktree_path") or "")
+    if (
+        current_mode == "worktree"
+        and old_branch == expected_branch
+        and old_worktree_path == worktree_rel
+        and str(state.get("worktree_name") or "") == worktree_name
+    ):
+        print(f"ok: worktree already adopted {args.feat}")
+        print(f"branch: {expected_branch}")
+        print(f"worktree: {worktree_abs}")
+        return 0
+
+    state["workspace_mode"] = "worktree"
+    if state.get("status") == "proposal":
+        state["status"] = "ready"
+    state["branch"] = expected_branch
+    state["worktree_name"] = worktree_name
+    state["worktree_path"] = worktree_rel
+    state.setdefault("history", []).append(
+        history_event(
+            "workspace_adopted",
+            (
+                f"{current_mode}:{old_branch or 'none'}@{old_worktree_path or 'none'}"
+                f" -> worktree:{expected_branch}@{worktree_rel}"
+            ),
+        )
+    )
+    save_feat(paths, args.feat, state, tasks)
+
+    print(f"ok: existing worktree adopted {args.feat}")
+    print(f"branch: {expected_branch}")
+    print(f"worktree: {worktree_abs}")
+    return 0
+
+
 FEATURE_STATUS_PRESENTATION = {
     "in_progress": ("In progress", "amber"),
     "blocked": ("Blocked", "red"),
@@ -3714,6 +4075,15 @@ FEATURE_STATUS_PRESENTATION = {
     "discarded": ("Discarded", "red"),
 }
 FEATURE_STATUS_ORDER = ("proposal", "ready", "in_progress", "blocked", "done")
+# One definition of the derived Task frontier groups, in presentation order,
+# shared by every human projection so no surface invents its own vocabulary.
+TASK_FRONTIER_LABELS = (
+    ("active", "Active"),
+    ("runnable", "Runnable"),
+    ("waiting", "Waiting"),
+    ("blocked", "Blocked"),
+    ("done", "Done"),
+)
 
 
 def human_status_label(status: Any) -> str:
@@ -3729,26 +4099,160 @@ def xml_text(value: Any) -> str:
     return html.escape(str(value or ""), quote=False)
 
 
-def feature_current_task(state: dict[str, Any], tasks: dict[str, Any]) -> dict[str, Any] | None:
-    current_id = str(state.get("current_task_id") or "")
-    if not current_id:
-        return None
-    return next(
-        (task for task in tasks.get("tasks", []) if str(task.get("id") or "") == current_id),
-        None,
-    )
+def task_records_by_id(tasks: dict[str, Any], task_ids: Iterable[str]) -> list[dict[str, Any]]:
+    by_id = {
+        str(task.get("id") or ""): task
+        for task in tasks.get("tasks", [])
+        if isinstance(task, dict)
+    }
+    return [by_id[task_id] for task_id in task_ids if task_id in by_id]
 
 
 def render_task_stats_html(tasks: dict[str, Any]) -> str:
     parts = []
     for status in ("in_progress", "blocked", "todo", "done"):
-        count = count_tasks(tasks, status)
+        count = count_current_tasks(tasks, status)
         if count:
             parts.append(
                 f'<span class="task-count task-count--{status.replace("_", "-")}">'
                 f"{html_text(status.replace('_', ' ').title())} {count}</span>"
             )
     return "".join(parts) or '<span class="task-count">No tasks</span>'
+
+
+def load_feature_runtime_activity(
+    paths: HarnessPaths,
+    state: dict[str, Any],
+    tasks: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Read optional Flow Runner progress receipts for one Feature.
+
+    Flow Runner owns this log.  The Tracker only projects it, and only an
+    explicit ``task_ref`` is allowed to bind a receipt to a Task. Older
+    receipts remain valid; the latest overall receipt is shown at Feature
+    level and the latest receipt for each bound Task is retained separately.
+    """
+    feat_id = str(state.get("feat_id") or "").strip()
+    if not feat_id or not is_valid_feat_id(feat_id):
+        return None
+    progress_path = (
+        paths.root
+        / ".bagakit"
+        / "flow-runner"
+        / "items"
+        / f"feature-{feat_id}"
+        / "progress.ndjson"
+    )
+    if not progress_path.is_file():
+        return None
+
+    valid_records: list[dict[str, Any]] = []
+    try:
+        for line in progress_path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(record, dict):
+                continue
+            if record.get("schema") != "bagakit/flow-runner/progress/v1":
+                continue
+            if str(record.get("item_id") or "") != f"feature-{feat_id}":
+                continue
+            if record.get("task_ref") is not None and not isinstance(record.get("task_ref"), str):
+                continue
+            valid_records.append(record)
+    except OSError:
+        return None
+    if not valid_records:
+        return None
+
+    task_ids = {
+        str(task.get("id") or "")
+        for task in current_plan_tasks(tasks)
+        if isinstance(task, dict)
+    }
+
+    def activity_for(record: dict[str, Any]) -> dict[str, Any]:
+        task_ref = str(record.get("task_ref") or "").strip()
+        return {
+            "record": record,
+            "task_ref": task_ref,
+            "bound_task_ref": task_ref if task_ref in task_ids else "",
+            "path": relative_display(paths.root, progress_path),
+            "href": progress_path.resolve().as_uri(),
+        }
+
+    latest = activity_for(valid_records[-1])
+    by_task: dict[str, dict[str, Any]] = {}
+    for record in valid_records:
+        task_ref = str(record.get("task_ref") or "").strip()
+        if task_ref in task_ids:
+            by_task[task_ref] = activity_for(record)
+    latest["by_task"] = by_task
+    return latest
+
+
+def render_runtime_activity_html(
+    activity: dict[str, Any] | None,
+    *,
+    compact: bool = False,
+) -> str:
+    if not activity:
+        return ""
+    record = activity.get("record") if isinstance(activity.get("record"), dict) else {}
+    task_ref = str(activity.get("task_ref") or "").strip()
+    bound_task_ref = str(activity.get("bound_task_ref") or "").strip()
+    scope = f"Task {bound_task_ref}" if bound_task_ref else "Feature-wide"
+    if task_ref and not bound_task_ref:
+        scope = f"Unmatched task_ref {task_ref}"
+    session_status = str(record.get("session_status") or "report")
+    stage = str(record.get("stage") or "")
+    result = str(record.get("result") or "").strip()
+    next_action = str(record.get("next_action") or "").strip()
+    attempted = str(record.get("attempted") or "").strip()
+    recorded_at = str(record.get("recorded_at") or "").strip()
+    source = (
+        f'<a href="{html_text(activity.get("href"))}" target="_blank" rel="noreferrer">'
+        f"{html_text(activity.get('path'))}</a>"
+    )
+    if compact:
+        summary = " · ".join(part for part in (scope, stage, session_status, result) if part)
+        return (
+            '<div class="runtime-activity-summary"><span class="eyebrow">Execution update</span>'
+            f'<strong>{html_text(summary or "Latest progress reported")}</strong></div>'
+        )
+    detail_rows = []
+    if attempted:
+        detail_rows.append(f"<div><dt>Attempted</dt><dd>{html_text(attempted)}</dd></div>")
+    if next_action:
+        detail_rows.append(f"<div><dt>Next action</dt><dd>{html_text(next_action)}</dd></div>")
+    if recorded_at:
+        detail_rows.append(
+            f'<div><dt>Reported</dt><dd><time datetime="{html_text(recorded_at)}">'
+            f"{html_text(recorded_at)}</time></dd></div>"
+        )
+    return (
+        '<section class="runtime-activity" aria-label="Latest execution activity">'
+        '<div class="runtime-activity-header"><div><span class="eyebrow">Execution update</span>'
+        f'<strong>{html_text(scope)}</strong></div>'
+        f'<span class="runtime-activity-state">{html_text(session_status)}</span></div>'
+        + (f'<p><strong>{html_text(stage)}</strong> · {html_text(result)}</p>' if stage or result else "")
+        + (f'<dl>{"".join(detail_rows)}</dl>' if detail_rows else "")
+        + (
+            '<p class="runtime-activity-source">SSOT: '
+            f'{source} · informational only; it does not change Task state or gate evidence.</p>'
+        )
+        + (
+            '<p class="runtime-activity-warning">The receipt names a Task that is not in the current reviewed plan; '
+            "it is intentionally not attached to a Task card.</p>"
+            if task_ref and not bound_task_ref
+            else ""
+        )
+        + "</section>"
+    )
 
 
 def build_agent_claim_message(
@@ -3761,38 +4265,46 @@ def build_agent_claim_message(
     worktree = str(state.get("worktree_path") or "").strip() or "none"
     branch = str(state.get("branch") or "").strip() or "none"
     feature_status = str(state.get("status") or "unknown")
-    current_task = feature_current_task(state, tasks)
-    task_id = str(current_task.get("id") or "none") if current_task else "none"
-    task_title = str(current_task.get("title") or "none") if current_task else "none"
+    frontier = feature_task_frontier(state, tasks)
+    active_text = ",".join(frontier["active"]) or "none"
+    runnable_text = ",".join(frontier["runnable"]) or "none"
     task_counts = ", ".join(
-        f"{status}={count_tasks(tasks, status)}"
+        f"{status}={count_current_tasks(tasks, status)}"
         for status in ("todo", "in_progress", "done", "blocked")
     )
     feature_dir = relative_display(
         paths.root,
         paths.feat_dir(feat_id, status=feature_status),
     )
-    canonical_refs = [f"{feature_dir}/state.json", f"{feature_dir}/tasks.json"]
+    canonical_refs = [
+        f"{feature_dir}{POSIX_SEP}state.json",
+        f"{feature_dir}{POSIX_SEP}tasks.json",
+    ]
     if paths.feat_goal(feat_id, status=feature_status).is_file():
-        canonical_refs.insert(0, f"{feature_dir}/goal.md")
+        canonical_refs.insert(0, f"{feature_dir}{POSIX_SEP}goal.md")
     if paths.feat_owner_receipt(feat_id, status=feature_status).is_file():
-        canonical_refs.insert(1 if canonical_refs[0].endswith("goal.md") else 0, f"{feature_dir}/owner-receipt.json")
+        canonical_refs.insert(
+            1 if canonical_refs[0].endswith("goal.md") else 0,
+            f"{feature_dir}{POSIX_SEP}owner-receipt.json",
+        )
     canonical_text = "\n".join(f"{index}. {ref}" for index, ref in enumerate(canonical_refs, 1))
     generated_time = datetime.now(timezone.utc).isoformat(timespec="seconds")
     name = f"Feature-Tracker-{feat_id}"
-    nearest_action = f"当前定位到 {task_id} · {task_title}。" if current_task else "当前未定位到 active Task。"
+    nearest_action = (
+        f"当前 active Tasks：{active_text}；可认领 Tasks：{runnable_text}。"
+    )
     body = f"""你是认领 Feature“{feature_name}”（{feat_id}）的 Agent。先从 canonical truth 建立自己的 Goal model，对齐后直接行动，不需要仅为确认而回复。
 
 Feature name: {feature_name}
 Feature ID: {feat_id}
 Worktree: {worktree}
 Branch: {branch}
-Progress snapshot: status={feature_status}; current_task={task_id}; {task_counts}
+Progress snapshot: status={feature_status}; active_tasks={active_text}; runnable_tasks={runnable_text}; {task_counts}
 
 SSOT（按顺序读取）：
 {canonical_text}
 
-{nearest_action} 上面的 progress 只帮助定位，不是状态副本。请从 SSOT 恢复 Goal、当前 Task、验收、blocker、authority 和下一步；若两者不一致，以 SSOT 为准。
+{nearest_action} 上面的 progress 只帮助定位，不是状态副本。请从 SSOT 恢复 Goal、Task、验收、blocker、authority 和下一步；若两者不一致，以 SSOT 为准。
 
 本消息只传递认领上下文，不授予超出当前 Host 和 Owner truth 的写入、外部副作用、合并或发布权限。对齐后直接推进最接近验收证据的动作；只有在 verified result、稳定 checkpoint、真实 blocker、方向或权限 mismatch、不可逆决策，或完成当前任务验收时，按 Goal / Result / Evidence / Mismatch or blocker / Next 返回。
 
@@ -3823,12 +4335,256 @@ def local_ref_href(root: Path, ref: Any) -> str | None:
         target.relative_to(root.resolve())
     except ValueError:
         return None
-    return target.as_uri() if target.is_file() else None
+    try:
+        return target.as_uri() if target.is_file() else None
+    except OSError:
+        # A command verification is not a repository-relative file reference.
+        # Long commands can exceed the host path limit; render them as code.
+        return None
 
 
-def render_task_review_html(root: Path, task: dict[str, Any]) -> str:
+def task_review_anchor(feat_id: str, task_id: str) -> str:
+    return f"{feat_id}-task-{task_id}"
+
+
+def topology_character_width(character: str) -> int:
+    if unicodedata.combining(character):
+        return 0
+    return 2 if unicodedata.east_asian_width(character) in {"W", "F", "A"} else 1
+
+
+def topology_title_lines(
+    value: Any,
+    *,
+    max_units: int = 25,
+    max_lines: int = 2,
+) -> list[str]:
+    """Wrap a compact SVG title by approximate display width.
+
+    Character count underestimates CJK width and allowed mixed-language titles
+    to escape their node.  The full title remains in the SVG `<title>`; this is
+    only the bounded visible label.
+    """
+    remaining = " ".join(str(value or "").split())
+    lines: list[str] = []
+    total_units = sum(topology_character_width(char) for char in remaining)
+    if total_units > max_units and total_units <= max_units * max_lines:
+        cumulative = 0
+        split_candidates: list[tuple[int, int, int]] = []
+        for index, character in enumerate(remaining[:-1], start=1):
+            cumulative += topology_character_width(character)
+            right = remaining[index:].lstrip()
+            if character.isspace() or character in ":;,+-—" + POSIX_SEP + "，、":
+                penalty = 1 if right[:1] in "+-:;，、" else 0
+                split_candidates.append((index, cumulative, penalty))
+        if not split_candidates:
+            cumulative = 0
+            for index, character in enumerate(remaining[:-1], start=1):
+                cumulative += topology_character_width(character)
+                adjacent_wide = (
+                    topology_character_width(character) == 2
+                    and topology_character_width(remaining[index]) == 2
+                )
+                split_candidates.append((index, cumulative, 1 if adjacent_wide else 0))
+        target_units = total_units / max_lines
+        split_index, _, _ = min(
+            split_candidates,
+            key=lambda item: (item[2], abs(item[1] - target_units), -item[1]),
+        )
+        return [remaining[:split_index].rstrip(), remaining[split_index:].lstrip()]
+
+    while remaining and len(lines) < max_lines:
+        used = 0
+        cut = 0
+        for index, character in enumerate(remaining):
+            width = topology_character_width(character)
+            if used + width > max_units:
+                break
+            used += width
+            cut = index + 1
+        if cut >= len(remaining):
+            lines.append(remaining)
+            remaining = ""
+            break
+        line = remaining[:cut].rstrip()
+        if not line:
+            line = remaining[:1]
+            cut = 1
+        lines.append(line)
+        remaining = remaining[cut:].lstrip()
+
+    if remaining and lines:
+        ellipsis_width = topology_character_width("…")
+        last = lines[-1]
+        while last and sum(topology_character_width(char) for char in last) > max_units - ellipsis_width:
+            last = last[:-1]
+        lines[-1] = last.rstrip() + "…"
+    return lines or [""]
+
+
+def render_task_topology_html(
+    state: dict[str, Any],
+    tasks: dict[str, Any],
+    runtime_activity: dict[str, Any] | None = None,
+) -> str:
+    feat_id = str(state.get("feat_id") or "")
+    if not has_reviewed_task_plan(tasks):
+        return ""
+    by_id, layers = task_topology_layers(tasks, feat_id=feat_id)
+    if not layers:
+        return ""
+
+    node_width = 176
+    node_height = 94
+    column_gap = 76
+    row_gap = 16
+    padding_x = 18
+    padding_y = 18
+    max_rows = max(len(layer) for layer in layers)
+    canvas_width = padding_x * 2 + len(layers) * node_width + (len(layers) - 1) * column_gap
+    canvas_height = padding_y * 2 + max_rows * node_height + max(0, max_rows - 1) * row_gap
+
+    positions: dict[str, tuple[float, float]] = {}
+    for layer_index, layer in enumerate(layers):
+        column_height = len(layer) * node_height + max(0, len(layer) - 1) * row_gap
+        offset_y = padding_y + (canvas_height - padding_y * 2 - column_height) / 2
+        x = padding_x + layer_index * (node_width + column_gap)
+        for row_index, task_id in enumerate(layer):
+            positions[task_id] = (x, offset_y + row_index * (node_height + row_gap))
+
+    edge_items: list[str] = []
+    edge_count = 0
+    for target_id, task in by_id.items():
+        target_x, target_y = positions[target_id]
+        for source_id in canonical_task_dependencies(task, label=f"{feat_id}/{target_id}"):
+            source_x, source_y = positions[source_id]
+            start_x = source_x + node_width
+            start_y = source_y + node_height / 2
+            end_x = target_x
+            end_y = target_y + node_height / 2
+            bend = max(24, (end_x - start_x) / 2)
+            edge_items.append(
+                f'<path class="topology-edge" data-from="{html_text(source_id)}" '
+                f'data-to="{html_text(target_id)}" '
+                f'd="M {start_x:g} {start_y:g} C {start_x + bend:g} {start_y:g}, '
+                f'{end_x - bend:g} {end_y:g}, {end_x:g} {end_y:g}" '
+                f'marker-end="url(#{html_text(feat_id)}-task-arrow)" />'
+            )
+            edge_count += 1
+
+    frontier = feature_task_frontier(state, tasks)
+    display_status_by_id = {
+        task_id: group
+        for group in ("active", "runnable", "blocked", "waiting", "done")
+        for task_id in frontier[group]
+    }
+    node_items: list[str] = []
+    for layer in layers:
+        for task_id in layer:
+            task = by_id[task_id]
+            x, y = positions[task_id]
+            display_status = display_status_by_id.get(task_id, str(task.get("status") or "todo"))
+            status_label = display_status.replace("_", " ").title()
+            full_title = str(task.get("title") or task_id)
+            dependencies = canonical_task_dependencies(
+                task,
+                label=f"{feat_id}/{task_id}",
+            )
+            gate_result = str(task.get("gate_result") or "").strip()
+            gate_label = {
+                "pass": "Gate pass",
+                "fail": "Gate fail",
+            }.get(gate_result, "Gate pending")
+            if not dependencies:
+                dependency_label = "Root task"
+            elif display_status == "waiting":
+                done_dependencies = sum(
+                    1
+                    for dependency in dependencies
+                    if str(by_id[dependency].get("status") or "") == "done"
+                )
+                dependency_label = f"Waiting · {done_dependencies}/{len(dependencies)} deps"
+            else:
+                dependency_label = f"{len(dependencies)} dep" + ("s" if len(dependencies) != 1 else "")
+            title_lines = topology_title_lines(full_title)
+            title_tspans = "".join(
+                f'<tspan x="{x + 13:g}" dy="{0 if index == 0 else 15}">{xml_text(line)}</tspan>'
+                for index, line in enumerate(title_lines)
+            )
+            task_activities = (
+                runtime_activity.get("by_task", {})
+                if isinstance(runtime_activity, dict)
+                else {}
+            )
+            live_marker = task_id in task_activities
+            node_class = f"topology-node--{display_status.replace('_', '-')}"
+            if live_marker:
+                node_class += " topology-node--live"
+            node_meta = f"{gate_label} · {dependency_label}"
+            if live_marker:
+                node_meta += " · Update"
+            node_items.append(
+                f'<a class="topology-node {html_text(node_class)}" '
+                f'data-task-id="{html_text(task_id)}" href="#{html_text(task_review_anchor(feat_id, task_id))}">'
+                f'<title>{xml_text(task_id)} · {xml_text(full_title)} · {xml_text(status_label)} · '
+                f'{xml_text(gate_label)} · {xml_text(dependency_label)}</title>'
+                f'<rect x="{x:g}" y="{y:g}" width="{node_width}" height="{node_height}" rx="10" />'
+                f'<circle cx="{x + 13:g}" cy="{y + 17:g}" r="4" />'
+                f'<text class="topology-node-id" x="{x + 24:g}" y="{y + 20:g}">{xml_text(task_id)}</text>'
+                f'<text class="topology-node-status" x="{x + node_width - 10:g}" y="{y + 20:g}" '
+                f'text-anchor="end">{xml_text(status_label)}</text>'
+                f'<text class="topology-node-title" x="{x + 13:g}" y="{y + 44:g}">'
+                f'{title_tspans}</text>'
+                f'<text class="topology-node-meta" x="{x + 13:g}" y="{y + 82:g}">'
+                f'{xml_text(node_meta)}</text></a>'
+            )
+
+    root_count = len(layers[0])
+    legend_html = "".join(
+        f'<span class="topology-legend topology-legend--{html_text(group)}">'
+        f'<i aria-hidden="true"></i>{label} {len(frontier[group])}</span>'
+        for group, label in TASK_FRONTIER_LABELS
+    )
+    return (
+        f'<section class="task-topology" data-feature-id="{html_text(feat_id)}" aria-label="Task topology">'
+        '<div class="task-topology-header"><div><span class="eyebrow">Task topology</span>'
+        '<h4>Dependencies and convergence</h4></div><div class="task-topology-header-actions">'
+        f'<span>{len(by_id)} Tasks · {root_count} roots · {edge_count} edges</span>'
+        f'<button type="button" class="topology-expand" data-topology-feature="{html_text(feat_id)}">View fullscreen</button>'
+        '<div class="topology-zoom-controls" role="group" aria-label="Topology zoom">'
+        '<button type="button" data-topology-zoom="out" aria-label="Zoom out">−</button>'
+        '<output class="topology-zoom-level" data-topology-zoom-level>100%</output>'
+        '<button type="button" data-topology-zoom="in" aria-label="Zoom in">+</button>'
+        '<button type="button" data-topology-zoom="reset">Reset</button>'
+        '</div>'
+        '</div></div>'
+        f'<div class="task-topology-legend" aria-label="Task runtime status">{legend_html}</div>'
+        '<div class="task-topology-scroll">'
+        f'<svg class="task-topology-svg" role="img" aria-label="Task dependency graph" '
+        f'width="{canvas_width}" height="{canvas_height}" viewBox="0 0 {canvas_width} {canvas_height}">'
+        '<defs><marker '
+        f'id="{html_text(feat_id)}-task-arrow" viewBox="0 0 8 8" refX="7" refY="4" '
+        'markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 8 4 L 0 8 z" /></marker></defs>'
+        + "".join(edge_items)
+        + "".join(node_items)
+        + '</svg></div><p class="task-topology-note">Select a node to jump to its acceptance and proof.</p></section>'
+    )
+
+
+def render_task_review_html(
+    root: Path,
+    task: dict[str, Any],
+    *,
+    feat_id: str,
+    runtime_activity: dict[str, Any] | None = None,
+    open_task: bool = False,
+) -> str:
     status = str(task.get("status") or "todo")
     gate_result = str(task.get("gate_result") or "").strip()
+    dependencies = canonical_task_dependencies(
+        task,
+        label=f"task {task.get('id')}",
+    )
     acceptance = task.get("acceptance") if isinstance(task.get("acceptance"), list) else []
     verification = task.get("verification") if isinstance(task.get("verification"), list) else []
     acceptance_html = (
@@ -3860,8 +4616,17 @@ def render_task_review_html(root: Path, task: dict[str, Any]) -> str:
         else '<p class="empty">No verification mappings.</p>'
     )
     gate_html = f'<span class="gate">Gate {html_text(gate_result)}</span>' if gate_result else ""
+    task_id = str(task.get("id") or "")
+    task_activities = (
+        runtime_activity.get("by_task", {})
+        if isinstance(runtime_activity, dict)
+        else {}
+    )
+    activity_html = render_runtime_activity_html(task_activities.get(task_id))
+    open_attr = " open" if open_task else ""
     return (
-        '<section class="review-task">'
+        f'<details class="review-task" id="{html_text(task_review_anchor(feat_id, task_id))}"{open_attr}>'
+        '<summary class="review-task-summary">'
         '<div class="task-heading">'
         f'<span class="task-id">{html_text(task.get("id"))}</span>'
         f'<span class="task-status task-status--{html_text(status.replace("_", "-"))}">'
@@ -3869,13 +4634,17 @@ def render_task_review_html(root: Path, task: dict[str, Any]) -> str:
         + gate_html
         + "</div>"
         f'<h4>{html_text(task.get("title"))}</h4>'
-        f'<p class="review-copy"><strong>Objective</strong>{html_text(task.get("objective"))}</p>'
+        f'<p class="task-dependencies"><strong>Depends on</strong> {html_text(", ".join(dependencies) or "none")}</p>'
+        '<span class="review-task-toggle">Details <span aria-hidden="true">↓</span></span>'
+        '</summary><div class="review-task-body">'
+        + activity_html
+        + f'<p class="review-copy"><strong>Objective</strong>{html_text(task.get("objective"))}</p>'
         f'<p class="review-copy"><strong>Outcome</strong>{html_text(task.get("outcome"))}</p>'
         '<div class="review-grid"><div><h5>Acceptance</h5>'
         + acceptance_html
         + "</div><div><h5>Verification</h5>"
         + verification_html
-        + "</div></div></section>"
+        + "</div></div></div></details>"
     )
 
 
@@ -3904,10 +4673,31 @@ def render_feature_review_html(
         if path.is_file()
     )
     reviewed_tasks = current_plan_tasks(tasks)
+    runtime_activity = load_feature_runtime_activity(paths, state, tasks)
+    topology_html = render_task_topology_html(state, tasks, runtime_activity)
     tasks_html = (
-        "".join(render_task_review_html(paths.root, task) for task in reviewed_tasks)
+        "".join(
+            render_task_review_html(
+                paths.root,
+                task,
+                feat_id=feat_id,
+                runtime_activity=runtime_activity,
+                open_task=(
+                    str(task.get("status") or "") in {"in_progress", "blocked"}
+                    or len(reviewed_tasks) <= 2
+                ),
+            )
+            for task in reviewed_tasks
+        )
         if reviewed_tasks
         else '<p class="empty">No reviewed tasks.</p>'
+    )
+    runtime_html = render_runtime_activity_html(runtime_activity)
+    task_fold_note = (
+        f'<p class="review-task-fold-note">{len(reviewed_tasks)} Tasks · active and blocked Tasks are open; '
+        "select a Task to inspect its acceptance and proof.</p>"
+        if len(reviewed_tasks) > 2
+        else ""
     )
     return (
         '<div class="review-panel"><div class="review-header"><div><span class="eyebrow">Review</span>'
@@ -3919,7 +4709,10 @@ def render_feature_review_html(
         f'<div><dt>Runtime role</dt><dd>{html_text(state.get("runtime_role") or "standalone")}</dd></div>'
         f'<div><dt>Depends on</dt><dd>{html_text(dependency_text or "none")}</dd></div>'
         "</dl>"
-        f'<div class="review-tasks">{tasks_html}</div></div>'
+        + runtime_html
+        + topology_html
+        + task_fold_note
+        + f'<div class="review-tasks">{tasks_html}</div></div>'
     )
 
 
@@ -3930,18 +4723,40 @@ def render_feature_card_html(
     *,
     open_review: bool,
 ) -> str:
-    current_task = feature_current_task(state, tasks)
-    current_task_html = (
+    feat_id = str(state.get("feat_id") or "")
+    frontier = feature_task_frontier(state, tasks)
+    runtime_activity = load_feature_runtime_activity(paths, state, tasks)
+    active_tasks = task_records_by_id(tasks, frontier["active"])
+    runnable_tasks = task_records_by_id(tasks, frontier["runnable"])
+    active_task_html = (
         '<div class="current-task">'
-        '<span class="eyebrow">Current task</span>'
-        f'<strong>{html_text(current_task.get("id"))} · {html_text(current_task.get("title"))}</strong>'
-        "</div>"
-        if current_task
+        '<span class="eyebrow">Active tasks</span>'
+        + "".join(
+            f'<strong>{html_text(task.get("id"))} · {html_text(task.get("title"))}</strong>'
+            for task in active_tasks
+        )
+        + "</div>"
+        if active_tasks
         else '<div class="current-task current-task--empty">No task is currently active</div>'
     )
-    blocker = str(state.get("blocked_reason") or "").strip()
+    runnable_task_html = (
+        '<div class="current-task runnable-tasks"><span class="eyebrow">Runnable tasks</span>'
+        + "".join(
+            f'<strong>{html_text(task.get("id"))} · {html_text(task.get("title"))}</strong>'
+            for task in runnable_tasks
+        )
+        + "</div>"
+        if runnable_tasks
+        else ""
+    )
+    runtime_summary_html = render_runtime_activity_html(runtime_activity, compact=True)
+    blocker_items = current_task_blockers(tasks, feat_id=feat_id)
     blocker_html = (
-        f'<p class="blocker"><strong>Blocked:</strong> {html_text(blocker)}</p>' if blocker else ""
+        "".join(
+            f'<p class="blocker"><strong>{html_text(item["item_id"])} blocked:</strong> '
+            f'{html_text(item["reason"])}</p>'
+            for item in blocker_items
+        )
     )
     goal = str(state.get("goal") or "").strip()
     open_attr = " open" if open_review else ""
@@ -3959,7 +4774,9 @@ def render_feature_card_html(
         f'<h3>{html_text(state.get("title"))}</h3>'
         + (f'<p class="goal">{html_text(goal)}</p>' if goal else "")
         + blocker_html
-        + current_task_html
+        + active_task_html
+        + runnable_task_html
+        + runtime_summary_html
         + f'<div class="task-counts">{render_task_stats_html(tasks)}</div>'
         + '<span class="review-hint">Review <span aria-hidden="true">↓</span></span>'
         + "</summary>"
@@ -3989,24 +4806,76 @@ def render_closed_features_html(items: list[dict[str, Any]]) -> str:
     )
 
 
-def render_feature_status_html(paths: HarnessPaths, *, feat_id: str | None) -> str:
+def render_feature_projection_error_html(
+    paths: HarnessPaths,
+    state: dict[str, Any],
+    error: str,
+) -> str:
+    """Keep one malformed Feature visible without inventing Task truth."""
+    feat_id = str(state.get("feat_id") or "unknown")
+    status = str(state.get("status") or "unknown")
+    links = []
+    for label, path in (
+        ("state.json", paths.feat_state(feat_id, status=status)),
+        ("tasks.json", paths.feat_tasks(feat_id, status=status)),
+    ):
+        if path.is_file():
+            links.append(
+                f'<a href="{html_text(path.resolve().as_uri())}" target="_blank" rel="noreferrer">{label}</a>'
+            )
+    links_html = "".join(links)
+    return (
+        f'<article class="feature-card feature-card--projection-error" id="{html_text(feat_id)}">'
+        '<div class="feature-summary">'
+        '<div class="card-kicker">'
+        f'<span class="feature-id">{html_text(feat_id)}</span>'
+        f'<span class="workspace-chip">{html_text(state.get("workspace_mode") or "unknown")}</span>'
+        '</div>'
+        f'<h3>{html_text(state.get("title") or feat_id)}</h3>'
+        f'<p class="projection-error"><strong>Needs tracker repair</strong> {html_text(error)}</p>'
+        f'<p class="projection-error-links">SSOT: {links_html or "state.json / tasks.json"}</p>'
+        '</div></article>'
+    )
+
+
+def render_feature_status_html(
+    paths: HarnessPaths,
+    *,
+    feat_id: str | None,
+    live: bool = False,
+    refresh_ms: int = 5000,
+) -> str:
     index_items = load_index(paths).get("features", [])
-    if feat_id:
-        state, tasks = load_feat(paths, feat_id)
-        active_records = [(state, tasks)]
-        closed_items: list[dict[str, Any]] = []
-        page_title = str(state.get("title") or feat_id)
-    else:
-        active_records = []
-        closed_items = []
-        for item in index_items:
-            status = str(item.get("status") or "")
-            if status in CLOSED_FEAT_STATUS:
-                closed_items.append(item)
-                continue
-            state, tasks = load_feat(paths, str(item.get("feat_id") or ""))
-            active_records.append((state, tasks))
-        page_title = "Feature Tracker"
+    focus_feat_id = str(feat_id or "").strip() or None
+    if focus_feat_id:
+        # `--feature` is a focus selector for the human HTML projection.  Load
+        # it once up front so an invalid id still fails closed, then render the
+        # complete active board below with only this Feature expanded.
+        load_feat(paths, focus_feat_id)
+
+    active_records = []
+    closed_items = []
+    for item in index_items:
+        status = str(item.get("status") or "")
+        if status in CLOSED_FEAT_STATUS:
+            closed_items.append(item)
+            continue
+        item_feat_id = str(item.get("feat_id") or "")
+        try:
+            state, tasks = load_feat(paths, item_feat_id)
+        except SystemExit as exc:
+            state = {
+                "feat_id": item_feat_id,
+                "title": item.get("title") or item_feat_id,
+                "status": status,
+                "workspace_mode": item.get("workspace_mode") or "unknown",
+                "branch": item.get("branch") or "",
+                "worktree_path": item.get("worktree") or "",
+                "_projection_error": normalize_error_text(exc),
+            }
+            tasks = {"tasks": []}
+        active_records.append((state, tasks))
+    page_title = "Feature Tracker"
 
     by_status: dict[str, list[tuple[dict[str, Any], dict[str, Any]]]] = {}
     for state, tasks in active_records:
@@ -4020,10 +4889,30 @@ def render_feature_status_html(paths: HarnessPaths, *, feat_id: str | None) -> s
         if not records:
             continue
         tone = FEATURE_STATUS_PRESENTATION.get(status, ("", "slate"))[1]
-        cards = "".join(
-            render_feature_card_html(paths, state, tasks, open_review=bool(feat_id))
-            for state, tasks in records
-        )
+        cards_parts = []
+        for state, tasks in records:
+            projection_error = str(state.get("_projection_error") or "").strip()
+            if projection_error:
+                cards_parts.append(render_feature_projection_error_html(paths, state, projection_error))
+                continue
+            try:
+                cards_parts.append(
+                    render_feature_card_html(
+                        paths,
+                        state,
+                        tasks,
+                        open_review=focus_feat_id == str(state.get("feat_id") or ""),
+                    )
+                )
+            except SystemExit as exc:
+                cards_parts.append(
+                    render_feature_projection_error_html(
+                        paths,
+                        state,
+                        normalize_error_text(exc),
+                    )
+                )
+        cards = "".join(cards_parts)
         columns.append(
             f'<section class="status-column status-column--{html_text(tone)}">'
             '<header><div class="status-title">'
@@ -4043,6 +4932,11 @@ def render_feature_status_html(paths: HarnessPaths, *, feat_id: str | None) -> s
         if columns
         else '<main class="status-board status-board--empty"><p class="empty">No active features.</p></main>'
     )
+    projection_note = (
+        f"Live read-only view; refreshes every {refresh_ms // 1000}s from canonical files."
+        if live
+        else "Snapshot computed from Feature Tracker canonical files. Regenerate and reload for current status; this page stores no planning or runtime truth."
+    )
 
     document_head = """<!doctype html>
 <html lang="en">
@@ -4059,7 +4953,16 @@ body { margin:0; background:var(--canvas); color:var(--ink); font-size:14px; }
 .page-header { display:flex; align-items:flex-end; justify-content:space-between; gap:24px; margin:0 0 20px; }
 .page-header h1 { margin:3px 0 0; font-size:24px; line-height:1.25; letter-spacing:-.025em; }
 .page-header p { margin:0; color:var(--muted); font-size:12px; }
+.projection-meta { display:grid; justify-items:end; gap:8px; }
 .projection-note { max-width:420px; text-align:right; }
+.refresh-control { display:flex; align-items:center; gap:7px; color:var(--muted); font-size:10px; }
+.refresh-dot { width:7px; height:7px; border-radius:50%; background:#9ca198; }
+.refresh-control[data-state="updating"] .refresh-dot { background:#b98313; animation:refresh-pulse 1s ease-in-out infinite; }
+.refresh-control[data-state="updated"] .refresh-dot { background:#2f8a5c; }
+.refresh-control[data-state="error"] .refresh-dot { background:#c4413b; }
+.refresh-now { border:1px solid #d6d8d0; border-radius:7px; background:transparent; color:#565851; cursor:pointer; padding:3px 6px; font:inherit; font-size:10px; }
+.refresh-now:hover { border-color:#9ca198; color:var(--ink); }
+@keyframes refresh-pulse { 50% { opacity:.35; transform:scale(.75); } }
 .metrics { display:flex; flex-wrap:wrap; gap:14px 34px; margin:0 0 20px; padding:0 2px; }
 .metric { min-width:86px; }
 .metric strong { display:block; font-size:23px; line-height:1.15; font-variant-numeric:tabular-nums; }
@@ -4087,10 +4990,16 @@ body { margin:0; background:var(--canvas); color:var(--ink); font-size:14px; }
 .feature-id,.task-id { color:var(--muted); font-size:11px; font-variant-numeric:tabular-nums; }
 .workspace-chip,.task-status,.gate { margin-left:auto; border-radius:999px; background:#f0f0ed; color:#5f605b; padding:2px 6px; font-size:10px; white-space:nowrap; }
 .feature-card h3 { margin:7px 0 0; font-size:14px; line-height:1.35; letter-spacing:-.01em; }
+.feature-card--projection-error { border:1px solid #e7b2ae; }
+.projection-error { margin:8px 0 0; border-radius:7px; background:#fff7f6; color:#8e2d29; padding:7px; font-size:11px; line-height:1.45; }
+.projection-error-links { margin:7px 0 0; color:var(--muted); font-size:10px; line-height:1.45; overflow-wrap:anywhere; }
+.projection-error-links a { color:#356f9e; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
 .goal { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; margin:5px 0 0; color:var(--muted); font-size:12px; line-height:1.45; }
 .blocker { margin:8px 0 0; border-radius:7px; background:#fff0ef; color:#8e2d29; padding:7px; font-size:11px; line-height:1.45; }
 .current-task { display:grid; gap:2px; margin-top:10px; border-radius:8px; background:color-mix(in srgb,var(--tone) 6%,transparent); padding:7px 8px; font-size:12px; line-height:1.4; }
 .current-task--empty { background:#f7f7f4; color:var(--muted); }
+.runtime-activity-summary { display:grid; gap:2px; margin-top:10px; border-radius:8px; background:#f2f7f4; padding:7px 8px; color:#315c45; font-size:11px; line-height:1.35; }
+.runtime-activity-summary strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .eyebrow { color:var(--muted); font-size:10px; text-transform:uppercase; letter-spacing:.06em; }
 .task-counts { display:flex; flex-wrap:wrap; gap:5px; margin-top:10px; }
 .task-count { border-radius:999px; background:#f2f2ef; color:#666761; padding:2px 6px; font-size:10px; font-variant-numeric:tabular-nums; }
@@ -4109,8 +5018,85 @@ body { margin:0; background:var(--canvas); color:var(--ink); font-size:14px; }
 .review-facts div { display:grid; grid-template-columns:76px 1fr; gap:8px; }
 .review-facts dt { color:var(--muted); font-size:10px; text-transform:uppercase; }
 .review-facts dd { margin:0; overflow-wrap:anywhere; font-size:11px; }
-.review-tasks { margin-top:18px; }
-.review-task + .review-task { margin-top:22px; }
+.runtime-activity { margin-top:14px; border-radius:9px; background:#f0f7f2; padding:10px; color:#315c45; }
+.runtime-activity-header { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+.runtime-activity-header strong { display:block; margin-top:2px; font-size:12px; }
+.runtime-activity-state { border-radius:999px; background:#dceee2; color:#315c45; padding:2px 6px; font-size:10px; white-space:nowrap; }
+.runtime-activity p { margin:8px 0 0; font-size:11px; line-height:1.45; }
+.runtime-activity dl { display:grid; gap:5px; margin:8px 0 0; }
+.runtime-activity dl div { display:grid; grid-template-columns:76px 1fr; gap:8px; }
+.runtime-activity dt { color:#6a8a73; font-size:10px; text-transform:uppercase; }
+.runtime-activity dd { margin:0; overflow-wrap:anywhere; color:#46644f; }
+.runtime-activity-source { color:#6a8a73 !important; font-size:10px !important; }
+.runtime-activity-source a { color:#356f9e; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+.runtime-activity-warning { color:#8e5d21 !important; }
+.task-topology { margin-top:16px; border-radius:10px; background:#fff; padding:12px; box-shadow:inset 0 0 0 1px rgb(31 32 28 / .045); }
+.task-topology-header { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; }
+.task-topology-header-actions { display:flex; align-items:center; justify-content:flex-end; gap:8px; }
+.task-topology-header h4 { margin:2px 0 0; font-size:12px; }
+.task-topology-header > span { color:var(--muted); font-size:10px; font-variant-numeric:tabular-nums; }
+.topology-expand { border:1px solid #d6d8d0; border-radius:7px; background:#fff; color:#565851; cursor:pointer; padding:4px 7px; font:inherit; font-size:10px; }
+.topology-expand:hover { border-color:#9ca198; color:var(--ink); }
+.topology-zoom-controls { display:inline-flex; align-items:center; gap:3px; }
+.topology-zoom-controls button { min-width:24px; height:24px; border:1px solid #d6d8d0; border-radius:6px; background:#fff; color:#565851; cursor:pointer; padding:2px 5px; font:inherit; font-size:11px; line-height:1; }
+.topology-zoom-controls button:hover { border-color:#9ca198; color:var(--ink); }
+.topology-zoom-level { min-width:38px; color:var(--muted); font-size:10px; font-variant-numeric:tabular-nums; text-align:center; }
+.task-topology-legend { display:flex; flex-wrap:wrap; gap:5px 10px; margin-top:10px; color:var(--muted); font-size:10px; }
+.topology-legend { display:inline-flex; align-items:center; gap:4px; }
+.topology-legend i { width:6px; height:6px; border-radius:50%; background:#a2a49d; }
+.topology-legend--active i { background:#b98313; }
+.topology-legend--runnable i { background:#3578c7; }
+.topology-legend--waiting i { background:#a2a49d; }
+.topology-legend--blocked i { background:#c4413b; }
+.topology-legend--done i { background:#2f8a5c; }
+.task-topology-scroll { max-height:420px; margin-top:10px; overflow:auto; overscroll-behavior:contain; scrollbar-gutter:stable; border-radius:8px; background:#f5f5f2; }
+.task-topology-svg { display:block; }
+.topology-edge { fill:none; stroke:#bfc2ba; stroke-width:1.5; }
+.task-topology marker path { fill:#bfc2ba; }
+.topology-node { cursor:pointer; outline:none; }
+.topology-node rect { fill:#fff; stroke:#d9dad4; stroke-width:1; transition:stroke .14s ease,fill .14s ease; }
+.topology-node:hover rect,.topology-node:focus rect { fill:#fff; stroke:#74776f; stroke-width:1.5; }
+.topology-node circle { fill:#a2a49d; }
+.topology-node--active circle { fill:#b98313; }
+.topology-node--active rect { fill:#fffaf0; stroke:#e2c77d; }
+.topology-node--runnable circle { fill:#3578c7; }
+.topology-node--runnable rect { fill:#f6faff; stroke:#a9c8e8; }
+.topology-node--blocked circle { fill:#c4413b; }
+.topology-node--blocked rect { fill:#fff7f6; stroke:#e7b2ae; }
+.topology-node--done circle { fill:#2f8a5c; }
+.topology-node--done rect { fill:#f5fbf7; stroke:#aed4bd; }
+.topology-node--live rect { stroke:#4e9a6c; stroke-width:1.7; }
+.topology-node-id { fill:#444640; font:650 10px ui-monospace,SFMono-Regular,Menlo,monospace; }
+.topology-node-status { fill:#858780; font-size:9px; text-transform:uppercase; }
+.topology-node-title { fill:#22231f; font-size:11px; font-weight:600; }
+.topology-node-meta { fill:#858780; font-size:9px; }
+.task-topology-note { margin:8px 1px 0; color:var(--muted); font-size:10px; }
+.topology-dialog { width:min(1180px,calc(100vw - 28px)); height:min(90vh,820px); border:0; border-radius:16px; background:#fff; color:var(--ink); padding:0; box-shadow:0 24px 80px rgb(20 20 16 / .24); }
+.topology-dialog::backdrop { background:rgb(20 20 16 / .36); backdrop-filter:blur(2px); }
+.topology-dialog:not([open]):not([data-open="true"]),.claim-dialog:not([open]):not([data-open="true"]) { display:none; }
+.topology-dialog[data-open="true"],.claim-dialog[data-open="true"] { display:block; position:fixed; top:5vh; left:50%; z-index:100; transform:translateX(-50%); }
+body[data-modal-open="true"]::before { content:""; position:fixed; inset:0; z-index:90; background:rgb(20 20 16 / .28); backdrop-filter:blur(2px); }
+.topology-dialog-shell { display:grid; grid-template-rows:auto 1fr; height:100%; }
+.topology-dialog-header { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; padding:18px 20px 12px; }
+.topology-dialog-header h2 { margin:2px 0 0; font-size:18px; }
+.topology-dialog-body { min-height:0; overflow:auto; padding:0 20px 20px; }
+.topology-dialog-body .task-topology { margin-top:0; box-shadow:none; }
+.topology-dialog-body .task-topology-scroll { max-height:none; min-height:400px; }
+.topology-dialog-body .task-topology-svg { margin:auto; }
+.topology-dialog-body .topology-expand { display:none; }
+.review-task-fold-note { margin:16px 0 0; color:var(--muted); font-size:10px; }
+.review-tasks { margin-top:10px; }
+.review-task + .review-task { margin-top:7px; }
+.review-task { scroll-margin-top:18px; border-radius:9px; background:#fff; box-shadow:inset 0 0 0 1px rgb(31 32 28 / .045); }
+.review-task-summary { cursor:pointer; list-style:none; padding:10px 11px; }
+.review-task-summary::-webkit-details-marker { display:none; }
+.review-task-summary:focus-visible { outline:2px solid #8ba8bf; outline-offset:-2px; border-radius:9px; }
+.review-task-summary h4 { margin:7px 0 0; font-size:13px; line-height:1.35; }
+.review-task-summary .task-dependencies { margin:4px 0 0; }
+.review-task-toggle { display:inline-flex; align-items:center; gap:4px; margin-top:7px; color:#356f9e; font-size:10px; font-weight:600; }
+.review-task[open] .review-task-toggle span { transform:rotate(180deg); }
+.review-task-body { padding:0 11px 12px; }
+.review-task-body > .runtime-activity { margin-top:0; }
 .review-task h4 { margin:8px 0 0; font-size:14px; }
 .review-copy { display:grid; grid-template-columns:70px 1fr; gap:9px; margin:7px 0 0; color:var(--muted); font-size:11px; line-height:1.5; }
 .review-copy strong { color:var(--ink); font-size:10px; text-transform:uppercase; letter-spacing:.04em; }
@@ -4149,7 +5135,7 @@ body { margin:0; background:var(--canvas); color:var(--ink); font-size:14px; }
 .closed-section li strong { overflow:hidden; color:var(--ink); font-weight:500; text-overflow:ellipsis; white-space:nowrap; }
 .closed-status { color:var(--muted); }
 .empty { color:var(--muted); }
-@media (max-width:720px) { .shell{padding:18px 12px}.page-header{align-items:flex-start;flex-direction:column}.projection-note{text-align:left}.metrics{gap:12px 22px}.status-board{grid-auto-flow:row;grid-auto-columns:auto;grid-template-columns:1fr;overflow:visible}.status-column,.status-column:has(.feature-review[open]){width:auto}.review-header,.claim-dialog-header{flex-direction:column}.canonical-links{justify-content:flex-start}.review-facts,.review-grid{grid-template-columns:1fr}.claim-bar{align-items:flex-start;flex-direction:column}.claim-dialog-shell{padding:15px}.claim-message{min-height:270px}.claim-actions{align-items:stretch;flex-direction:column}.claim-status{margin:0;text-align:center} }
+@media (max-width:720px) { .shell{padding:18px 12px}.page-header{align-items:flex-start;flex-direction:column}.projection-meta{justify-items:start}.projection-note{text-align:left}.metrics{gap:12px 22px}.status-board{grid-auto-flow:row;grid-auto-columns:auto;grid-template-columns:1fr;overflow:visible}.status-column,.status-column:has(.feature-review[open]){width:auto}.review-header,.claim-dialog-header,.topology-dialog-header{flex-direction:column}.canonical-links{justify-content:flex-start}.review-facts,.review-grid{grid-template-columns:1fr}.claim-bar{align-items:flex-start;flex-direction:column}.claim-dialog-shell{padding:15px}.claim-message{min-height:270px}.claim-actions{align-items:stretch;flex-direction:column}.claim-status{margin:0;text-align:center}.task-topology-header{align-items:flex-start;flex-direction:column}.task-topology-header-actions{justify-content:flex-start;flex-wrap:wrap}.topology-dialog{width:calc(100vw - 16px);height:calc(100vh - 16px)}.topology-dialog-header,.topology-dialog-body{padding-left:14px;padding-right:14px}.topology-dialog-body .task-topology-scroll{min-height:280px} }
 </style>
 </head>
 <body>
@@ -4173,6 +5159,7 @@ body { margin:0; background:var(--canvas); color:var(--ink); font-size:14px; }
 </dialog>
 <script>
 (() => {
+  const dialogApi = window.__bagakitStatusDialogs;
   const dialog = document.getElementById("claim-dialog");
   const title = document.getElementById("claim-dialog-title");
   const message = document.getElementById("claim-message");
@@ -4210,7 +5197,18 @@ body { margin:0; background:var(--canvas); color:var(--ink); font-size:14px; }
     message.value = draft.value;
     refreshTime();
     status.textContent = "";
-    dialog.showModal();
+    dialogApi.open(dialog);
+  });
+
+  dialog.addEventListener("click", (event) => {
+    if (event.target.closest(".dialog-close")) {
+      event.preventDefault();
+      dialogApi.close(dialog);
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && dialogApi.isOpen(dialog)) dialogApi.close(dialog);
   });
 
   document.getElementById("copy-claim").addEventListener("click", copyMessage);
@@ -4234,12 +5232,353 @@ body { margin:0; background:var(--canvas); color:var(--ink); font-size:14px; }
 </script>
 """
 
+    topology_dialog = r"""
+<dialog class="topology-dialog" id="topology-dialog" aria-labelledby="topology-dialog-title">
+  <div class="topology-dialog-shell">
+    <header class="topology-dialog-header">
+      <div><span class="eyebrow">Task topology</span><h2 id="topology-dialog-title">Full-screen topology</h2></div>
+      <form method="dialog"><button class="dialog-close" aria-label="Close topology">×</button></form>
+    </header>
+    <div class="topology-dialog-body" id="topology-dialog-body"></div>
+  </div>
+</dialog>
+<script>
+(() => {
+  const dialogApi = window.__bagakitStatusDialogs = window.__bagakitStatusDialogs || {
+    syncBody() {
+      const open = Array.from(document.querySelectorAll("dialog")).some((item) =>
+        item.open === true || item.dataset.open === "true"
+      );
+      document.body.dataset.modalOpen = open ? "true" : "false";
+    },
+    isOpen(item) {
+      return Boolean(item && (item.open === true || item.dataset.open === "true"));
+    },
+    open(item) {
+      if (!item) return;
+      if (typeof item.showModal === "function") item.showModal();
+      else item.dataset.open = "true";
+      this.syncBody();
+    },
+    close(item) {
+      if (!item) return;
+      if (typeof item.close === "function" && item.open === true) item.close();
+      else delete item.dataset.open;
+      this.syncBody();
+    },
+  };
+  const dialog = document.getElementById("topology-dialog");
+  const dialogBody = document.getElementById("topology-dialog-body");
+  const dialogTitle = document.getElementById("topology-dialog-title");
+
+  function scrollerFor(topology) {
+    return topology && topology.querySelector(".task-topology-scroll");
+  }
+
+  function zoomFor(topology) {
+    const value = Number.parseFloat(topology && topology.dataset.topologyZoom);
+    return Number.isFinite(value) ? value : 1;
+  }
+
+  function applyZoom(topology, value) {
+    if (!topology) return;
+    const next = Math.min(2, Math.max(0.6, Math.round(value * 10) / 10));
+    topology.dataset.topologyZoom = String(next);
+    const svg = topology.querySelector(".task-topology-svg");
+    if (svg) {
+      const width = Number(svg.getAttribute("width"));
+      const height = Number(svg.getAttribute("height"));
+      if (Number.isFinite(width) && Number.isFinite(height)) {
+        svg.style.width = `${width * next}px`;
+        svg.style.height = `${height * next}px`;
+      }
+    }
+    const label = topology.querySelector("[data-topology-zoom-level]");
+    if (label) label.textContent = `${Math.round(next * 100)}%`;
+  }
+
+  function copyViewport(source, target) {
+    const sourceScroller = scrollerFor(source);
+    const targetScroller = scrollerFor(target);
+    applyZoom(target, zoomFor(source));
+    if (sourceScroller && targetScroller) {
+      targetScroller.scrollLeft = sourceScroller.scrollLeft;
+      targetScroller.scrollTop = sourceScroller.scrollTop;
+    }
+  }
+
+  function openTopology(trigger) {
+    const source = trigger && trigger.closest(".task-topology");
+    const card = trigger && trigger.closest(".feature-card");
+    if (!source || !card) return;
+    dialog.dataset.featureId = card.id;
+    dialogBody.innerHTML = source.outerHTML;
+    const clone = dialogBody.querySelector(".task-topology");
+    copyViewport(source, clone);
+    const title = card.querySelector("h3");
+    dialogTitle.textContent = title ? `${title.textContent.trim()} · topology` : "Full-screen topology";
+    dialogApi.open(dialog);
+    if (zoomFor(source) === 1) {
+      window.setTimeout(() => fitTopology(clone), 0);
+    }
+  }
+
+  function fitTopology(topology) {
+    if (!topology) return;
+    const scroller = scrollerFor(topology);
+    const svg = topology.querySelector(".task-topology-svg");
+    const width = Number(svg && svg.getAttribute("width"));
+    if (!scroller || !Number.isFinite(width) || width <= 0) return;
+    const fit = (scroller.clientWidth - 8) / width;
+    applyZoom(topology, Math.min(1, Math.max(0.6, fit)));
+    scroller.scrollLeft = 0;
+    scroller.scrollTop = 0;
+  }
+
+  function bindTopologyTriggers(root) {
+    for (const trigger of (root || document).querySelectorAll(".topology-expand")) {
+      trigger.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        openTopology(trigger);
+      });
+    }
+  }
+
+  document.addEventListener("click", (event) => {
+    const zoomButton = event.target.closest("[data-topology-zoom]");
+    if (zoomButton) {
+      const topology = zoomButton.closest(".task-topology");
+      if (!topology) return;
+      event.preventDefault();
+      const action = zoomButton.dataset.topologyZoom;
+      const current = zoomFor(topology);
+      applyZoom(topology, action === "in" ? current + 0.1 : action === "out" ? current - 0.1 : 1);
+      return;
+    }
+
+    const trigger = event.target.closest(".topology-expand");
+    if (!trigger) return;
+    openTopology(trigger);
+  });
+
+  bindTopologyTriggers(document);
+  window.__bagakitBindTopologyTriggers = bindTopologyTriggers;
+
+  dialogBody.addEventListener("click", (event) => {
+    const node = event.target.closest(".topology-node");
+    if (!node) return;
+    const taskId = node.dataset.taskId;
+    const target = document.getElementById(`${dialog.dataset.featureId}-task-${taskId}`);
+    dialogApi.close(dialog);
+    if (target) {
+      if (target.tagName === "DETAILS") target.open = true;
+      target.scrollIntoView({behavior: "smooth", block: "start"});
+    }
+  });
+
+  dialog.addEventListener("click", (event) => {
+    if (event.target.closest(".dialog-close")) {
+      event.preventDefault();
+      dialogApi.close(dialog);
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && dialogApi.isOpen(dialog)) dialogApi.close(dialog);
+  });
+
+})();
+</script>
+"""
+
+    live_script = ""
+    if live:
+        live_script = f"""
+<script>
+(() => {{
+  const refreshMs = {int(refresh_ms)};
+  const indicator = document.getElementById("refresh-indicator");
+  const indicatorText = document.getElementById("refresh-indicator-text");
+  const refreshButton = document.getElementById("refresh-now");
+  const topologyDialog = document.getElementById("topology-dialog");
+  const topologyDialogBody = document.getElementById("topology-dialog-body");
+  const topologyDialogTitle = document.getElementById("topology-dialog-title");
+  const dialogApi = window.__bagakitStatusDialogs;
+  let busy = false;
+
+  function setRefreshState(kind, text) {{
+    if (!indicator || !indicatorText) return;
+    indicator.dataset.state = kind;
+    indicatorText.textContent = text;
+  }}
+
+  function openFeatureIds() {{
+    return Array.from(document.querySelectorAll("#status-content .feature-review[open]"))
+      .map((details) => details.closest(".feature-card"))
+      .filter(Boolean)
+      .map((card) => card.id);
+  }}
+
+  function restoreOpenFeatures(ids) {{
+    for (const id of ids) {{
+      const details = document.querySelector(`#${{CSS.escape(id)}} .feature-review`);
+      if (details) details.open = true;
+    }}
+  }}
+
+  function openTaskIds() {{
+    return Array.from(document.querySelectorAll("#status-content .review-task[open]"))
+      .map((task) => task.id)
+      .filter(Boolean);
+  }}
+
+  function restoreOpenTasks(ids) {{
+    for (const id of ids) {{
+      const task = document.getElementById(id);
+      if (task && task.tagName === "DETAILS") task.open = true;
+    }}
+  }}
+
+  function captureTopologyViews() {{
+    const views = new Map();
+    for (const topology of document.querySelectorAll("#status-content .task-topology")) {{
+      const featureId = topology.dataset.featureId;
+      const scroller = topology.querySelector(".task-topology-scroll");
+      if (!featureId || !scroller) continue;
+      views.set(featureId, {{
+        left: scroller.scrollLeft,
+        top: scroller.scrollTop,
+        zoom: Number.parseFloat(topology.dataset.topologyZoom) || 1,
+      }});
+    }}
+    return views;
+  }}
+
+  function restoreTopologyView(topology, view) {{
+    if (!topology || !view) return;
+    const zoom = Math.min(2, Math.max(0.6, Number(view.zoom) || 1));
+    const svg = topology.querySelector(".task-topology-svg");
+    if (svg) {{
+      const width = Number(svg.getAttribute("width"));
+      const height = Number(svg.getAttribute("height"));
+      if (Number.isFinite(width) && Number.isFinite(height)) {{
+        svg.style.width = `${{width * zoom}}px`;
+        svg.style.height = `${{height * zoom}}px`;
+      }}
+    }}
+    topology.dataset.topologyZoom = String(zoom);
+    const scroller = topology.querySelector(".task-topology-scroll");
+    if (scroller) {{
+      scroller.scrollLeft = view.left;
+      scroller.scrollTop = view.top;
+    }}
+    const label = topology.querySelector("[data-topology-zoom-level]");
+    if (label) label.textContent = `${{Math.round(zoom * 100)}}%`;
+  }}
+
+  function restoreTopologyViews(views) {{
+    for (const topology of document.querySelectorAll("#status-content .task-topology")) {{
+      const featureId = topology.dataset.featureId;
+      if (featureId) restoreTopologyView(topology, views.get(featureId));
+    }}
+  }}
+
+  function captureDialogView() {{
+    if (!topologyDialog || !dialogApi.isOpen(topologyDialog)) return null;
+    const topology = topologyDialogBody.querySelector(".task-topology");
+    if (!topology) return null;
+    const scroller = topology.querySelector(".task-topology-scroll");
+    return {{
+      left: scroller ? scroller.scrollLeft : 0,
+      top: scroller ? scroller.scrollTop : 0,
+      zoom: Number.parseFloat(topology.dataset.topologyZoom) || 1,
+    }};
+  }}
+
+  function captureBoardScroll() {{
+    const board = document.querySelector("#status-content .status-board");
+    return board ? {{left: board.scrollLeft, top: board.scrollTop}} : null;
+  }}
+
+  function restoreBoardScroll(view) {{
+    const board = document.querySelector("#status-content .status-board");
+    if (!board || !view) return;
+    const maxLeft = Math.max(0, board.scrollWidth - board.clientWidth);
+    const maxTop = Math.max(0, board.scrollHeight - board.clientHeight);
+    board.scrollLeft = Math.min(Math.max(0, Number(view.left) || 0), maxLeft);
+    board.scrollTop = Math.min(Math.max(0, Number(view.top) || 0), maxTop);
+  }}
+
+  function restoreTopology(featureId, view) {{
+    if (!featureId || !topologyDialog || !dialogApi.isOpen(topologyDialog)) return;
+    const card = document.getElementById(featureId);
+    const fresh = card && card.querySelector(".task-topology");
+    if (!fresh) {{
+      dialogApi.close(topologyDialog);
+      return;
+    }}
+    topologyDialogBody.innerHTML = fresh.outerHTML;
+    const clone = topologyDialogBody.querySelector(".task-topology");
+    restoreTopologyView(clone, view);
+    const title = card.querySelector("h3");
+    if (title && topologyDialogTitle) topologyDialogTitle.textContent = `${{title.textContent.trim()}} · topology`;
+  }}
+
+  async function refreshStatus() {{
+    if (busy) return;
+    busy = true;
+    const openIds = openFeatureIds();
+    const openTaskIdsBeforeRefresh = openTaskIds();
+    const topologyFeatureId = topologyDialog && dialogApi.isOpen(topologyDialog)
+      ? topologyDialog.dataset.featureId
+      : "";
+    const topologyViews = captureTopologyViews();
+    const dialogView = captureDialogView();
+    const boardScroll = captureBoardScroll();
+    setRefreshState("updating", "Updating…");
+    try {{
+      const response = await fetch(window.location.pathname + window.location.search, {{cache: "no-store"}});
+      if (!response.ok) throw new Error(`status ${{response.status}}`);
+      const markup = await response.text();
+      const nextDocument = new DOMParser().parseFromString(markup, "text/html");
+      const currentContent = document.getElementById("status-content");
+      const nextContent = nextDocument.getElementById("status-content");
+      if (!currentContent || !nextContent) throw new Error("status content missing");
+      currentContent.replaceWith(nextContent);
+      if (window.__bagakitBindTopologyTriggers) window.__bagakitBindTopologyTriggers(nextContent);
+      restoreOpenFeatures(openIds);
+      restoreOpenTasks(openTaskIdsBeforeRefresh);
+      restoreTopologyViews(topologyViews);
+      restoreTopology(topologyFeatureId, dialogView);
+      restoreBoardScroll(boardScroll);
+      setRefreshState("updated", `Updated ${{new Date().toLocaleTimeString()}}`);
+    }} catch (_) {{
+      setRefreshState("error", "Update failed · retrying");
+    }} finally {{
+      busy = false;
+      window.setTimeout(refreshStatus, refreshMs);
+    }}
+  }}
+
+  if (refreshButton) refreshButton.addEventListener("click", refreshStatus);
+  refreshStatus();
+}})();
+</script>
+"""
+
     return (
         document_head
         + '<div class="shell"><header class="page-header"><div><p>Bagakit · read-only projection</p>'
-        f'<h1>{html_text(page_title)}</h1></div>'
-        '<p class="projection-note">Snapshot computed from Feature Tracker canonical files. Regenerate and reload for current status; this page stores no planning or runtime truth.</p></header>'
-        '<section class="metrics" aria-label="Feature summary">'
+        f'<h1>{html_text(page_title)}</h1></div><div class="projection-meta"><p class="projection-note">{html_text(projection_note)}</p>'
+        + (
+            '<div class="refresh-control" id="refresh-indicator" data-state="idle">'
+            '<i class="refresh-dot" aria-hidden="true"></i><span id="refresh-indicator-text" aria-live="polite">Connecting…</span>'
+            '<button type="button" class="refresh-now" id="refresh-now">Refresh</button></div></div></header>'
+            if live
+            else "</div></header>"
+        )
+        + '<div id="status-content"><section class="metrics" aria-label="Feature summary">'
         f'<div class="metric"><strong>{active_count}</strong><span>Active</span></div>'
         f'<div class="metric"><strong>{in_progress_count}</strong><span>In progress</span></div>'
         f'<div class="metric"><strong>{blocked_count}</strong><span>Blocked</span></div>'
@@ -4247,18 +5586,329 @@ body { margin:0; background:var(--canvas); color:var(--ink); font-size:14px; }
         "</section>"
         + board_html
         + render_closed_features_html(closed_items)
-        + "</div>"
+        + "</div></div>"
+        + topology_dialog
         + claim_dialog
+        + live_script
         + "</body></html>"
     )
+
+
+def cmd_serve_feature_status(args: argparse.Namespace) -> int:
+    root = Path(args.root).resolve()
+    paths = HarnessPaths(root)
+    ensure_harness_exists(paths)
+    refresh_ms = max(1000, min(int(args.refresh_ms), 60000))
+    requested_feature = str(args.feat or "").strip() or None
+
+    class StatusHandler(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:  # noqa: N802
+            parsed = urlparse(self.path)
+            if parsed.path not in {POSIX_SEP, POSIX_SEP + "status"}:
+                self.send_error(404)
+                return
+            query_feature = parse_qs(parsed.query).get("feature", [requested_feature])[0]
+            try:
+                document = render_feature_status_html(
+                    paths,
+                    feat_id=str(query_feature).strip() or None,
+                    live=True,
+                    refresh_ms=refresh_ms,
+                )
+            except SystemExit as exc:
+                body = html.escape(str(exc)).encode("utf-8")
+                self.send_response(404)
+                self.send_header("Content-Type", "text/plain; charset=utf-8")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
+            body = document.encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Cache-Control", "no-store, max-age=0")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, _format: str, *_args: Any) -> None:
+            return
+
+    server = ThreadingHTTPServer(("127.0.0.1", args.port), StatusHandler)
+    url = f"http://127.0.0.1:{server.server_port}/"
+    if requested_feature:
+        url += f"?feature={requested_feature}"
+    print(f"status_server: {url}", flush=True)
+    print("status_server: read-only; press Ctrl-C to stop", flush=True)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("status_server: stopped")
+    finally:
+        server.server_close()
+    return 0
+
+
+TERMINAL_FRONTIER_GLYPHS = {
+    "active": "▶",
+    "runnable": "●",
+    "waiting": "○",
+    "blocked": "✕",
+    "done": "✓",
+}
+TERMINAL_FRONTIER_COLORS = {
+    "active": "33",
+    "runnable": "32",
+    "waiting": "36",
+    "blocked": "31",
+    "done": "90",
+}
+
+
+def terminal_projection_signature(paths: HarnessPaths) -> str:
+    """Opaque signature of the canonical inputs a terminal projection renders.
+
+    Derived from tracker content only. Physical identity such as mtime or inode
+    is excluded, so rewriting a file with identical bytes is not a change.
+    """
+    digest = hashlib.sha256()
+    for feat_dir in sorted(paths.feats_dir.glob("*")):
+        if not feat_dir.is_dir():
+            continue
+        for name in ("state.json", "tasks.json"):
+            candidate = feat_dir / name
+            if not candidate.exists():
+                continue
+            digest.update(feat_dir.name.encode("utf-8"))
+            digest.update(name.encode("utf-8"))
+            try:
+                digest.update(candidate.read_bytes())
+            except OSError:
+                digest.update(b"<unreadable>")
+    return digest.hexdigest()[:12]
+
+
+def render_terminal_feature_lines(
+    state: dict[str, Any],
+    tasks: dict[str, Any],
+    *,
+    expand: bool,
+    width: int,
+) -> list[str]:
+    """One Feature as terminal lines, derived only from canonical projections."""
+
+    def paint(text: str, code: str) -> str:
+        return f"\x1b[{code}m{text}\x1b[0m"
+
+    feat_id = str(state.get("feat_id") or "")
+    lines = [f"\x1b[1m{feat_id}\x1b[0m  {str(state.get('title') or '')[:max(12, width - 16)]}"]
+
+    projection_error = str(state.get("_projection_error") or "").strip()
+    if projection_error:
+        # Same contract as the HTML repair-needed card: one malformed record
+        # must not hide the rest of the board, and must not read as inactive.
+        lines.append(f"  {paint('repair needed', '31')} {projection_error[:max(12, width - 20)]}")
+        lines.append("  \x1b[2mrun validate-tracker for the strict diagnosis\x1b[0m")
+        return lines
+
+    lines.append(
+        f"  {paint(str(state.get('status') or '?'), '34')}"
+        f"  \x1b[2mplan r{tasks.get('plan_revision', '?')}"
+        f" · {tasks.get('plan_status', '?')}"
+        f" · round {(state.get('counters') or {}).get('round_count', '?')}\x1b[0m"
+    )
+
+    frontier = feature_task_frontier(state, tasks)
+    total = sum(len(frontier[group]) for group, _ in TASK_FRONTIER_LABELS)
+    if not total:
+        return lines
+
+    bar_width = min(34, max(8, width - 18))
+    bar = "".join(
+        paint("█" * max(1, round(len(frontier[group]) / total * bar_width)),
+              TERMINAL_FRONTIER_COLORS[group])
+        for group in ("done", "active", "runnable", "waiting", "blocked")
+        if frontier[group]
+    )
+    done_count = len(frontier["done"])
+    lines.append(
+        f"  {bar} \x1b[1m{round(done_count / total * 100)}%\x1b[0m"
+        f" \x1b[2m{done_count}/{total}\x1b[0m"
+    )
+    tally = "  ".join(
+        paint(f"{TERMINAL_FRONTIER_GLYPHS[group]} {len(frontier[group])} {label.lower()}",
+              TERMINAL_FRONTIER_COLORS[group])
+        for group, label in TASK_FRONTIER_LABELS
+        if group != "done" and frontier[group]
+    )
+    if tally:
+        lines.append("  " + tally)
+
+    gate = state.get("gate") or {}
+    if gate.get("last_result"):
+        result = str(gate["last_result"])
+        lines.append(
+            f"  gate {paint(result, '32' if result == 'pass' else '31')}"
+            f" \x1b[2mon {gate.get('last_task_id', '?')}\x1b[0m"
+        )
+    counters = state.get("counters") or {}
+    if counters.get("gate_fail_streak") or counters.get("no_progress_rounds"):
+        lines.append(
+            f"  {paint('!', '33')} fail streak {counters.get('gate_fail_streak', 0)}"
+            f" · no-progress {counters.get('no_progress_rounds', 0)}"
+        )
+
+    by_id, layers = task_topology_layers(tasks, feat_id=feat_id)
+    group_by_id = {
+        task_id: group
+        for group, _ in TASK_FRONTIER_LABELS
+        for task_id in frontier[group]
+    }
+
+    for task_id in frontier["active"]:
+        title = str(by_id.get(task_id, {}).get("title") or "")
+        lines.append(f"  {paint('▶ active', '33')} {task_id} {title[:max(12, width - 22)]}")
+        blocker = (by_id.get(task_id, {}).get("last_blocker") or {})
+        if blocker.get("class"):
+            lines.append(f"      \x1b[2mblocker: {blocker['class']}\x1b[0m")
+    if frontier["runnable"]:
+        lines.append(f"  {paint('● runnable', '32')} {' '.join(frontier['runnable'])}")
+    elif not frontier["active"]:
+        lines.append("  \x1b[2mnothing runnable\x1b[0m")
+
+    if not expand:
+        return lines
+
+    lines.append("  \x1b[1mtopology\x1b[0m \x1b[2mL0 = no unmet parents\x1b[0m")
+    for depth, members in enumerate(layers):
+        visible = [task_id for task_id in members if group_by_id.get(task_id) != "done"]
+        if not visible:
+            continue
+        lines.append(f"  \x1b[2mL{depth}\x1b[0m")
+        for task_id in visible:
+            group = group_by_id.get(task_id, "waiting")
+            dependencies = canonical_task_dependencies(
+                by_id[task_id],
+                label=f"{feat_id}/{task_id}",
+            )
+            unmet = [
+                dependency for dependency in dependencies
+                if str(by_id[dependency].get("status") or "") != "done"
+            ]
+            if unmet:
+                edge = f" \x1b[2m⇠{','.join(unmet)}\x1b[0m"
+            elif dependencies:
+                edge = " \x1b[90m⇠done\x1b[0m"
+            else:
+                edge = ""
+            title = str(by_id[task_id].get("title") or "")
+            lines.append(
+                f"    {paint(TERMINAL_FRONTIER_GLYPHS[group], TERMINAL_FRONTIER_COLORS[group])}"
+                f" {task_id} {title[:max(12, width - 30)]}{edge}"
+            )
+    return lines
+
+
+def render_terminal_status_frame(
+    paths: HarnessPaths,
+    *,
+    feat_id: str | None,
+    width: int,
+) -> list[str]:
+    """The whole board as terminal lines, from the same canonical index the page reads."""
+    focus = str(feat_id or "").strip() or None
+    lines = ["\x1b[1;35mfeature observation\x1b[0m  \x1b[2mread-only\x1b[0m"]
+    active_records: list[tuple[dict[str, Any], dict[str, Any]]] = []
+    for item in load_index(paths).get("features", []):
+        status = str(item.get("status") or "")
+        if status in CLOSED_FEAT_STATUS:
+            continue
+        item_feat_id = str(item.get("feat_id") or "")
+        try:
+            state, tasks = load_feat(paths, item_feat_id)
+        except SystemExit as exc:
+            state = {
+                "feat_id": item_feat_id,
+                "title": item.get("title") or item_feat_id,
+                "status": status,
+                "_projection_error": normalize_error_text(exc),
+            }
+            tasks = {"tasks": []}
+        active_records.append((state, tasks))
+
+    if not active_records:
+        lines.append("\x1b[2mno active features\x1b[0m")
+        return lines
+
+    order = {status: index for index, status in enumerate(FEATURE_STATUS_ORDER)}
+    active_records.sort(
+        key=lambda record: (
+            order.get(str(record[0].get("status") or ""), len(order)),
+            str(record[0].get("feat_id") or ""),
+        )
+    )
+    for state, tasks in active_records:
+        lines.append("")
+        lines.extend(
+            render_terminal_feature_lines(
+                state,
+                tasks,
+                expand=(focus is None or str(state.get("feat_id") or "") == focus),
+                width=width,
+            )
+        )
+    return lines
+
+
+def cmd_watch_feature_status(args: argparse.Namespace) -> int:
+    root = Path(args.root).resolve()
+    paths = HarnessPaths(root)
+    ensure_harness_exists(paths)
+    refresh_ms = max(1000, min(int(args.refresh_ms), 60000))
+    focus = str(args.feat or "").strip() or None
+    if focus:
+        # Fail closed on an invalid id before entering the render loop.
+        load_feat(paths, focus)
+
+    delay = refresh_ms / 1000
+    previous_signature = ""
+    changed_at = ""
+    last_good: list[str] = []
+    while True:
+        width = shutil.get_terminal_size((80, 24)).columns
+        stamp = datetime.now().strftime("%H:%M:%S")
+        try:
+            signature = terminal_projection_signature(paths)
+            if previous_signature and signature != previous_signature:
+                changed_at = stamp
+            previous_signature = signature
+            body = render_terminal_status_frame(paths, feat_id=focus, width=width)
+            last_good = body
+            footer = f"\x1b[2mupdated {stamp} · refresh {delay:g}s · ^C to stop\x1b[0m"
+            if changed_at:
+                footer = f"\x1b[35mchanged {changed_at}\x1b[0m  " + footer
+        except KeyboardInterrupt:
+            raise
+        except Exception as exc:  # noqa: BLE001 - a transient read must not blank the pane
+            body = last_good or ["\x1b[31mno readable projection yet\x1b[0m"]
+            footer = (
+                f"\x1b[31mupdate failed {stamp} · retrying"
+                f" ({type(exc).__name__})\x1b[0m"
+            )
+        sys.stdout.write("\x1b[H\x1b[2J\x1b[3J" + "\n".join(body + ["", footer]) + "\n")
+        sys.stdout.flush()
+        try:
+            time.sleep(delay)
+        except KeyboardInterrupt:
+            break
+    return 0
 
 
 def cmd_feat_status(args: argparse.Namespace) -> int:
     root = Path(args.root).resolve()
     paths = HarnessPaths(root)
     ensure_harness_exists(paths)
-    index_data = load_index(paths)
-    feats = index_data.get("features", [])
 
     if args.output and args.format != "html":
         raise SystemExit("error: --output requires --format html")
@@ -4285,9 +5935,11 @@ def cmd_feat_status(args: argparse.Namespace) -> int:
 
     if args.feat:
         state, tasks = load_feat(paths, args.feat)
+        frontier = feature_task_frontier(state, tasks)
         payload = {
             "feature": state,
             "tasks": tasks,
+            "task_frontier": frontier,
         }
         if args.json:
             print(json.dumps(payload, ensure_ascii=False, indent=2))
@@ -4298,13 +5950,14 @@ def cmd_feat_status(args: argparse.Namespace) -> int:
         print(f"workspace_mode: {state.get('workspace_mode', '')}")
         print(f"branch: {state.get('branch', '')}")
         print(f"worktree: {state.get('worktree_path', '')}")
-        print(f"current_task: {state.get('current_task_id')}")
+        print(f"active_tasks: {','.join(frontier['active']) or 'none'}")
+        print(f"runnable_tasks: {','.join(frontier['runnable']) or 'none'}")
         print(
             "tasks: "
-            f"todo={count_tasks(tasks, 'todo')} "
-            f"in_progress={count_tasks(tasks, 'in_progress')} "
-            f"done={count_tasks(tasks, 'done')} "
-            f"blocked={count_tasks(tasks, 'blocked')}"
+            f"todo={count_current_tasks(tasks, 'todo')} "
+            f"in_progress={count_current_tasks(tasks, 'in_progress')} "
+            f"done={count_current_tasks(tasks, 'done')} "
+            f"blocked={count_current_tasks(tasks, 'blocked')}"
         )
         return 0
 
@@ -4365,11 +6018,6 @@ def cmd_task_start(args: argparse.Namespace) -> int:
         eprint(f"error: task {task_id} is not part of the current reviewed task plan")
         return 1
 
-    for t in tasks.get("tasks", []):
-        if t.get("status") == "in_progress" and t.get("id") != task_id:
-            eprint(f"error: another task is already in_progress: {t.get('id')}")
-            return 1
-
     target = find_task(tasks, task_id)
     if target.get("superseded_by"):
         eprint(f"error: task {task_id} has been superseded and cannot be restarted")
@@ -4378,13 +6026,33 @@ def cmd_task_start(args: argparse.Namespace) -> int:
         eprint(f"error: task {task_id} cannot be started from status={target.get('status')}")
         return 1
 
-    execution = resolve_feature_execution_root(root, state)
+    by_id, _ = current_plan_task_graph(tasks, feat_id=args.feat)
+    unfinished_dependencies = [
+        dependency
+        for dependency in canonical_task_dependencies(
+            target,
+            label=f"{args.feat}/{task_id}",
+        )
+        if str(by_id[dependency].get("status") or "") != "done"
+    ]
+    if unfinished_dependencies:
+        eprint(
+            f"error: task {task_id} is not runnable; unfinished dependencies: "
+            + ", ".join(unfinished_dependencies)
+        )
+        return 1
+
+    try:
+        task_verification_commands(target, feat_id=args.feat)
+    except SystemExit as exc:
+        eprint(str(exc))
+        return 1
+
+    resolve_feature_execution_root(root, state)
+    if target.get("status") == "blocked":
+        target["gate_result"] = None
+        target["last_gate_commands"] = []
     target["status"] = "in_progress"
-    state["status"] = "in_progress"
-    state["blocked_reason_class"] = "none"
-    state.pop("blocked_reason", None)
-    state.pop("blocked_task_id", None)
-    state["current_task_id"] = task_id
     state.setdefault("history", []).append(
         history_event("task_started", task_id)
     )
@@ -4408,9 +6076,6 @@ def cmd_task_unstart(args: argparse.Namespace) -> int:
 
     if task.get("status") != "in_progress":
         eprint(f"error: task is not in_progress: {args.task}")
-        return 1
-    if state.get("current_task_id") != args.task:
-        eprint("error: state current_task_id mismatch")
         return 1
     if task_has_unstart_evidence(paths, state, task, args.task):
         eprint(f"error: task has execution evidence and cannot be unstarted: {args.task}")
@@ -4456,8 +6121,6 @@ def cmd_task_unstart(args: argparse.Namespace) -> int:
         return 1
 
     task["status"] = "todo"
-    state["current_task_id"] = None
-    state["status"] = "ready"
     state.setdefault("history", []).append(history_event("task_unstarted", args.task))
     save_feat(paths, args.feat, state, tasks)
     print(f"ok: task unstarted {args.feat}/{args.task}")
@@ -4510,35 +6173,81 @@ def detect_project_type(root: Path, config: dict[str, Any]) -> str:
     return default_type
 
 
-def collect_non_ui_commands(root: Path, config: dict[str, Any]) -> list[str]:
-    gate_cfg = runtime_gate_config(config)
-    custom = gate_cfg.get("non_ui_commands", [])
-    if not isinstance(custom, list):
-        raise SystemExit("error: gate.non_ui_commands must be a list of non-empty commands")
-    if custom:
-        commands = [item.strip() for item in custom if isinstance(item, str) and item.strip()]
-        if len(commands) != len(custom):
-            raise SystemExit("error: gate.non_ui_commands must be a list of non-empty commands")
-        return commands
+def task_verification_commands(task: dict[str, Any], *, feat_id: str) -> list[str]:
+    """Return the executable verification declared by the current Task.
 
+    Runtime policy describes tracker behavior (for example whether the
+    optional Feature-level verification note is required). It must not choose
+    a task's completion command: that meaning belongs to the reviewed Task
+    plan. Non-command mappings remain evidence for a human or another owner
+    and are intentionally not executed by this command.
+    """
+    task_id = str(task.get("id") or "<unknown>")
+    verification = task.get("verification")
+    if not isinstance(verification, list):
+        raise SystemExit(f"error: {feat_id}/{task_id}: verification must be a list")
     commands: list[str] = []
-    if (root / "pyproject.toml").exists() or (root / "requirements.txt").exists() or (root / "pytest.ini").exists():
-        if command_exists("pytest"):
-            commands.append("pytest -q")
-    if (root / "go.mod").exists() and command_exists("go"):
-        commands.append("go test ./...")
-    if (root / "Cargo.toml").exists() and command_exists("cargo"):
-        commands.append("cargo test -q")
-    package_json = root / "package.json"
-    if package_json.exists() and command_exists("npm"):
-        try:
-            data = load_json(package_json)
-            scripts = data.get("scripts", {}) if isinstance(data, dict) else {}
-            if isinstance(scripts, dict) and "test" in scripts:
-                commands.append("npm test --silent")
-        except Exception:  # noqa: BLE001
-            pass
+    for index, mapping in enumerate(verification):
+        if not isinstance(mapping, dict):
+            raise SystemExit(
+                f"error: {feat_id}/{task_id}: verification[{index}] must be an object"
+            )
+        if mapping.get("kind") != "command":
+            continue
+        command = mapping.get("ref")
+        if not isinstance(command, str) or not command.strip():
+            raise SystemExit(
+                f"error: {feat_id}/{task_id}: verification[{index}].ref must be a non-empty command"
+            )
+        commands.append(command.strip())
+    if not commands:
+        raise SystemExit(
+            f"error: {feat_id}/{task_id}: reviewed Task gate requires at least one "
+            "verification mapping with kind=command; add the Task's executable proof "
+            "to tasks.json instead of relying on runtime-policy gate commands"
+        )
     return commands
+
+
+def require_task_gate_receipt(task: dict[str, Any], *, feat_id: str) -> None:
+    commands = task_verification_commands(task, feat_id=feat_id)
+    records = task.get("last_gate_commands")
+    if not isinstance(records, list):
+        raise SystemExit(
+            f"error: {feat_id}/{task.get('id')}: cannot finish task as done without "
+            "a Task verification gate receipt; run run-task-gate again"
+        )
+    recorded_commands = [
+        record.get("command")
+        for record in records
+        if isinstance(record, dict)
+    ]
+    if recorded_commands != commands or len(recorded_commands) != len(records):
+        raise SystemExit(
+            f"error: {feat_id}/{task.get('id')}: gate receipt does not match the "
+            "current Task verification commands; run run-task-gate again"
+        )
+    if any(
+        not isinstance(record, dict)
+        or record.get("status") != "pass"
+        or record.get("exit_code") != 0
+        for record in records
+    ):
+        raise SystemExit(
+            f"error: {feat_id}/{task.get('id')}: cannot finish task as done with a "
+            "non-passing Task verification receipt"
+        )
+
+
+def reject_retired_gate_commands(config: dict[str, Any]) -> None:
+    gate_cfg = runtime_gate_config(config)
+    retired = [name for name in ("ui_commands", "non_ui_commands") if name in gate_cfg]
+    if retired:
+        names = ", ".join(f"gate.{name}" for name in retired)
+        raise SystemExit(
+            f"error: {names} are retired; move completion commands to "
+            "tasks.json verification entries with kind=command"
+        )
 
 
 def resolve_verification_policy(config: dict[str, Any]) -> str:
@@ -4648,9 +6357,6 @@ def cmd_task_gate(args: argparse.Namespace) -> int:
         if task.get("status") != "in_progress":
             eprint(f"error: task {args.task} must be in_progress before gate")
             return 1
-        if state.get("current_task_id") != args.task:
-            eprint("error: current feature current_task_id does not match requested task")
-            return 1
         try:
             execution = resolve_feature_execution_root(root, state)
         except SystemExit as exc:
@@ -4661,6 +6367,7 @@ def cmd_task_gate(args: argparse.Namespace) -> int:
         project_type = "invalid"
         try:
             config = load_runtime_policy(paths)
+            reject_retired_gate_commands(config)
             project_type = detect_project_type(execution.path, config)
             verification_policy = resolve_verification_policy(config)
             verification_file = paths.feat_verification(
@@ -4677,31 +6384,8 @@ def cmd_task_gate(args: argparse.Namespace) -> int:
                     failed = True
                     fail_reasons.extend(verification_errors)
 
-            if project_type == "ui":
-                ui_cmds = runtime_gate_config(config).get("ui_commands", [])
-                if isinstance(ui_cmds, list):
-                    commands = [
-                        item.strip()
-                        for item in ui_cmds
-                        if isinstance(item, str) and item.strip()
-                    ]
-                    if len(commands) != len(ui_cmds):
-                        commands = []
-                command_failure_prefix = "ui command failed"
-                if not commands:
-                    failed = True
-                    fail_reasons.append(
-                        "no UI gate command available; "
-                        f"set gate.ui_commands in {paths.runtime_policy_file.relative_to(root)}"
-                    )
-            else:
-                commands = collect_non_ui_commands(execution.path, config)
-                if not commands:
-                    failed = True
-                    fail_reasons.append(
-                        "no non-ui gate command available; "
-                        f"set gate.non_ui_commands in {paths.runtime_policy_file.relative_to(root)}"
-                    )
+            commands = task_verification_commands(task, feat_id=args.feat)
+            command_failure_prefix = "task verification command failed"
         except SystemExit as exc:
             commands = []
             if project_type not in {"ui", "non_ui"}:
@@ -4726,7 +6410,7 @@ def cmd_task_gate(args: argparse.Namespace) -> int:
     with tracker_state_lock(root):
         state, tasks = load_feat(paths, args.feat)
         task = find_task(tasks, args.task)
-        if task.get("status") != "in_progress" or state.get("current_task_id") != args.task:
+        if task.get("status") != "in_progress":
             eprint("error: task state changed while gate was running; gate result was not recorded")
             return 1
         if revalidate_workspace_signature(root, state, execution_sig, label="gate") is None:
@@ -5181,12 +6865,14 @@ def publish_closeout(
     preserved_root_entries = [target for _, target in publication.root_moves]
     if preserved_root_entries:
         print(f"preserved_root_entries: {len(preserved_root_entries)}")
-        print(
-            "preserved_root_dir: "
-            + relative_display(
-                root, dst_dir / "artifacts" / FEATURE_CLOSEOUT_PRESERVE_DIRNAME
-            )
+        preserved_dirs = sorted(
+            {str(Path(target).parent) for target in preserved_root_entries}
         )
+        for preserved_dir in preserved_dirs:
+            print(
+                "preserved_root_dir: "
+                + relative_display(root, dst_dir / preserved_dir)
+            )
     print(f"ok: feat {target_status} {feat_id}")
     return 0
 
@@ -5293,7 +6979,18 @@ def cmd_feat_discard(args: argparse.Namespace) -> int:
     if current_status not in {"proposal", "ready", "in_progress", "blocked", "done"}:
         eprint(f"error: feat cannot be discarded from status={current_status}")
         return 1
-    if current_status == "in_progress" and count_tasks(tasks, "in_progress") > 0:
+    invalid_source_issues = validate_feat(paths, root, args.feat) if args.reason == "invalid" else []
+    if args.reason == "invalid" and not invalid_source_issues:
+        eprint(
+            "error: --reason invalid requires at least one Feature contract error; "
+            "use stale, superseded, or cancelled for a valid Feature"
+        )
+        return 1
+    if (
+        args.reason != "invalid"
+        and current_status == "in_progress"
+        and count_tasks(tasks, "in_progress") > 0
+    ):
         eprint("error: cannot discard feat while a task is in_progress")
         eprint("hint: finish the active task as blocked or done before discard-feature")
         return 1
@@ -5328,24 +7025,34 @@ def cmd_feat_discard(args: argparse.Namespace) -> int:
             feat_id=args.feat,
             target_status="discarded",
         )
-        preflight_closeout_workspace(root, state, target_status="discarded")
-        publication = prepare_closed_feature_publication(
-            paths,
-            state,
-            tasks,
-            feat_id=args.feat,
-            target_status="discarded",
-            event_action="feat_discarded",
-            event_detail=f"reason={args.reason}; replacement={replacement or 'none'}",
-            closeout_review=closeout_review,
-            discard_reason=args.reason,
-            replacement_feat_id=replacement or None,
-        )
+        if args.reason == "invalid":
+            publication = prepare_invalid_discard_publication(
+                paths,
+                state,
+                feat_id=args.feat,
+                closeout_review=closeout_review,
+                source_issue_count=len(invalid_source_issues),
+                replacement_feat_id=replacement or None,
+            )
+        else:
+            preflight_closeout_workspace(root, state, target_status="discarded")
+            publication = prepare_closed_feature_publication(
+                paths,
+                state,
+                tasks,
+                feat_id=args.feat,
+                target_status="discarded",
+                event_action="feat_discarded",
+                event_detail=f"reason={args.reason}; replacement={replacement or 'none'}",
+                closeout_review=closeout_review,
+                discard_reason=args.reason,
+                replacement_feat_id=replacement or None,
+            )
     except SystemExit as exc:
         eprint(str(exc))
         return 1
 
-    return publish_closeout(
+    result = publish_closeout(
         root,
         paths,
         args.feat,
@@ -5353,6 +7060,9 @@ def cmd_feat_discard(args: argparse.Namespace) -> int:
         target_status="discarded",
         publication=publication,
     )
+    if result == 0 and args.reason == "invalid":
+        print(f"invalid_source_errors: {len(invalid_source_issues)}")
+    return result
 
 
 def closeout_plan_lines(root: Path, state: dict[str, Any], tasks: dict[str, Any]) -> list[str]:
@@ -5375,28 +7085,27 @@ def closeout_plan_lines(root: Path, state: dict[str, Any], tasks: dict[str, Any]
     if status == "blocked":
         lines.append(
             f"{feat_id}: blocked; review and choose closeout-feature --archive-blocked or "
-            "--mode discard --reason stale|superseded|cancelled|invalid"
+            "--mode discard --reason stale|superseded|cancelled; "
+            "use invalid only when validate-tracker reports a Feature contract error"
         )
         return lines
 
     if status == "in_progress":
-        task_id = str(state.get("current_task_id") or "")
-        task = find_task(tasks, task_id) if task_id else None
-        if not task:
-            lines.append(f"{feat_id}: in_progress without current_task_id; inspect tracker state")
-            return lines
-        gate_result = str(task.get("gate_result") or "")
-        if gate_result != "pass":
+        frontier = task_frontier(tasks, feat_id=feat_id)
+        for task_id in frontier["active"]:
+            task = find_task(tasks, task_id)
+            gate_result = str(task.get("gate_result") or "")
+            if gate_result != "pass":
+                lines.append(
+                    f"{feat_id}: task {task_id} needs passing gate; run "
+                    f"feature-tracker.sh run-task-gate --root {root_q} --feature {feat_id} --task {task_id}"
+                )
+                continue
             lines.append(
-                f"{feat_id}: task {task_id} needs passing gate before closeout; run "
-                f"feature-tracker.sh run-task-gate --root {root_q} --feature {feat_id} --task {task_id}"
+                f"{feat_id}: task {task_id} gate passed; finish with "
+                f"feature-tracker.sh closeout-feature --root {root_q} --feature {feat_id} "
+                f"--task {task_id} --result done"
             )
-            return lines
-        lines.append(
-            f"{feat_id}: task {task_id} gate passed; review and close with "
-            f"feature-tracker.sh closeout-feature --root {root_q} --feature {feat_id} "
-            f"--task {task_id} --result done"
-        )
         return lines
 
     lines.append(f"{feat_id}: status={status}; no automatic closeout plan")
@@ -5514,10 +7223,15 @@ def cmd_feat_closeout(args: argparse.Namespace) -> int:
     if status == "in_progress":
         candidate_state = copy.deepcopy(state)
         candidate_tasks = copy.deepcopy(tasks)
-        task_id = task_id or str(state.get("current_task_id") or "")
         if not task_id:
-            eprint("error: --task is required when closing an in_progress feat without current_task_id")
-            return 1
+            active_task_ids = task_frontier(tasks, feat_id=feat_id)["active"]
+            if len(active_task_ids) == 1:
+                task_id = active_task_ids[0]
+            else:
+                eprint("error: --task is required when multiple Tasks are active")
+                for line in closeout_plan_lines(root, state, tasks):
+                    print(f"plan: {line}")
+                return 1
         try:
             apply_task_finish_transition(
                 candidate_state,
@@ -5588,6 +7302,18 @@ def validate_feat(paths: HarnessPaths, root: Path, feat_id: str) -> list[str]:
     if status not in FEAT_STATUS:
         errors.append(f"{feat_id}: invalid feature status: {status}")
 
+    if status not in CLOSED_FEAT_STATUS:
+        for obsolete_field in (
+            "current_task_id",
+            "blocked_reason_class",
+            "blocked_reason",
+            "blocked_task_id",
+        ):
+            if obsolete_field in state:
+                errors.append(
+                    f"{feat_id}: obsolete state field must be removed: {obsolete_field}"
+                )
+
     if state.get("feat_id") != feat_id:
         errors.append(f"{feat_id}: state feat_id mismatch")
 
@@ -5617,14 +7343,7 @@ def validate_feat(paths: HarnessPaths, root: Path, feat_id: str) -> list[str]:
         state_runtime_role = "standalone"
 
     try:
-        state_blocked_reason, _ = canonical_feature_blocker(state, feat_id=feat_id)
-    except SystemExit as exc:
-        errors.append(normalize_error_text(exc))
-        state_blocked_reason = "none"
-    try:
         require_canonical_task_blockers(tasks, feat_id=feat_id)
-        if status == "blocked":
-            require_current_blocker_task_evidence(state, tasks, feat_id=feat_id)
     except SystemExit as exc:
         errors.append(normalize_error_text(exc))
 
@@ -5646,8 +7365,13 @@ def validate_feat(paths: HarnessPaths, root: Path, feat_id: str) -> list[str]:
             errors.append(
                 f"{feat_id}: {state_runtime_role} may only declare runtime_relations with relation=handoff_from"
             )
-    if state_blocked_reason == "parked_context" and state_runtime_role != "frontdoor_context":
-        errors.append(f"{feat_id}: blocked_reason_class parked_context requires runtime_role=frontdoor_context")
+    try:
+        blockers = current_task_blockers(tasks, feat_id=feat_id)
+    except SystemExit as exc:
+        errors.append(normalize_error_text(exc))
+        blockers = []
+    if any(item["class"] == "parked_context" for item in blockers) and state_runtime_role != "frontdoor_context":
+        errors.append(f"{feat_id}: parked_context Task blocker requires runtime_role=frontdoor_context")
 
     index_entry = get_feat_index_entry(load_index(paths), feat_id)
     if index_entry is None:
@@ -5668,17 +7392,8 @@ def validate_feat(paths: HarnessPaths, root: Path, feat_id: str) -> list[str]:
             index_runtime_role = "standalone"
         if index_runtime_role != state_runtime_role:
             errors.append(f"{feat_id}: index runtime_role drift from state.json")
-        try:
-            index_blocked_reason = canonical_blocked_reason_class(
-                index_entry.get("blocked_reason_class"),
-                feat_id=feat_id,
-                status=str(index_entry.get("status") or ""),
-            )
-        except SystemExit as exc:
-            errors.append(normalize_error_text(exc))
-            index_blocked_reason = "none"
-        if index_blocked_reason != state_blocked_reason:
-            errors.append(f"{feat_id}: index blocked_reason_class drift from state.json")
+        if status not in CLOSED_FEAT_STATUS and "blocked_reason_class" in index_entry:
+            errors.append(f"{feat_id}: index contains obsolete blocked_reason_class projection")
         try:
             index_runtime_relations = canonical_runtime_relations(index_entry.get("runtime_relations"), feat_id=feat_id)
         except SystemExit as exc:
@@ -5870,6 +7585,15 @@ def validate_feat(paths: HarnessPaths, root: Path, feat_id: str) -> list[str]:
                         errors.append(normalize_error_text(exc))
                     if not isinstance(mapping.get("proves"), str) or not str(mapping.get("proves")).strip():
                         errors.append(f"{mapping_label}.proves must be a non-empty string")
+                # An active Task must have an executable proof before it can
+                # participate in the new gate.  Completed legacy Tasks may
+                # remain artifact/manual-only; they are historical evidence,
+                # not permission to execute or finish a new Task.
+                if tid in current_plan_ids and tstatus == "in_progress":
+                    try:
+                        task_verification_commands(task, feat_id=feat_id)
+                    except SystemExit as exc:
+                        errors.append(normalize_error_text(exc))
             supersedes = task.get("supersedes")
             if not isinstance(supersedes, list):
                 errors.append(f"{feat_id}/{tid}: supersedes must be a list")
@@ -5881,6 +7605,10 @@ def validate_feat(paths: HarnessPaths, root: Path, feat_id: str) -> list[str]:
                         errors.append(f"{feat_id}/{tid}: supersedes entries must be task ids")
                     elif superseded_id == tid:
                         errors.append(f"{feat_id}/{tid}: task must not supersede itself")
+            try:
+                canonical_task_dependencies(task, label=f"{feat_id}/{tid}")
+            except SystemExit as exc:
+                errors.append(normalize_error_text(exc))
             introduced_revision = task.get("introduced_in_revision")
             if (
                 not isinstance(introduced_revision, int)
@@ -5946,13 +7674,24 @@ def validate_feat(paths: HarnessPaths, root: Path, feat_id: str) -> list[str]:
             }
             if invalid_targets:
                 errors.append(f"{feat_id}/{task_id}: superseded_by references unknown tasks")
+        try:
+            current_plan_task_graph(tasks, feat_id=feat_id)
+        except SystemExit as exc:
+            errors.append(normalize_error_text(exc))
 
-    if len(in_progress) > 1:
-        errors.append(f"{feat_id}: more than one in_progress task: {', '.join(in_progress)}")
-
-    cur = state.get("current_task_id")
-    if cur is not None and cur not in in_progress:
-        errors.append(f"{feat_id}: current_task_id does not match in_progress task")
+    if status not in CLOSED_FEAT_STATUS and has_reviewed_task_plan(tasks):
+        try:
+            expected_status = derived_feature_status(state, tasks)
+        except SystemExit as exc:
+            errors.append(normalize_error_text(exc))
+        else:
+            if status != expected_status:
+                errors.append(
+                    f"{feat_id}: feature status drift from Task frontier: "
+                    f"expected {expected_status}, found {status}"
+                )
+            if status == "blocked" and not blockers:
+                errors.append(f"{feat_id}: blocked Feature requires Task blocker evidence")
     if workspace_mode == "proposal_only" and in_progress:
         errors.append(f"{feat_id}: proposal_only feat must not have in_progress tasks")
 
@@ -6594,6 +8333,7 @@ def query_list(paths: HarnessPaths, *, scopes: set[str] | None = None) -> list[d
         scope = feature_scope_for_status(str(state.get("status") or ""))
         if scope not in selected_scopes:
             continue
+        frontier = feature_task_frontier(state, tasks)
         out.append(
             {
                 "feat_id": feat_id,
@@ -6604,11 +8344,14 @@ def query_list(paths: HarnessPaths, *, scopes: set[str] | None = None) -> list[d
                 "branch": state.get("branch", ""),
                 "worktree": state.get("worktree_path", ""),
                 "task_stats": {
-                    "todo": count_tasks(tasks, "todo"),
-                    "in_progress": count_tasks(tasks, "in_progress"),
-                    "done": count_tasks(tasks, "done"),
-                    "blocked": count_tasks(tasks, "blocked"),
+                    "todo": count_current_tasks(tasks, "todo"),
+                    "in_progress": count_current_tasks(tasks, "in_progress"),
+                    "done": count_current_tasks(tasks, "done"),
+                    "blocked": count_current_tasks(tasks, "blocked"),
+                    "runnable": len(frontier["runnable"]),
                 },
+                "active_task_ids": frontier["active"],
+                "runnable_task_ids": frontier["runnable"],
             }
         )
     return out
@@ -6616,7 +8359,8 @@ def query_list(paths: HarnessPaths, *, scopes: set[str] | None = None) -> list[d
 
 def query_one(paths: HarnessPaths, feat_id: str) -> dict[str, Any]:
     state, tasks = load_feat(paths, feat_id)
-    return {"state": state, "tasks": tasks}
+    frontier = feature_task_frontier(state, tasks)
+    return {"state": state, "tasks": tasks, "task_frontier": frontier}
 
 
 def query_filter(
@@ -6793,14 +8537,68 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--branch-prefix", default=None)
     sp.set_defaults(func=cmd_assign_feat_workspace)
 
+    sp = sub.add_parser(
+        "adopt-feature-worktree",
+        help="bind an existing registered Git worktree to a reviewed feature",
+    )
+    add_common(sp)
+    sp.add_argument("--feature", dest="feat", required=True)
+    sp.add_argument("--worktree-path", required=True)
+    sp.add_argument("--branch", required=True)
+    sp.set_defaults(func=cmd_adopt_feat_worktree)
+
     sp = sub.add_parser("show-feature-status", help="show feature status")
     add_common(sp)
-    sp.add_argument("--feature", dest="feat", default=None)
+    sp.add_argument(
+        "--feature",
+        dest="feat",
+        default=None,
+        help="text/JSON: inspect one Feature; HTML: focus and expand it while keeping the full active board",
+    )
     status_output = sp.add_mutually_exclusive_group()
     status_output.add_argument("--json", action="store_true")
     status_output.add_argument("--format", choices=["text", "html"], default="text")
     sp.add_argument("--output", default=None, help="atomically write HTML outside tracker state")
     sp.set_defaults(func=cmd_feat_status)
+
+    sp = sub.add_parser(
+        "serve-feature-status",
+        help="serve a live, read-only feature status page from canonical tracker files",
+    )
+    add_common(sp)
+    sp.add_argument(
+        "--feature",
+        dest="feat",
+        default=None,
+        help="focus and expand one Feature while keeping the full active board",
+    )
+    sp.add_argument("--port", type=int, default=0, help="loopback TCP port; 0 selects an available port")
+    sp.add_argument(
+        "--refresh-ms",
+        type=int,
+        default=5000,
+        help="page reload interval in milliseconds, clamped to 1000..60000",
+    )
+    sp.set_defaults(func=cmd_serve_feature_status)
+
+    sp = sub.add_parser(
+        "watch-feature-status",
+        help="render a live, read-only feature status view in the terminal",
+    )
+    add_common(sp)
+    sp.add_argument(
+        "--feature",
+        dest="feat",
+        default=None,
+        help="expand one Feature's Task topology while keeping the full active board",
+    )
+    sp.add_argument(
+        "--refresh-ms",
+        type=int,
+        default=5000,
+        help="recompute interval in milliseconds, clamped to 1000..60000",
+    )
+    sp.set_defaults(func=cmd_watch_feature_status)
 
     sp = sub.add_parser("get-owner-receipt", help="read the current feature execution-owner receipt")
     add_common(sp)
@@ -6923,7 +8721,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="feature lifecycle scope: active, archived, discarded; repeat or comma-separate values; default active",
     )
     sp.add_argument("--status", default=None)
-    sp.add_argument("--task-status", choices=["todo", "in_progress", "done", "blocked"], default=None)
+    sp.add_argument(
+        "--task-status",
+        choices=["todo", "runnable", "in_progress", "done", "blocked"],
+        default=None,
+    )
     sp.add_argument("--contains", default=None)
     sp.set_defaults(func=cmd_query_filter)
 
@@ -6944,6 +8746,7 @@ def command_requires_global_tracker_lock(args: argparse.Namespace) -> bool:
         "repair-reviewed-task-plan",
         "set-feature-goal",
         "assign-feature-workspace",
+        "adopt-feature-worktree",
         "start-task",
         "unstart-task",
         "finish-task",

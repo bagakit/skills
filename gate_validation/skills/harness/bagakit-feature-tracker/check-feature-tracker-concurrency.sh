@@ -78,7 +78,8 @@ mkdir -p "$WORKTREE_GATE_PATH/worktree-only"
 cat > "$WORKTREE_GATE_PATH/worktree-only/gate-sentinel.txt" <<'EOF'
 gate should run in the feature worktree
 EOF
-feature_tracker_set_non_ui_gate "$TMP_DIR" "test -f worktree-only/gate-sentinel.txt"
+feature_tracker_set_task_command \
+  "$TMP_DIR" "$WORKTREE_GATE_ID" "test -f worktree-only/gate-sentinel.txt"
 bash "$SKILL_DIR/scripts/feature-tracker.sh" start-task --root "$TMP_DIR" --feature "$WORKTREE_GATE_ID" --task T-001 >/dev/null
 DISCARD_ACTIVE_OUT="$TMP_DIR/discard-active.out"
 DISCARD_ACTIVE_ERR="$TMP_DIR/discard-active.err"

@@ -47,7 +47,7 @@ Commands:
   next [--root <repo-root>] [--item <item-id>] [--json]
   resume-candidates [--root <repo-root>] [--json]
   snapshot --root <repo-root> --item <item-id> --label <label> [--json]
-  checkpoint --item <item-id> --stage <stage> --session-status <status> --objective <text> --attempted <text> --result <text> --next-action <text> --clean-state <yes|no|unknown> [--item-status <status>] [--json]
+  checkpoint --item <item-id> --stage <stage> --session-status <status> --objective <text> --attempted <text> --result <text> --next-action <text> --clean-state <yes|no|unknown> [--task-ref <upstream-item-id>] [--item-status <status>] [--json]
   open-incident --item <item-id> --family <family> --summary <summary> --recommended-resume <stay_blocked|resume_execution|closeout> [--json]
   resolve-incident --item <item-id> --incident <incident-id> --close-note <note> [--json]
   archive-item --item <item-id>
@@ -215,6 +215,7 @@ function cmdCheckpoint(argv: string[]): number {
     options: {
       ...commonOptions(),
       item: { type: "string" as const },
+      "task-ref": { type: "string" as const },
       stage: { type: "string" as const },
       "session-status": { type: "string" as const },
       objective: { type: "string" as const },
@@ -252,6 +253,7 @@ function cmdCheckpoint(argv: string[]): number {
     values["next-action"],
     values["clean-state"] as (typeof CLEAN_STATES)[number],
     itemStatus as (typeof ITEM_STATUSES)[number] | undefined,
+    values["task-ref"],
   );
   if (values.json) {
     console.log(JSON.stringify(payload, null, 2));

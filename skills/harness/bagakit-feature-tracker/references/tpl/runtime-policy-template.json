@@ -43,8 +43,6 @@
         ]
       },
       "default": "non_ui"
-    },
-    "ui_commands": [],
-    "non_ui_commands": []
+    }
   }
 }

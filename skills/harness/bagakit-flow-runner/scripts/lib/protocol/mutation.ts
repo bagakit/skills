@@ -44,6 +44,7 @@ export type CreateItemInput = Readonly<{
 }>;
 
 export type CheckpointInput = Readonly<{
+  task_ref?: string;
   stage: string;
   session_status: SessionStatus;
   objective: string;
@@ -169,6 +170,7 @@ export function recordCheckpoint(stateInput: ItemState, input: CheckpointInput):
     input.session_status === "progress" ? "active" : input.session_status === "blocked" ? "blocked" : "done";
   const sessionNumber = state.runtime.session_count + 1;
   const checkpointReceipt: CheckpointReceipt = {
+    ...(input.task_ref?.trim() ? { task_ref: input.task_ref.trim() } : {}),
     stage: input.stage,
     session_status: input.session_status,
     objective: input.objective,
@@ -208,6 +210,7 @@ export function recordCheckpoint(stateInput: ItemState, input: CheckpointInput):
   const progress: ProgressEntry = {
     schema: FLOW_PROTOCOL_SCHEMAS.progress,
     item_id: state.item_id,
+    ...(input.task_ref?.trim() ? { task_ref: input.task_ref.trim() } : {}),
     session_number: sessionNumber,
     stage: input.stage,
     session_status: input.session_status,

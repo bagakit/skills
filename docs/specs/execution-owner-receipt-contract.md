@@ -14,14 +14,14 @@ An owner writes `owner-receipt.json` beside its canonical runtime state:
 
 ```json
 {
-  "schema": "bagakit.execution-owner-receipt.v1",
+  "schema": "bagakit.execution-owner-receipt.v2",
   "owner_kind": "feature_tracker",
   "owner_id": "f-example",
   "semantic_revision": "<stable semantic digest>",
   "lifecycle_status": "in_progress",
   "continuation": "continue",
-  "current_item_id": "T-001",
-  "blocker": null,
+  "active_item_ids": ["T-001", "T-002"],
+  "blockers": [],
   "replacement_ref": null,
   "evidence_refs": [
     ".bagakit/feature-tracker/features/f-example/state.json",
@@ -45,11 +45,16 @@ Required behavior:
   files must not silently become receipt evidence
 - `semantic_revision` is the sha256 of canonical compact JSON over
   `owner_kind`, `owner_id`, `lifecycle_status`, `continuation`,
-  `current_item_id`, `blocker`, `replacement_ref`, and `evidence_hashes`.
+  `active_item_ids`, `blockers`, `replacement_ref`, and `evidence_hashes`.
   Timestamps, logs, and rendered projections do not affect it.
 - `continuation` is one of `continue`, `blocked`, `complete`, `superseded`, or
   `unavailable`.
-- `blocker` is null or contains non-empty `class` and `reason` strings.
+- `active_item_ids` is the sorted set of current-plan Tasks whose status is
+  `in_progress`; it is derived from `tasks.json` and is empty when no Task is
+  active.
+- `blockers` is empty unless continuation is `blocked`. Task blockers contain
+  `item_id`, `class`, and `reason`; owner-level blockers such as missing plan or
+  workspace use `item_id = null`.
 - `replacement_ref` is null unless another repo-relative owner artifact
   supersedes this owner.
 - `evidence_refs` are existing repo-relative canonical owner artifacts. A
@@ -71,10 +76,11 @@ Recovery rules:
   continuation
 - verify `state.json.goal_contract.ref` and `revision` against the co-located
   `goal.md`
-- read current task, blocker, and continuation from owner state rather than
+- read active Tasks, blockers, and continuation from owner state rather than
   copying them into the Goal
-- `continue` permits work on the owner-selected task
-- `blocked` requires following the owner's blocker and independent-work rules
+- `continue` permits querying Tracker for runnable work or continuing an active
+  Task; the receipt does not select or schedule the next Task
+- `blocked` requires following the owner's blockers and independent-work rules
 - `complete` means the Feature lifecycle is complete; the Goal does not carry
   its own completion flag
 - `superseded` routes to `replacement_ref`
@@ -86,4 +92,5 @@ Recovery rules:
 
 The receipt is a typed handoff, not shared authority. It does not authorize a
 consumer to update Feature Tracker, infer task completion, or replay owner
-history.
+history. It does not carry runnable Task ids, Worker assignments, concurrency
+policy, or Task-worktree topology.

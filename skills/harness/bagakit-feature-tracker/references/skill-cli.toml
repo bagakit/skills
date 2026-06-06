@@ -16,6 +16,14 @@ name = "initialize-tracker"
 summary = "Apply tracker files into a project."
 
 [[command]]
+name = "rekey-local-issuer"
+summary = "Rotate the local Feature-id issuer namespace and Git-local guard key."
+
+[[command]]
+name = "materialize-feature-artifact"
+summary = "Write one optional proposal, spec-delta, or verification helper from its canonical template."
+
+[[command]]
 name = "create-feature"
 summary = "Create a feature with explicit workspace mode."
 
@@ -44,8 +52,20 @@ name = "assign-feature-workspace"
 summary = "Assign one reviewed feature to current_tree or worktree execution."
 
 [[command]]
+name = "adopt-feature-worktree"
+summary = "Bind or rebind an existing registered Git worktree and its exact branch to a reviewed feature with no active Tasks."
+
+[[command]]
 name = "show-feature-status"
 summary = "Show all or one feature as terminal text, JSON, or a read-only HTML review; HTML may be atomically written outside tracker state for human viewing."
+
+[[command]]
+name = "serve-feature-status"
+summary = "Serve a loopback-only live, read-only status page that regenerates from canonical tracker files on each refresh."
+
+[[command]]
+name = "watch-feature-status"
+summary = "Render a live, read-only status view in the terminal, recomputed from canonical tracker files on each refresh."
 
 [[command]]
 name = "get-owner-receipt"
@@ -53,7 +73,7 @@ summary = "Read and verify the persisted execution-owner receipt against canonic
 
 [[command]]
 name = "start-task"
-summary = "Start one feature task."
+summary = "Atomically start one runnable feature Task after its direct dependencies are done."
 
 [[command]]
 name = "unstart-task"
@@ -61,7 +81,7 @@ summary = "Return an active task with no gate or prior completion evidence to to
 
 [[command]]
 name = "run-task-gate"
-summary = "Run one non-empty task gate and record fail-closed evidence."
+summary = "Run the current Task's declared command verification entries in order and record fail-closed evidence."
 
 [[command]]
 name = "finish-task"
@@ -101,7 +121,7 @@ summary = "List tracked features."
 
 [[command]]
 name = "get-feature"
-summary = "Show one feature record."
+summary = "Show one Feature record with its derived active, runnable, blocked, waiting, and done Task frontier."
 
 [[command]]
 name = "filter-features"

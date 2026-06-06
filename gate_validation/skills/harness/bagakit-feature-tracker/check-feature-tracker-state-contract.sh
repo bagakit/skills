@@ -19,7 +19,8 @@ ROOT="$(cd "$ROOT" && pwd)"
 SKILL_DIR="$ROOT/skills/harness/bagakit-feature-tracker"
 LIB_DIR="$ROOT/gate_validation/skills/harness/bagakit-feature-tracker/lib"
 TMP_DIR="$(mktemp -d)"
-trap 'rm -rf "$TMP_DIR"' EXIT
+ADOPT_TMP_DIR="$(mktemp -d)"
+trap 'rm -rf "$TMP_DIR" "$ADOPT_TMP_DIR"' EXIT
 
 source "$LIB_DIR/feature-tracker-testlib.sh"
 
@@ -31,7 +32,6 @@ bash "$SKILL_DIR/scripts/feature-tracker.sh" create-feature --root "$TMP_DIR" --
 DIRTY_ARCHIVE_ID="$(feature_tracker_feature_id_by_title "$TMP_DIR" "Dirty current tree archive")"
 bash "$SKILL_DIR/scripts/feature-tracker.sh" set-task-plan --root "$TMP_DIR" --feature "$DIRTY_ARCHIVE_ID" --tasks-file "$TASK_PLAN_JSON" --expected-revision 0 >/dev/null
 bash "$SKILL_DIR/scripts/feature-tracker.sh" assign-feature-workspace --root "$TMP_DIR" --feature "$DIRTY_ARCHIVE_ID" --workspace-mode current_tree >/dev/null
-feature_tracker_set_non_ui_gate "$TMP_DIR" "true"
 bash "$SKILL_DIR/scripts/feature-tracker.sh" start-task --root "$TMP_DIR" --feature "$DIRTY_ARCHIVE_ID" --task T-001 >/dev/null
 bash "$SKILL_DIR/scripts/feature-tracker.sh" run-task-gate --root "$TMP_DIR" --feature "$DIRTY_ARCHIVE_ID" --task T-001 >/dev/null
 bash "$SKILL_DIR/scripts/feature-tracker.sh" finish-task --root "$TMP_DIR" --feature "$DIRTY_ARCHIVE_ID" --task T-001 --result done >/dev/null
@@ -78,7 +78,6 @@ bash "$SKILL_DIR/scripts/feature-tracker.sh" set-task-plan \
   --expected-revision 0 >/dev/null
 bash "$SKILL_DIR/scripts/feature-tracker.sh" assign-feature-workspace \
   --root "$TMP_DIR" --feature "$DISCARD_BLOCKED_ID" --workspace-mode current_tree >/dev/null
-feature_tracker_set_non_ui_gate "$TMP_DIR" "true"
 bash "$SKILL_DIR/scripts/feature-tracker.sh" start-task \
   --root "$TMP_DIR" --feature "$DISCARD_BLOCKED_ID" --task T-001 >/dev/null
 bash "$SKILL_DIR/scripts/feature-tracker.sh" finish-task \
@@ -194,8 +193,8 @@ bash "$SKILL_DIR/scripts/feature-tracker.sh" finish-task \
   --blocked-reason-class internal_blocker \
   --blocked-reason "discard closes an invalid execution route" >/dev/null
 
-cp "$TMP_DIR/.bagakit/feature-tracker/features/$CLOSE_BLOCKED_ARCHIVE_ID/state.json" \
-  "$TMP_DIR/blocked-closeout-state.saved"
+cp "$TMP_DIR/.bagakit/feature-tracker/features/$CLOSE_BLOCKED_ARCHIVE_ID/tasks.json" \
+  "$TMP_DIR/blocked-closeout-tasks.saved"
 python3 - "$TMP_DIR" "$CLOSE_BLOCKED_ARCHIVE_ID" <<'PY'
 import json
 import sys
@@ -203,10 +202,11 @@ from pathlib import Path
 
 root = Path(sys.argv[1])
 feature_id = sys.argv[2]
-state_path = root / ".bagakit" / "feature-tracker" / "features" / feature_id / "state.json"
-state = json.loads(state_path.read_text(encoding="utf-8"))
-state["blocked_reason"] = " " + state["blocked_reason"]
-state_path.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
+tasks_path = root / ".bagakit" / "feature-tracker" / "features" / feature_id / "tasks.json"
+tasks = json.loads(tasks_path.read_text(encoding="utf-8"))
+task = next(item for item in tasks["tasks"] if item["id"] == "T-001")
+task["last_blocker"]["reason"] = " " + task["last_blocker"]["reason"]
+tasks_path.write_text(json.dumps(tasks, indent=2) + "\n", encoding="utf-8")
 PY
 if bash "$SKILL_DIR/scripts/feature-tracker.sh" archive-feature \
   --root "$TMP_DIR" --feature "$CLOSE_BLOCKED_ARCHIVE_ID" \
@@ -215,12 +215,12 @@ if bash "$SKILL_DIR/scripts/feature-tracker.sh" archive-feature \
   echo "error: archive accepted a non-canonical live blocker" >&2
   exit 1
 fi
-grep -F "blocked_reason must not have surrounding whitespace" \
+grep -F "last_blocker.reason must not have surrounding whitespace" \
   "$TMP_DIR/noncanonical-live-blocker.err" >/dev/null
 test -d "$TMP_DIR/.bagakit/feature-tracker/features/$CLOSE_BLOCKED_ARCHIVE_ID"
 test ! -d "$TMP_DIR/.bagakit/feature-tracker/features-archived/$CLOSE_BLOCKED_ARCHIVE_ID"
-cp "$TMP_DIR/blocked-closeout-state.saved" \
-  "$TMP_DIR/.bagakit/feature-tracker/features/$CLOSE_BLOCKED_ARCHIVE_ID/state.json"
+cp "$TMP_DIR/blocked-closeout-tasks.saved" \
+  "$TMP_DIR/.bagakit/feature-tracker/features/$CLOSE_BLOCKED_ARCHIVE_ID/tasks.json"
 
 if bash "$SKILL_DIR/scripts/feature-tracker.sh" closeout-feature \
   --root "$TMP_DIR" --feature "$CLOSE_BLOCKED_ARCHIVE_ID" \
@@ -237,7 +237,7 @@ test ! -d "$TMP_DIR/.bagakit/feature-tracker/features-archived/$CLOSE_BLOCKED_AR
 
 if bash "$SKILL_DIR/scripts/feature-tracker.sh" closeout-feature \
   --root "$TMP_DIR" --feature "$CLOSE_BLOCKED_DISCARD_ID" --mode discard \
-  --reason invalid --blocked-reason-class internal_blocker \
+  --reason cancelled --blocked-reason-class internal_blocker \
   >"$TMP_DIR/discard-closeout-unused.out" 2>"$TMP_DIR/discard-closeout-unused.err"; then
   echo "error: discard closeout accepted unused blocker arguments" >&2
   exit 1
@@ -272,11 +272,11 @@ assert_closeout_rejected() {
     "$TMP_DIR/.bagakit/feature-tracker/index/features.json")"
 }
 assert_closeout_rejected archive-with-reason "$CLOSE_BLOCKED_ARCHIVE_ID" \
-  "valid only with --mode discard" --reason invalid
+  "valid only with --mode discard" --reason cancelled
 assert_closeout_rejected archive-with-replacement "$CLOSE_BLOCKED_ARCHIVE_ID" \
   "valid only with --mode discard" --replacement "$CLOSE_BLOCKED_DISCARD_ID"
 assert_closeout_rejected discard-with-archive-blocked "$CLOSE_BLOCKED_DISCARD_ID" \
-  "valid only with --mode archive" --mode discard --reason invalid --archive-blocked
+  "valid only with --mode archive" --mode discard --reason cancelled --archive-blocked
 rm -f "$TMP_DIR"/*.out "$TMP_DIR"/*.err "$TMP_DIR"/*.saved
 
 bash "$SKILL_DIR/scripts/feature-tracker.sh" closeout-feature \
@@ -285,7 +285,7 @@ bash "$SKILL_DIR/scripts/feature-tracker.sh" closeout-feature \
   "${FEATURE_TRACKER_CLOSEOUT_REVIEW_ARGS[@]}" >/dev/null
 bash "$SKILL_DIR/scripts/feature-tracker.sh" closeout-feature \
   --root "$TMP_DIR" --feature "$CLOSE_BLOCKED_DISCARD_ID" \
-  --mode discard --reason invalid --execute \
+  --mode discard --reason cancelled --execute \
   "${FEATURE_TRACKER_CLOSEOUT_REVIEW_ARGS[@]}" >/dev/null
 python3 - "$TMP_DIR" "$CLOSE_BLOCKED_ARCHIVE_ID" "$CLOSE_BLOCKED_DISCARD_ID" <<'PY'
 import json
@@ -309,15 +309,16 @@ for feat_id, directory, status, reason_class, reason in cases:
     task = next(item for item in tasks["tasks"] if item["id"] == "T-001")
     assert state["status"] == status
     assert state["closed_from_status"] == "blocked"
-    assert state["blocked_reason_class"] == "none"
+    assert "blocked_reason_class" not in state
     assert "blocked_reason" not in state
     assert "blocked_task_id" not in state
     assert task["status"] == "blocked"
     assert task["last_blocker"] == {"class": reason_class, "reason": reason}
     assert receipt["lifecycle_status"] == status
-    assert receipt["blocker"] is None
+    assert receipt["active_item_ids"] == []
+    assert receipt["blockers"] == []
     assert entry["status"] == status
-    assert entry["blocked_reason_class"] == "none"
+    assert "blocked_reason_class" not in entry
 PY
 bash "$SKILL_DIR/scripts/feature-tracker.sh" validate-tracker --root "$TMP_DIR" >/dev/null
 
@@ -428,7 +429,6 @@ PY
 )"
 WORKTREE_CLOSEOUT_PATH="$TMP_DIR/$(printf '%s\n' "$WORKTREE_CLOSEOUT_FACTS" | sed -n '1p')"
 WORKTREE_CLOSEOUT_BRANCH="$(printf '%s\n' "$WORKTREE_CLOSEOUT_FACTS" | sed -n '2p')"
-feature_tracker_set_non_ui_gate "$TMP_DIR" "true"
 bash "$SKILL_DIR/scripts/feature-tracker.sh" start-task \
   --root "$TMP_DIR" --feature "$WORKTREE_CLOSEOUT_ID" --task T-001 >/dev/null
 bash "$SKILL_DIR/scripts/feature-tracker.sh" run-task-gate \
@@ -847,5 +847,137 @@ if bash "$SKILL_DIR/scripts/feature-tracker.sh" validate-tracker --root "$TMP_DI
 fi
 grep -F "last_blocker.reason must not have surrounding whitespace" \
   "$TMP_DIR/noncanonical-blocker.err" >/dev/null
+
+feature_tracker_init_temp_repo "$ADOPT_TMP_DIR"
+bash "$SKILL_DIR/scripts/feature-tracker.sh" initialize-tracker \
+  --root "$ADOPT_TMP_DIR" >/dev/null
+ADOPT_PLAN="$ADOPT_TMP_DIR/.bagakit/feature-tracker/artifacts/adopt-plan.json"
+feature_tracker_write_reviewed_task_plan \
+  "$ADOPT_PLAN" \
+  "Adopt and rebind existing registered worktrees without changing them."
+bash "$SKILL_DIR/scripts/feature-tracker.sh" create-feature \
+  --root "$ADOPT_TMP_DIR" \
+  --title "Adopt existing worktree" \
+  --slug "adopt-existing-worktree" \
+  --goal "Bind an existing worktree through the public Tracker transition" \
+  --workspace-mode proposal_only >/dev/null
+ADOPT_ID="$(
+  feature_tracker_feature_id_by_title "$ADOPT_TMP_DIR" "Adopt existing worktree"
+)"
+bash "$SKILL_DIR/scripts/feature-tracker.sh" set-task-plan \
+  --root "$ADOPT_TMP_DIR" \
+  --feature "$ADOPT_ID" \
+  --tasks-file "$ADOPT_PLAN" \
+  --expected-revision 0 >/dev/null
+
+mkdir -p "$ADOPT_TMP_DIR/.worktrees"
+printf '.worktrees/\n' >>"$ADOPT_TMP_DIR/.git/info/exclude"
+FIRST_WORKTREE="$ADOPT_TMP_DIR/.worktrees/existing-feature"
+SECOND_WORKTREE="$ADOPT_TMP_DIR/.worktrees/rebound-feature"
+git -C "$ADOPT_TMP_DIR" worktree add -q \
+  -b feature/existing-feature "$FIRST_WORKTREE" HEAD
+git -C "$ADOPT_TMP_DIR" worktree add -q \
+  -b feature/rebound-feature "$SECOND_WORKTREE" HEAD
+printf 'preserve first\n' >"$FIRST_WORKTREE/UNRELATED.txt"
+printf 'preserve second\n' >"$SECOND_WORKTREE/UNRELATED.txt"
+WORKTREE_LIST_BEFORE="$(git -C "$ADOPT_TMP_DIR" worktree list --porcelain)"
+FIRST_HEAD_BEFORE="$(git -C "$FIRST_WORKTREE" rev-parse HEAD)"
+SECOND_HEAD_BEFORE="$(git -C "$SECOND_WORKTREE" rev-parse HEAD)"
+ADOPT_STATE="$ADOPT_TMP_DIR/.bagakit/feature-tracker/features/$ADOPT_ID/state.json"
+ADOPT_RECEIPT="$ADOPT_TMP_DIR/.bagakit/feature-tracker/features/$ADOPT_ID/owner-receipt.json"
+ADOPT_STATE_SHA="$(shasum "$ADOPT_STATE" | awk '{print $1}')"
+
+if bash "$SKILL_DIR/scripts/feature-tracker.sh" adopt-feature-worktree \
+  --root "$ADOPT_TMP_DIR" \
+  --feature "$ADOPT_ID" \
+  --worktree-path "$FIRST_WORKTREE" \
+  --branch feature/wrong-branch >/dev/null 2>&1; then
+  echo "error: worktree adoption accepted a branch mismatch" >&2
+  exit 1
+fi
+test "$ADOPT_STATE_SHA" = "$(shasum "$ADOPT_STATE" | awk '{print $1}')"
+
+mkdir -p "$ADOPT_TMP_DIR/not-registered"
+if bash "$SKILL_DIR/scripts/feature-tracker.sh" adopt-feature-worktree \
+  --root "$ADOPT_TMP_DIR" \
+  --feature "$ADOPT_ID" \
+  --worktree-path "$ADOPT_TMP_DIR/not-registered" \
+  --branch feature/existing-feature >/dev/null 2>&1; then
+  echo "error: worktree adoption accepted an unregistered path" >&2
+  exit 1
+fi
+test "$ADOPT_STATE_SHA" = "$(shasum "$ADOPT_STATE" | awk '{print $1}')"
+
+cp "$ADOPT_RECEIPT" "$ADOPT_TMP_DIR/owner-receipt.saved.json"
+printf '{}\n' >"$ADOPT_RECEIPT"
+if bash "$SKILL_DIR/scripts/feature-tracker.sh" adopt-feature-worktree \
+  --root "$ADOPT_TMP_DIR" \
+  --feature "$ADOPT_ID" \
+  --worktree-path "$FIRST_WORKTREE" \
+  --branch feature/existing-feature >/dev/null 2>&1; then
+  echo "error: worktree adoption accepted a stale owner receipt" >&2
+  exit 1
+fi
+mv "$ADOPT_TMP_DIR/owner-receipt.saved.json" "$ADOPT_RECEIPT"
+
+bash "$SKILL_DIR/scripts/feature-tracker.sh" adopt-feature-worktree \
+  --root "$ADOPT_TMP_DIR" \
+  --feature "$ADOPT_ID" \
+  --worktree-path "$FIRST_WORKTREE" \
+  --branch feature/existing-feature >/dev/null
+RECEIPT_SHA_AFTER_ADOPT="$(shasum "$ADOPT_RECEIPT" | awk '{print $1}')"
+bash "$SKILL_DIR/scripts/feature-tracker.sh" adopt-feature-worktree \
+  --root "$ADOPT_TMP_DIR" \
+  --feature "$ADOPT_ID" \
+  --worktree-path "$SECOND_WORKTREE" \
+  --branch feature/rebound-feature >/dev/null
+test "$RECEIPT_SHA_AFTER_ADOPT" != "$(shasum "$ADOPT_RECEIPT" | awk '{print $1}')"
+
+python3 - "$ADOPT_TMP_DIR" "$ADOPT_ID" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+feature_id = sys.argv[2]
+state = json.loads(
+    (root / ".bagakit" / "feature-tracker" / "features" / feature_id / "state.json").read_text(
+        encoding="utf-8"
+    )
+)
+assert state["status"] == "ready"
+assert state["workspace_mode"] == "worktree"
+assert state["branch"] == "feature/rebound-feature"
+assert state["worktree_name"] == "rebound-feature"
+assert state["worktree_path"] == ".worktrees/rebound-feature"
+assert state["history"][-1] == {
+    "action": "workspace_adopted",
+    "detail": (
+        "worktree:feature/existing-feature@.worktrees/existing-feature"
+        " -> worktree:feature/rebound-feature@.worktrees/rebound-feature"
+    ),
+}
+PY
+
+bash "$SKILL_DIR/scripts/feature-tracker.sh" start-task \
+  --root "$ADOPT_TMP_DIR" --feature "$ADOPT_ID" --task T-001 >/dev/null
+if bash "$SKILL_DIR/scripts/feature-tracker.sh" adopt-feature-worktree \
+  --root "$ADOPT_TMP_DIR" \
+  --feature "$ADOPT_ID" \
+  --worktree-path "$FIRST_WORKTREE" \
+  --branch feature/existing-feature >/dev/null 2>&1; then
+  echo "error: worktree adoption accepted an active Task" >&2
+  exit 1
+fi
+
+test "$(cat "$FIRST_WORKTREE/UNRELATED.txt")" = "preserve first"
+test "$(cat "$SECOND_WORKTREE/UNRELATED.txt")" = "preserve second"
+test "$WORKTREE_LIST_BEFORE" = "$(git -C "$ADOPT_TMP_DIR" worktree list --porcelain)"
+test "$FIRST_HEAD_BEFORE" = "$(git -C "$FIRST_WORKTREE" rev-parse HEAD)"
+test "$SECOND_HEAD_BEFORE" = "$(git -C "$SECOND_WORKTREE" rev-parse HEAD)"
+bash "$SKILL_DIR/scripts/feature-tracker.sh" get-owner-receipt \
+  --root "$ADOPT_TMP_DIR" --feature "$ADOPT_ID" >/dev/null
+bash "$SKILL_DIR/scripts/feature-tracker.sh" validate-tracker \
+  --root "$ADOPT_TMP_DIR" >/dev/null
 
 echo "ok: bagakit-feature-tracker state contract regression passed"

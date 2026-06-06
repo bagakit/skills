@@ -279,6 +279,7 @@ export function validateIncidentRecord(value: unknown, label = "incident"): Inci
 export function validateCheckpointReceipt(value: unknown, label = "checkpoint_receipt"): CheckpointReceipt {
   const record = assertRecord(value, label);
   return {
+    ...(record.task_ref === undefined ? {} : { task_ref: assertOptionalString(record.task_ref, `${label}.task_ref`) }),
     stage: assertString(record.stage, `${label}.stage`),
     session_status: assertEnum(record.session_status, SESSION_STATUSES, `${label}.session_status`) as SessionStatus,
     objective: assertString(record.objective, `${label}.objective`),

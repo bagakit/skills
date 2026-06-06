@@ -8,169 +8,307 @@ metadata:
 
 # Bagakit Feature Tracker
 
-## When to Use
+## Route
 
-- You need a durable feature or task planning surface.
-- You need explicit workspace assignment such as `worktree`,
-  `current_tree`, or `proposal_only`.
-- You need task-level gate evidence.
-- You need archive or discard flows that keep planning state explicit.
+Use this skill when work needs durable Feature identity, a reviewed Task plan,
+workspace assignment, task-gate evidence, or explicit archive/discard closeout.
 
-## When Not to Use
+Do not create Tracker state for a tiny single-shot change. Use
+`bagakit-flow-runner` when canonical planning truth already exists and the need
+is repeated execution rather than planning ownership.
 
-- The change is tiny and does not need tracked feature lifecycle.
-- You only need task-level skill evidence.
-- You need repeated execution orchestration across rounds.
+## Ownership And Truth
 
-Use `bagakit-flow-runner` for repeated execution flow.
-For tiny single-shot changes, work directly in the repository tree and keep the
-task local instead of creating tracker lifecycle state.
+Feature Tracker owns:
 
-## What It Owns
+- Feature identity, lifecycle, workspace assignment, and dependencies
+- reviewed Task-plan revisions, Task dependencies, and Task progression
+- task gates and blocker evidence
+- optional Feature-owned `goal.md` for restart, compact, handoff, or supervision
+- archive and discard publication
 
-- feature identity and feature lifecycle
-- reviewed semantic task plans, revisions, supersession, and current task progression
-- workspace mode and worktree assignment
-- task gates
-- execution-owner receipts derived from canonical feature state
-- optional long-running Agent `goal.md` control truth and its revision binding
-- archive and discard state
+Canonical truth is deliberately small:
 
-It does not own:
+- `state.json`: Feature lifecycle and workspace truth
+- `tasks.json`: the only Task dependency, status, and closeout-review truth
+- optional `goal.md`: stable Agent control truth, not another lifecycle
+- `owner-receipt.json`: derived content binding, never Task truth
 
-- repeated outer-loop scheduling
-- generic normalized work-item orchestration
-- external system bridges
-- repository-level learning or promotion
+Keep these invariants:
 
-## Output Discipline
+- reuse an active Feature with the same normalized slug; revise its reviewed
+  plan instead of creating a parallel same-class Feature
+- an Agent may draft requirements, but only user-confirmed discussion or an
+  explicitly delegated review decision may authorize the reviewed plan
+- execution cannot start before reviewed Task truth and workspace assignment
+- missing `depends_on` means a graph root; Task ids and array order never imply
+  sequencing
+- runnable and active Task sets are derived from `tasks.json`; different
+  runnable Tasks may be active together
+- Git commits, branches, merges, and cleanup remain Git truth, not Tracker truth
+- helper Markdown and HTML projections never become editable mirrors of JSON
+- exact SHAs, current phase, next action, and rebase checkpoints are mutable
+  execution context; never keep them in stable `goal.md`
+- the first reviewed execution Task should close the smallest end-to-end
+  acceptance path before broad cross-tree coverage or cleanup
 
-Follow `docs/specs/output-discipline.md` through tracker-owned artifacts.
-Follow `docs/specs/principle-layer-contract.md` when feature intent will guide
-multiple tasks or later reuse.
+## Golden Path
 
-- task acceptance depends on task gates, not persuasive prose
-- optional helper artifacts should state what they prove and what remains open
-- repeated tracker failures should become task-gate or validation ratchets only
-  when the failure mode is reproducible
-- do not add subjective scores to feature lifecycle transitions
-- `show-feature-status --format html` is a disposable, read-only human
-  projection; use `--output` to atomically refresh a stable page outside tracker
-  state when a Host-presentable artifact is useful
-- its per-Feature Agent claim action emits a `bagakit-agent-messaging`
-  `agent-set-v1` draft for Host delivery; the draft never grants authority or
-  proves that an Agent received or claimed the work
-- non-trivial feature proposals should distinguish rationale, intended
-  generalization, non-goals, acceptance criteria, and verification checks
-
-## Runtime Surface Declaration
-
-- top-level runtime surface root when materialized:
-  - `.bagakit/feature-tracker/`
-- shared exchange path not owned by this skill:
-  - `.bagakit/planning-entry/handoffs/`
-- stable contract:
-  - `docs/specs/runtime-surface-contract.md`
-- if the top-level root exists in a host repo, it should carry `surface.toml`
-
-## Quick Start
+Resolve the installed skill directory, then initialize once:
 
 ```bash
 export BAGAKIT_FEATURE_TRACKER_SKILL_DIR="<path-to-bagakit-feature-tracker-skill>"
 
-bash "$BAGAKIT_FEATURE_TRACKER_SKILL_DIR/scripts/feature-tracker.sh" initialize-tracker --root .
+bash "$BAGAKIT_FEATURE_TRACKER_SKILL_DIR/scripts/feature-tracker.sh" \
+  initialize-tracker --root .
+```
 
-bash "$BAGAKIT_FEATURE_TRACKER_SKILL_DIR/scripts/feature-tracker.sh" create-feature \
+Create or reuse a proposal before planning:
+
+```bash
+bash "$BAGAKIT_FEATURE_TRACKER_SKILL_DIR/scripts/feature-tracker.sh" \
+  create-feature \
   --root . \
   --title "<feature-title>" \
-  --slug "<feature-slug>" \
-  --goal "<goal>" \
+  --slug "<feature-family-slug>" \
+  --goal "<user goal>" \
   --workspace-mode proposal_only
+```
 
-bash "$BAGAKIT_FEATURE_TRACKER_SKILL_DIR/scripts/feature-tracker.sh" show-feature-status \
-  --root . \
-  --format html \
-  --output .tmp/feature-tracker/status.html
+After the user confirms the plan, materialize it and assign a workspace:
 
-bash "$BAGAKIT_FEATURE_TRACKER_SKILL_DIR/scripts/feature-tracker.sh" set-task-plan \
+```bash
+bash "$BAGAKIT_FEATURE_TRACKER_SKILL_DIR/scripts/feature-tracker.sh" \
+  set-task-plan \
   --root . \
   --feature <feature-id> \
   --tasks-file <reviewed-task-plan.json> \
-  --expected-revision 0
+  --expected-revision <current-revision>
 
-bash "$BAGAKIT_FEATURE_TRACKER_SKILL_DIR/scripts/feature-tracker.sh" set-feature-goal \
+bash "$BAGAKIT_FEATURE_TRACKER_SKILL_DIR/scripts/feature-tracker.sh" \
+  assign-feature-workspace \
   --root . \
   --feature <feature-id> \
-  --goal-file <reviewed-goal.md> \
-  --expected-revision none
-
-bash "$BAGAKIT_FEATURE_TRACKER_SKILL_DIR/scripts/feature-tracker.sh" assign-feature-workspace \
-  --root . \
-  --feature <feature-id> \
-  --workspace-mode current_tree
-
-bash "$BAGAKIT_FEATURE_TRACKER_SKILL_DIR/scripts/feature-tracker.sh" create-feature-from-planning-entry-handoff \
-  --root . \
-  --handoff .bagakit/planning-entry/handoffs/<handoff-id>.json \
-  --workspace-mode proposal_only
+  --workspace-mode <current_tree|worktree>
 ```
 
-Generate the human page only after `create-feature` has created or reused the
-Feature. When the Host can present local files, include its returned link in
-the next human start update before planning continues. Reuse the same output
-path and regenerate it only at a reviewed-plan boundary, execution start,
-blocker change, closeout, or explicit status request. The page is a static
-snapshot: reload it after regeneration. Do not send the page before the Feature
-exists, on every tracker mutation, or as Agent authority or task truth.
-
-Use `--slug` as the stable active Feature family key. It does not affect the
-opaque public feature id, but two non-closed Features must not share the same
-normalized slug. Creating a proposal for an existing slug reuses that Feature
-without mutation. When new reviewed work targets an existing slug, revise that
-Feature's Task plan with `set-task-plan`; do not create a parallel Feature.
-Archived or discarded history remains immutable and does not reserve the slug.
-
-Optional helper files can be materialized later:
+When the implementation worktree already exists, adopt or rebind it instead of
+creating another one:
 
 ```bash
-bash "$BAGAKIT_FEATURE_TRACKER_SKILL_DIR/scripts/feature-tracker.sh" materialize-feature-artifact \
+bash "$BAGAKIT_FEATURE_TRACKER_SKILL_DIR/scripts/feature-tracker.sh" \
+  adopt-feature-worktree \
   --root . \
   --feature <feature-id> \
-  --kind proposal
+  --worktree-path <existing-worktree-path> \
+  --branch <exact-checked-out-branch>
 ```
 
-## Public Commands
+Execute any runnable Task through the public state machine:
 
-- `feature-tracker.sh initialize-tracker`
-- `feature-tracker.sh rekey-local-issuer`
-- `feature-tracker.sh materialize-feature-artifact`
-- `feature-tracker.sh create-feature`
-- `feature-tracker.sh create-feature-from-planning-entry-handoff`
-- `feature-tracker.sh set-task-plan`
-- `feature-tracker.sh repair-reviewed-task-plan`
-- `feature-tracker.sh validate-feature-goal`
-- `feature-tracker.sh set-feature-goal`
-- `feature-tracker.sh assign-feature-workspace`
-- `feature-tracker.sh show-feature-status`
-- `feature-tracker.sh get-owner-receipt`
-- `feature-tracker.sh start-task`
-- `feature-tracker.sh unstart-task`
-- `feature-tracker.sh run-task-gate`
-- `feature-tracker.sh finish-task`
-- `feature-tracker.sh closeout-feature`
-- `feature-tracker.sh archive-feature`
-- `feature-tracker.sh discard-feature`
-- `feature-tracker.sh validate-tracker`
-- `feature-tracker.sh diagnose-tracker`
-- `feature-tracker.sh replan-features`
-- `feature-tracker.sh show-feature-dag`
-- `feature-tracker.sh list-features`
-- `feature-tracker.sh get-feature`
-- `feature-tracker.sh filter-features`
+```text
+start-task -> run-task-gate -> finish-task
+```
 
-External bridges are intentionally out of scope for this skill.
+`start-task` atomically claims one Task after all direct dependencies are done.
+Use the exact next command emitted by the operator. A blocked finish must carry
+its canonical blocker class and reason in the same transition; unrelated
+runnable or active Tasks may continue.
 
-## Stable Specs
+`run-task-gate` executes the current Task's `verification` mappings with
+`kind=command`, in their declared order, and records the same command results
+in both `tasks.json.last_gate_commands` and
+`state.json.gate.last_check_commands`. Runtime policy does not choose Task
+completion commands. A reviewed Task without an executable command
+verification fails closed when it is being started or gated; artifact, manual,
+and owner-receipt mappings remain additional evidence routes and are not
+silently treated as a passing command gate. Existing reviewed plans that only
+contain those non-command mappings remain readable as historical truth, but
+cannot start or finish a new execution Task until their reviewed plan is
+revised with an executable command. `finish-task --result done` also rejects a
+stale receipt whose command list no longer matches the current Task plan, even
+if an old `pass` value is present. This transition check is deliberately not a
+retroactive migration: historical completed Tasks remain readable without
+claiming that their older gate receipts satisfy the new proof rule.
+
+When implementation is delegated, the Owner or Supervisor maintains Feature,
+workspace, Goal, and Task transitions. The implementation Worker consumes the
+current receipt and Task, produces code and evidence, and does not repeatedly
+replan or rewrite control state unless a user-confirmed requirement changes.
+
+## Task Decomposition And Parallelism
+
+Treat one Feature as one user goal, then make its Task plan as fine-grained as
+the acceptance evidence allows:
+
+- split work at independently implementable and independently verifiable
+  outcomes; a Task should be small enough to close in one bounded execution
+  loop, not a broad phase such as “finish the backend”
+- declare only real prerequisites in `depends_on`; do not add edges merely to
+  preserve the order in which Tasks were written
+- inspect the derived runnable frontier before each claim and start independent
+  runnable Tasks concurrently when the Host or Supervisor can safely support
+  them
+- when branches must share an implementation result or joint verification,
+  add one explicit downstream integration Task that depends on those branches
+- do not split work into ceremony-only Tasks or force parallel edits to the
+  same artifact; isolation and merge order remain Host/Supervisor decisions
+
+The target is the smallest set of independently closable Tasks that exposes
+real parallelism, not the largest possible Task count.
+
+## Human Visibility
+
+After Feature creation, a Host may present one stable, disposable status page
+that derives the active and runnable Task frontier. Expanding a Feature shows
+the same file-derived Task topology and links its nodes to acceptance and proof
+detail:
+
+```bash
+bash "$BAGAKIT_FEATURE_TRACKER_SKILL_DIR/scripts/feature-tracker.sh" \
+  show-feature-status \
+  --root . \
+  --feature <feature-id> \
+  --format html \
+  --output .tmp/feature-tracker/status.html
+```
+
+The HTML `--feature` option focuses and expands one Feature while retaining the
+complete active overview; text and JSON forms continue to inspect one Feature.
+If one active record is malformed, the overview shows a minimal repair-needed
+card with canonical links and leaves strict diagnosis to `validate-tracker`.
+The page is a static snapshot computed from canonical Tracker files plus an
+optional latest Flow Runner progress overlay. Reuse the same
+path and regenerate it only after plan confirmation, execution start, blocker
+change, closeout, or an explicit status request. Its Agent claim draft is a
+Host-delivered `bagakit-agent-messaging` envelope; it grants no authority and
+proves no delivery or claim. Expanding a Feature exposes the Task topology;
+use its full-screen control for larger graphs and read the node labels and
+legend for the derived runtime frontier, gate state, and direct dependencies.
+Task review details are independently collapsible; active and blocked Tasks are
+open by default while other Tasks stay compact in larger plans. Their browser
+disclosure state is preserved by live refresh and is not Tracker truth.
+
+For a live local view, use the loopback-only read-only server:
+
+```bash
+bash "$BAGAKIT_FEATURE_TRACKER_SKILL_DIR/scripts/feature-tracker.sh" \
+  serve-feature-status \
+  --root . \
+  --feature <feature-id>
+```
+
+The server regenerates the same projection from `state.json`, `tasks.json`,
+and `index/features.json` on each browser refresh. If Flow Runner is present,
+it also reads the latest `progress.ndjson` receipt for the mirrored Feature;
+only an explicit `task_ref` can attach that informational activity to a Task.
+The page's JavaScript only fetches and replaces the status region; it does not
+read browser-local files, mutate Tracker state, or provide a write endpoint.
+It preserves expanded Features and the topology dialog while showing refresh
+state, and preserves topology scroll and
+zoom position and the board's horizontal scroll position across those
+replacements. The fullscreen control has a bounded
+zoom range and a CSS fallback when the host does not expose native
+`HTMLDialogElement` support. It fits a graph to the fullscreen viewport on first
+open and keeps the SVG's layout dimensions synchronized with zoom, so scrolling
+does not expose a clipped visual transform. Stop the server when the observation
+session ends.
+
+When the observer has a terminal but no browser, render the same projection in
+place:
+
+```bash
+bash "$BAGAKIT_FEATURE_TRACKER_SKILL_DIR/scripts/feature-tracker.sh" \
+  watch-feature-status \
+  --root . \
+  --feature <feature-id>
+```
+
+This is the same derived frontier and Task topology as the other two routes, not
+a second projection: it renders `feature_task_frontier` and
+`task_topology_layers` over the same canonical files and holds no tracker lock.
+`--feature` expands one Feature's topology while keeping the full active board,
+and a malformed active record shows the same repair-needed line rather than
+disappearing from the board. On each refresh it recomputes the whole projection,
+reports `updated`, and on a transient read error keeps the last good frame and
+reports the failure instead of blanking the view. It also marks the time the
+canonical content last changed, derived from content rather than file
+timestamps, so a change that happened while the observer looked away stays
+visible. Prefer the loopback server when a browser is available: only the page
+carries the full interactive graph.
+
+## Progress Publication
+
+When reporting progress for a tracked Feature, the Agent must first refresh or
+serve its human status projection and include the same stable topology link in
+that progress message:
+
+- static route: rerun `show-feature-status --format html --output <stable-path>`
+- live route: reuse the `serve-feature-status` loopback URL
+- terminal route: `watch-feature-status` when the observer has no browser
+- keep the link stable across updates; do not create a new page per mutation
+- let the page carry the complete topology; the progress message should give
+  only the result, current exception or blocker, and the link
+- if no route can be presented, include a compact derived frontier summary
+  (`active`, `runnable`, `blocked`, `waiting`) and state that the topology page
+  is unavailable
+
+This publication rule applies to user-facing progress messages, not every
+internal state mutation or Worker heartbeat.
+
+When the Feature is executed through `bagakit-flow-runner`, a bounded session
+about one Task should record the exact Task id with checkpoint's optional
+`--task-ref <task-id>`. The status page then attaches the latest progress
+receipt matching that Task. Feature-wide work or a session without a reliable Task
+binding must omit it; the page keeps that activity Feature-wide rather than
+guessing. This is a read-only overlay and never replaces `tasks.json` status or
+gate evidence.
+Host-only `worker-v1` messages and `agent-loop` observations are not scraped by
+the page; when Task-level visibility matters, record the bounded execution
+checkpoint through Flow Runner instead.
+
+## Closeout
+
+A code commit is not Feature completion. Run `closeout-feature` first as a dry
+run, resolve the three review items it prints, then rerun with `--execute`:
+
+- documentation: update or verify only the owning SSOT; never turn Agent
+  inference into requirements
+- learning: summarize bounded mistakes, corrections, and useful methods; merge
+  duplicates and keep them non-authoritative for requirements
+- promotion: use an existing Chronicle, Evolver, Principle Layer, or Living
+  Knowledge owner; do not create another store
+
+The terminal lifecycle is `archived` or `discarded`. Use
+`discard-feature --reason invalid` only when a readable active Feature actually
+fails its contract: Tracker rejects valid state, preserves the original
+Feature-root files under `artifacts/invalid-source/`, and publishes a minimal
+discarded tombstone without changing Git workspaces.
+
+## Low-Frequency Paths
+
+- `create-feature-from-planning-entry-handoff` consumes an approved planning
+  handoff without making the handoff a second SSOT
+- `set-feature-goal` is optional; use `bagakit-set-loop-goal` for Goal authoring
+- `materialize-feature-artifact` creates optional proposal, spec-delta, or
+  verification helpers only when they add evidence value
+- `adopt-feature-worktree` binds or rebinds an existing registered worktree;
+  it never creates, cleans, checks out, or removes the worktree
+- `diagnose-tracker --closeout-plan` is the read-only cleanup entrypoint
+- use `repair-reviewed-task-plan` only when the operator reports damaged
+  reviewed lineage; do not invent another repair or compatibility path
+
+The complete discovery inventory is
+`references/skill-cli.toml`; argparse and the contracts own option semantics.
+
+## Runtime Surface Declaration
+
+- top-level runtime surface: `.bagakit/feature-tracker/`
+- shared input not owned here: `.bagakit/planning-entry/handoffs/`
+- stable surface contract: `docs/specs/runtime-surface-contract.md`
+- a materialized top-level runtime surface should carry `surface.toml`
+
+## Stable Contracts
 
 - `docs/specs/feature-tracker-contract.md`
 - `docs/specs/feature-tracker-id-issuance.md`
@@ -178,141 +316,5 @@ External bridges are intentionally out of scope for this skill.
 - `docs/specs/execution-owner-receipt-contract.md`
 - `docs/specs/principle-layer-contract.md`
 
-The runtime payload is intentionally smaller than the canonical repo-spec layer.
-Use the specs above when you need the durable contract rather than the local
-operator entrypoint.
-
-Task SSOT lives only in `tasks.json`.
-The default feature directory keeps canonical `state.json` and `tasks.json`
-plus optional canonical `goal.md`. Derived `owner-receipt.json` exists only
-for reviewed execution or Goal continuation.
-New features without a reviewed task plan remain `proposal` + `proposal_only`
-with no executable placeholder task.
-Active execution requires explicit version 2 reviewed task truth materialized
-from `bagakit.feature-task-plan.v1` through `--tasks-file` or `set-task-plan`.
-Plan approval means the user confirmed the requirements during discussion or
-explicitly delegated the review decision. An Agent may draft the plan but must
-not self-approve inferred requirements or implementation discoveries.
-Workspace assignment and task start fail closed until that plan exists.
-Plan replacement uses `--expected-revision`, is rejected during active task
-execution, preserves blocked/done evidence, and requires explicit supersession
-lineage against the immediately prior current plan.
-When persisted state claims a reviewed plan but canonical lineage is damaged,
-ordinary owner writes fail closed. `repair-reviewed-task-plan` is the single
-maintainer repair path: it accepts a complete canonical `tasks.json`, requires
-exact SHA-256 guards for state/tasks/Goal/receipt, preserves `state.json` and
-the active current-task identity, and atomically refreshes tasks plus receipt.
-Historical superseded tasks remain attributable but cannot be restarted.
-Review, source, verification, and evidence refs must be portable repo-relative
-paths and must not use URI, absolute, drive-qualified, UNC, or escaping paths.
-`goal.md` is optional and should be created only when restart, compact, handoff,
-or loop supervision needs a durable Agent control Kernel. Feature Tracker owns
-its write path and revision guard; `bagakit-set-loop-goal` owns authoring
-semantics and delegates mutation back to this operator. Goal does not own a
-second lifecycle, topology, event stream, or archive.
-Tracker validation checks Goal identity, Feature binding, non-empty content,
-and portability; it does not prescribe headings, prose order, or recovery
-wording.
-For reviewed execution or Goal continuation, `owner-receipt.json` binds
-`state.json`, `tasks.json`, and `goal.md` when present through SHA-256
-`evidence_hashes`; missing or stale persisted receipts fail closed. Proposal
-and draft state without a Goal do not materialize a receipt.
-The receipt follows `docs/specs/execution-owner-receipt-contract.md` and remains
-a derived handoff rather than task truth.
-`show-feature-dag` computes the dependency projection on demand from active
-feature state. No persisted DAG is required; `state.json.depends_on` remains
-the only dependency truth and the projection never carries policy-resolved
-execution planning.
-Runtime truth and Git truth are separate surfaces. Feature Tracker does not
-generate commit prose or execute Git commits; use ordinary Git or
-`bagakit-git-message-craft` and keep implementation commits outside tracker
-state. Workspace assignment determines where task gates execute. For
-`worktree` features, `run-task-gate` runs from the assigned worktree path.
-Task gates fail closed when the resolved UI or non-UI command list is empty;
-an empty gate is never passing evidence.
-Tracker state mutation is serialized, but long-running gate commands release
-the global state lock while external commands run and revalidate the
-workspace assignment before recording results.
-Do not reassign a feature workspace while a task is `in_progress`; same-feature
-task execution remains single-active-task by contract.
-An accidentally started task may return to `todo` only through `unstart-task`
-when it has no gate evidence or prior blocked/done completion, its persisted
-owner receipt is current, its assigned execution worktree is clean, and the
-current Git HEAD matches the caller's expected HEAD. This optimistic
-current-state guard does not prove that no commit occurred since task start.
-The transition is for evidence-free plan correction, not for erasing attempted
-execution.
-Finishing a task as blocked requires canonical blocker truth in the same
-transition:
-
-```bash
-bash "$BAGAKIT_FEATURE_TRACKER_SKILL_DIR/scripts/feature-tracker.sh" finish-task \
-  --root . \
-  --feature <feature-id> \
-  --task <task-id> \
-  --result blocked \
-  --blocked-reason-class <external_blocker|internal_blocker|parked_context> \
-  --blocked-reason "<non-empty reason>"
-```
-
-The Tracker stores the exact pair as task evidence and projects it as the
-current blocker; the complete blocker lifecycle is normative in
-`docs/specs/feature-tracker-contract.md`.
-For tracked features, a code commit is not the feature completion boundary;
-close through `archive-feature`, `discard-feature`, or
-`closeout-feature --execute`.
-`closeout-feature` is the single-feature operator path for completing the
-tracker lifecycle after gate work. It defaults to a dry-run plan and
-requires `--execute` before it mutates state.
-Use that dry run to resolve all three closeout review items before archive or
-discard:
-
-- documentation: `updated`, `verified_current`, or `not_applicable`
-- learning: `candidates_reviewed` or `no_reusable_learning`
-- promotion: `routed_for_review`, `promoted`, or `not_needed`
-
-Give each item a rationale and add repo-relative refs when the selected option
-claims an update, verification, reviewed candidate, route, or promotion.
-For documentation, inspect changed behavior and update only the owning SSOT;
-write requirement changes only from user-confirmed discussion or explicitly
-delegated review evidence, never from Agent inference. For learning, the Agent
-may review bounded plan revisions, failures, corrections, and final evidence;
-compare original intent and non-goals with delivered scope; ask whether the
-shortest useful vertical closure came first and whether later work improved
-quality instead of only expanding task count. Merge duplicate lessons, keep
-them concise, and do not turn them into requirements without user confirmation.
-Keep raw sessions with their host. For promotion, merge same-class candidates,
-check repository principles, and route through existing Chronicle, Evolver,
-Principle Layer, or Living Knowledge ownership instead of creating another
-store.
-Tracker writes the normalized result only to final
-`tasks.json.closeout_review`; `summary.md` projects it and the existing owner
-receipt binds it. A failed closeout leaves no active review record.
-The canonical `summary.md` does not restate the Feature Goal or regenerate
-requirements. It points to the confirmed `tasks.json` plan revision and review
-evidence; Agent-authored execution learning remains explicitly non-authoritative
-for requirements.
-Closeout validation, option scope, staged publication, and Git-cleanup
-boundaries are normative in `docs/specs/feature-tracker-contract.md`.
-For `current_tree` features, `archive-feature` may proceed with unrelated
-non-harness repo changes because it only closes tracker metadata; `discard-feature`
-still requires a clean non-harness tree before closeout.
-Optional helper markdown files such as `proposal.md`, `spec-delta.md`, and
-`verification.md` can be materialized later at the feature root.
-Unsupported feature-root files such as `PRD.md` and `Changelog.md` are outside
-the current tracker contract and should fail validation.
-Route feature intent to `proposal.md` or upstream planning artifacts, and keep
-change history in repo or release surfaces rather than in active feature roots.
-Closed feature roots keep `summary.md` instead; live-only or unsupported legacy
-root entries are preserved under `artifacts/closeout-preserved-root/` during
-archive/discard so the closed feature stays contract-valid.
-If an operator already wrote `summary.md` in an active feature root, closeout
-preserves that draft under `artifacts/closeout-preserved-root/summary.md`
-before writing the canonical closed summary.
-
-Use `verification.md` only when a task needs manual or mixed evidence beyond
-automated command output.
-The older `ui-verification.md` name is retired; rename old files to
-`verification.md` before rerunning gate in active feature roots.
-Closed feature roots should preserve legacy `ui-verification.md` under
-`artifacts/closeout-preserved-root/` instead of restoring it at the root.
+Read only the owning contract needed for a low-frequency decision. Do not copy
+contract detail back into this entrypoint.

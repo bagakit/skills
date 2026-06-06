@@ -81,7 +81,7 @@ cat >"$PLAN_ONE" <<'JSON'
       "verification": [
         {
           "kind": "command",
-          "ref": "gate_validation/skills/harness/bagakit-feature-tracker/validation.toml",
+          "ref": "true",
           "proves": "Feature Tracker public lifecycle behavior remains valid."
         }
       ],
@@ -165,6 +165,11 @@ cat >"$PLAN_TWO" <<'JSON'
       "acceptance": ["Revision two records T-001 as superseded."],
       "verification": [
         {
+          "kind": "command",
+          "ref": "true",
+          "proves": "The reviewed Task gate has an executable proof."
+        },
+        {
           "kind": "owner_receipt",
           "ref": "owner-receipt.json",
           "proves": "The owner receipt reflects current lifecycle and task identity."
@@ -203,7 +208,8 @@ assert tasks["tasks"][0]["supersedes"] == ["T-001"]
 assert tasks["plan_history"][-1]["superseded_task_ids"] == ["T-001"]
 assert receipt["lifecycle_status"] == "ready"
 assert receipt["continuation"] == "continue"
-assert receipt["current_item_id"] is None
+assert receipt["active_item_ids"] == []
+assert receipt["blockers"] == []
 assert len(receipt["semantic_revision"]) == 64
 feature_ref_root = PurePosixPath(".bagakit", "feature-tracker", "features", feature_id)
 assert receipt["evidence_refs"] == [
@@ -245,7 +251,8 @@ import sys
 receipt = json.loads(sys.argv[1])
 assert receipt["lifecycle_status"] == "in_progress"
 assert receipt["continuation"] == "continue"
-assert receipt["current_item_id"] == "T-002"
+assert receipt["active_item_ids"] == ["T-002"]
+assert receipt["blockers"] == []
 PY
 
 ACTIVE_HEAD="$(git -C "$TMP_DIR" rev-parse HEAD)"
@@ -359,11 +366,12 @@ feature_dir = root / ".bagakit" / "feature-tracker" / "features" / feature_id
 state = json.loads((feature_dir / "state.json").read_text(encoding="utf-8"))
 tasks = json.loads((feature_dir / "tasks.json").read_text(encoding="utf-8"))
 assert state["status"] == "ready"
-assert state["current_task_id"] is None
+assert "current_task_id" not in state
 assert state["history"][-1] == {"action": "task_unstarted", "detail": "T-002"}
 assert tasks["tasks"][0]["status"] == "todo"
 assert receipt["lifecycle_status"] == "ready"
-assert receipt["current_item_id"] is None
+assert receipt["active_item_ids"] == []
+assert receipt["blockers"] == []
 assert receipt["evidence_hashes"] == {
     ref: hashlib.sha256((root / ref).read_bytes()).hexdigest()
     for ref in receipt["evidence_refs"]
@@ -405,7 +413,7 @@ assert_finish_rejected_without_writes \
   blocked-blank-reason "--blocked-reason is required" \
   --result blocked --blocked-reason-class external_blocker --blocked-reason "   "
 assert_finish_rejected_without_writes \
-  blocked-invalid-parked "parked_context requires runtime_role=frontdoor_context" \
+  blocked-invalid-parked "parked_context Task blocker requires runtime_role=frontdoor_context" \
   --result blocked --blocked-reason-class parked_context \
   --blocked-reason "standalone cannot park as frontdoor context"
 assert_finish_rejected_without_writes \
@@ -473,18 +481,20 @@ assert tasks["tasks"][0]["last_blocker"] == {
     "reason": "upstream capability is unavailable",
 }
 assert state["status"] == "blocked"
-assert state["current_task_id"] is None
-assert state["blocked_reason_class"] == "external_blocker"
-assert state["blocked_reason"] == "upstream capability is unavailable"
-assert state["blocked_task_id"] == "T-002"
+assert "current_task_id" not in state
+assert "blocked_reason_class" not in state
+assert "blocked_reason" not in state
+assert "blocked_task_id" not in state
 assert index_entry["status"] == "blocked"
-assert index_entry["blocked_reason_class"] == "external_blocker"
+assert "blocked_reason_class" not in index_entry
 assert receipt["lifecycle_status"] == "blocked"
 assert receipt["continuation"] == "blocked"
-assert receipt["blocker"] == {
+assert receipt["active_item_ids"] == []
+assert receipt["blockers"] == [{
+    "item_id": "T-002",
     "class": "external_blocker",
     "reason": "upstream capability is unavailable",
-}
+}]
 PY
 bash "$SKILL_DIR/scripts/feature-tracker.sh" validate-tracker --root "$TMP_DIR" >/dev/null
 
@@ -505,13 +515,14 @@ index = json.loads(
 )
 index_entry = next(item for item in index["features"] if item["feat_id"] == feature_id)
 assert state["status"] == "in_progress"
-assert state["blocked_reason_class"] == "none"
+assert "blocked_reason_class" not in state
 assert "blocked_reason" not in state
 assert "blocked_task_id" not in state
 assert index_entry["status"] == "in_progress"
-assert index_entry["blocked_reason_class"] == "none"
+assert "blocked_reason_class" not in index_entry
 assert receipt["continuation"] == "continue"
-assert receipt["blocker"] is None
+assert receipt["active_item_ids"] == ["T-002"]
+assert receipt["blockers"] == []
 PY
 BLOCKED_RESTART_HEAD="$(git -C "$TMP_DIR" rev-parse HEAD)"
 if bash "$SKILL_DIR/scripts/feature-tracker.sh" unstart-task \
@@ -541,9 +552,9 @@ assert task["last_blocker"] == {
     "class": "internal_blocker",
     "reason": "reviewed recovery plan is required",
 }
-assert state["blocked_reason_class"] == "internal_blocker"
-assert state["blocked_reason"] == "reviewed recovery plan is required"
-assert state["blocked_task_id"] == "T-002"
+assert "blocked_reason_class" not in state
+assert "blocked_reason" not in state
+assert "blocked_task_id" not in state
 PY
 
 PLAN_THREE="$TMP_DIR/plan-three.json"
@@ -563,6 +574,11 @@ cat >"$PLAN_THREE" <<'JSON'
       "outcome": "The blocked task remains attributable while the reviewed plan provides a new route.",
       "acceptance": ["T-002 remains blocked and T-003 is the only new todo task."],
       "verification": [
+        {
+          "kind": "command",
+          "ref": "true",
+          "proves": "The reviewed Task gate has an executable proof."
+        },
         {
           "kind": "artifact",
           "ref": "tasks.json",
@@ -602,13 +618,14 @@ assert by_id["T-002"]["last_blocker"] == {
 }
 assert by_id["T-003"]["status"] == "todo"
 assert state["status"] == "ready"
-assert state["blocked_reason_class"] == "none"
+assert "blocked_reason_class" not in state
 assert "blocked_reason" not in state
 assert "blocked_task_id" not in state
 assert index_entry["status"] == "ready"
-assert index_entry["blocked_reason_class"] == "none"
+assert "blocked_reason_class" not in index_entry
 assert receipt["continuation"] == "continue"
-assert receipt["blocker"] is None
+assert receipt["active_item_ids"] == []
+assert receipt["blockers"] == []
 PY
 bash "$SKILL_DIR/scripts/feature-tracker.sh" validate-tracker --root "$TMP_DIR" >/dev/null
 
@@ -637,6 +654,11 @@ cat >"$PLAN_FOUR" <<'JSON'
       "outcome": "Revision four supersedes only revision three's current task.",
       "acceptance": ["T-002 remains preserved while only T-003 is newly superseded."],
       "verification": [
+        {
+          "kind": "command",
+          "ref": "true",
+          "proves": "The reviewed Task gate has an executable proof."
+        },
         {
           "kind": "artifact",
           "ref": "tasks.json",

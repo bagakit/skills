@@ -168,6 +168,8 @@ export type NextActionPayload = Readonly<{
 }>;
 
 export type CheckpointReceipt = Readonly<{
+  // Optional upstream work-item binding (for example a Feature Tracker Task id).
+  task_ref?: string;
   stage: string;
   session_status: SessionStatus;
   objective: string;
@@ -196,6 +198,8 @@ export type CheckpointPayload = Readonly<{
 export type ProgressEntry = Readonly<{
   schema: typeof FLOW_PROTOCOL_SCHEMAS.progress;
   item_id: string;
+  // Optional upstream work-item binding (for example a Feature Tracker Task id).
+  task_ref?: string;
   session_number: number;
   stage: string;
   session_status: SessionStatus;

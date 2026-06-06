@@ -206,6 +206,70 @@ if grep -F "Prove discard cannot bypass closeout review" "$DISCARDED_SUMMARY" >/
   exit 1
 fi
 
+bash "$SKILL_DIR/scripts/feature-tracker.sh" create-feature \
+  --root "$TMP_DIR" \
+  --title "Invalid discard feature" \
+  --slug "invalid-discard-feature" \
+  --goal "Close damaged tracker state without normalizing it into requirements" \
+  --workspace-mode proposal_only >/dev/null
+INVALID_ID="$(feature_tracker_feature_id_by_title "$TMP_DIR" "Invalid discard feature")"
+INVALID_DIR="$TMP_DIR/.bagakit/feature-tracker/features/$INVALID_ID"
+if bash "$SKILL_DIR/scripts/feature-tracker.sh" discard-feature \
+  --root "$TMP_DIR" --feature "$INVALID_ID" --reason invalid \
+  "${FEATURE_TRACKER_CLOSEOUT_REVIEW_ARGS[@]}" \
+  >"$TMP_DIR/valid-as-invalid.out" 2>"$TMP_DIR/valid-as-invalid.err"; then
+  echo "error: a valid Feature was discarded as invalid" >&2
+  exit 1
+fi
+grep -F -- "--reason invalid requires at least one Feature contract error" \
+  "$TMP_DIR/valid-as-invalid.err" >/dev/null
+
+python3 - "$INVALID_DIR/tasks.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+tasks_path = Path(sys.argv[1])
+tasks = json.loads(tasks_path.read_text(encoding="utf-8"))
+tasks.pop("plan_status")
+tasks_path.write_text(json.dumps(tasks, indent=2) + "\n", encoding="utf-8")
+PY
+cp "$INVALID_DIR/state.json" "$TMP_DIR/invalid-source-state.json"
+cp "$INVALID_DIR/tasks.json" "$TMP_DIR/invalid-source-tasks.json"
+printf 'unrelated work remains outside tracker state\n' >"$TMP_DIR/unrelated-work.txt"
+
+bash "$SKILL_DIR/scripts/feature-tracker.sh" discard-feature \
+  --root "$TMP_DIR" --feature "$INVALID_ID" --reason invalid \
+  "${FEATURE_TRACKER_CLOSEOUT_REVIEW_ARGS[@]}" \
+  >"$TMP_DIR/invalid-discard.out"
+grep -F "invalid_source_errors: " "$TMP_DIR/invalid-discard.out" >/dev/null
+grep -F "artifacts/invalid-source" "$TMP_DIR/invalid-discard.out" >/dev/null
+
+INVALID_CLOSED_DIR="$TMP_DIR/.bagakit/feature-tracker/features-discarded/$INVALID_ID"
+INVALID_SOURCE_DIR="$INVALID_CLOSED_DIR/artifacts/invalid-source"
+cmp "$TMP_DIR/invalid-source-state.json" "$INVALID_SOURCE_DIR/state.json"
+cmp "$TMP_DIR/invalid-source-tasks.json" "$INVALID_SOURCE_DIR/tasks.json"
+test -f "$TMP_DIR/unrelated-work.txt"
+python3 - "$INVALID_CLOSED_DIR" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+feature_dir = Path(sys.argv[1])
+state = json.loads((feature_dir / "state.json").read_text(encoding="utf-8"))
+tasks = json.loads((feature_dir / "tasks.json").read_text(encoding="utf-8"))
+summary = (feature_dir / "summary.md").read_text(encoding="utf-8")
+assert state["status"] == "discarded"
+assert state["discard_reason"] == "invalid"
+assert state["workspace_mode"] == "proposal_only"
+assert tasks["tasks"] == []
+assert tasks["closeout_review"]["schema"] == "bagakit.feature-closeout-review.v1"
+assert "artifacts/invalid-source/state.json" in summary
+assert "artifacts/invalid-source/tasks.json" in summary
+assert "Close damaged tracker state" not in summary
+assert not (feature_dir / "owner-receipt.json").exists()
+PY
+
 bash "$SKILL_DIR/scripts/feature-tracker.sh" validate-tracker --root "$TMP_DIR" >/dev/null
 
 echo "ok: feature tracker closeout review"

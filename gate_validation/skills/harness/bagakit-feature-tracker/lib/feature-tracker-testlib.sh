@@ -39,7 +39,7 @@ feature_tracker_write_reviewed_task_plan() {
       "verification": [
         {
           "kind": "command",
-          "ref": "gate_validation/skills/harness/bagakit-feature-tracker/validation.toml",
+          "ref": "true",
           "proves": "The public lifecycle behavior under test passes."
         }
       ],
@@ -104,21 +104,30 @@ print(state["branch"])
 PY
 }
 
-feature_tracker_set_non_ui_gate() {
+feature_tracker_set_task_command() {
   local repo_root="$1"
-  local command="$2"
-  python3 - "$repo_root" "$command" <<'PY'
+  local feature_id="$2"
+  local command="$3"
+  python3 - "$repo_root" "$feature_id" "$command" <<'PY'
 import json
 import sys
 from pathlib import Path
 
-policy_path = Path(sys.argv[1]) / ".bagakit" / "feature-tracker" / "runtime-policy.json"
-command = sys.argv[2]
-policy = json.loads(policy_path.read_text(encoding="utf-8"))
-policy.setdefault("gate", {})["project_type"] = "non_ui"
-policy["gate"]["verification_policy"] = "never"
-policy["gate"]["non_ui_commands"] = [command]
-policy_path.write_text(json.dumps(policy, indent=2) + "\n", encoding="utf-8")
+root = Path(sys.argv[1])
+feature_id = sys.argv[2]
+command = sys.argv[3]
+tasks_path = root / ".bagakit" / "feature-tracker" / "features" / feature_id / "tasks.json"
+payload = json.loads(tasks_path.read_text(encoding="utf-8"))
+current_ids = set(payload["plan_history"][-1]["task_ids"])
+current = [task for task in payload["tasks"] if task.get("id") in current_ids]
+if len(current) != 1:
+    raise SystemExit("fixture requires exactly one current task")
+current[0]["verification"] = [{
+    "kind": "command",
+    "ref": command,
+    "proves": "The command runs from the assigned Feature workspace.",
+}]
+tasks_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 PY
 }
 
@@ -131,7 +140,6 @@ feature_tracker_complete_reviewed_feature() {
     --root "$repo_root" --feature "$feature_id" --tasks-file "$task_plan" --expected-revision 0 >/dev/null
   bash "$skill_dir/scripts/feature-tracker.sh" assign-feature-workspace \
     --root "$repo_root" --feature "$feature_id" --workspace-mode current_tree >/dev/null
-  feature_tracker_set_non_ui_gate "$repo_root" "true"
   bash "$skill_dir/scripts/feature-tracker.sh" start-task \
     --root "$repo_root" --feature "$feature_id" --task T-001 >/dev/null
   bash "$skill_dir/scripts/feature-tracker.sh" run-task-gate \

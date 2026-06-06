@@ -191,6 +191,8 @@ Current receipt-bearing mutation surfaces include:
   - appends one protocol mutation receipt before the physical move
 Checkpoint receipt fields currently include:
 
+- optional `task_ref`, a caller-supplied upstream work-item binding (for
+  example a Feature Tracker Task id)
 - `stage`
 - `session_status`
 - `objective`
@@ -205,6 +207,11 @@ Progress receipts currently include those fields plus:
 
 - `schema`
 - `item_id`
+
+Checkpoint and progress `task_ref` are optional. The runner stores and checks
+the field shape but does not resolve or authorize the referenced item. When it
+is omitted, consumers must keep the report at runner-item/Feature level and
+must not infer a Task binding from `stage`, `objective`, or free-form text.
 
 Receipt validation expectations:
 
