@@ -1,5 +1,5 @@
 version = 1
 skill = "bagakit-paperwork-technical-writing"
-trigger = "Technical notes, drafts, or transcripts need a publishable article plus execution-ready handoff."
-do = "Draft or rewrite with explicit quality gates, source evidence, and review output."
+trigger = "Technical notes, chats, meeting records, drafts, or transcripts need a concise evidence-faithful brief or a publishable article with execution handoff; aliases include 炼化, 精炼, 提炼, distill, $refine-doc, and $bagakit-refine-doc."
+do = "Route to distill or article, preserve hard facts and source parentage, then run the matching evidence and quality gates."
 see = "skills/paperwork/bagakit-paperwork-technical-writing/SKILL.md"

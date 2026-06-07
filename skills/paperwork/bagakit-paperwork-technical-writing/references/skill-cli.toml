@@ -34,3 +34,19 @@ summary = "Print the technical-writing review packet template."
 [[command]]
 name = "print-procedural-precision"
 summary = "Print the execution-bearing procedural precision guide."
+
+[[command]]
+name = "print-distillation-workflow"
+summary = "Print the concise technical-collaboration distillation workflow."
+
+[[command]]
+name = "print-refined-document-template"
+summary = "Print the neutral refined technical brief template."
+
+[[command]]
+name = "print-distillation-guardrails"
+summary = "Print fidelity, masking, time-validity, and read-only guardrails."
+
+[[command]]
+name = "mask-secrets"
+summary = "Mask common credential shapes from standard input."

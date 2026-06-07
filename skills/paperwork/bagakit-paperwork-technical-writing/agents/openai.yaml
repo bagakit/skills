@@ -1,4 +1,4 @@
 interface:
   display_name: "Bagakit-Paperwork-TechWriting"
-  short_description: "Draft publish-ready technical writing with objective quality gates."
-  default_prompt: "Use bagakit-paperwork-technical-writing workflow to produce article.md, execution_appendix.md, and review_report.md."
+  short_description: "Distill or publish technical writing with evidence gates."
+  default_prompt: "Use $bagakit-paperwork-technical-writing (or $refine-doc) for a source-faithful technical brief or a publish-ready article with an execution handoff."

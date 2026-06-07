@@ -52,9 +52,13 @@ def main() -> int:
     report_template = SKILL_DIR / "references/tpl/review-report-template.md"
     execution_template = SKILL_DIR / "references/tpl/execution-appendix-template.md"
     procedural_reference = SKILL_DIR / "references/procedural-precision.md"
+    distillation_workflow = SKILL_DIR / "references/distillation-workflow.md"
+    refined_template = SKILL_DIR / "references/refined-document-template.md"
+    distillation_guards = SKILL_DIR / "references/distillation-guardrails.md"
+    mask_helper = SKILL_DIR / "scripts/mask-secrets.py"
     spec = Path("docs/specs/review-packet-contract.md")
 
-    for path in [cli, readme, check_script, review_template, report_template, execution_template, procedural_reference, spec]:
+    for path in [cli, readme, check_script, review_template, report_template, execution_template, procedural_reference, distillation_workflow, refined_template, distillation_guards, mask_helper, spec]:
         require((root / path).is_file(), f"missing required file: {path}", failures)
 
     if failures:
@@ -64,6 +68,19 @@ def main() -> int:
 
     cli_validate = run(["bash", str(cli), "validate"], root)
     require(cli_validate.returncode == 0, "skill CLI validate failed", failures)
+
+    skill_text = (root / SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+    distillation_text = (root / distillation_workflow).read_text(encoding="utf-8")
+    refined_text = (root / refined_template).read_text(encoding="utf-8")
+    guards_text = (root / distillation_guards).read_text(encoding="utf-8")
+    for token in ["distill", "refined.md", "not a second runtime", "$refine-doc", "$bagakit-refine-doc", "[已脱敏]", "bagakit-writing-intake", "bagakit-writing-core", "bagakit-writing-de-ai-tone"]:
+        require(token in skill_text, f"technical-writing skill missing distill/composition token: {token}", failures)
+    for token in ["Source Inventory", "provenance", "conclusion", "data", "step", "resource", "pitfall", "Verification Pass"]:
+        require(token.lower() in distillation_text.lower(), f"distillation workflow missing token: {token}", failures)
+    for token in ["结论速览", "踩坑与避坑指南", "待确认与缺口", "附录：来源与局限"]:
+        require(token in refined_text, f"refined template missing token: {token}", failures)
+    for token in ["No Hallucination", "Time Validity", "[已脱敏]", "read-only"]:
+        require(token.lower() in guards_text.lower(), f"distillation guardrails missing token: {token}", failures)
 
     core_proc = run(["bash", str(cli), "core", "describe"], root)
     require(core_proc.returncode == 0, "technical-writing core dispatch failed", failures)
@@ -97,6 +114,35 @@ def main() -> int:
         "does not ship the controlled",
     ]:
         require(token in procedural_proc.stdout, f"procedural precision guide missing token: {token}", failures)
+
+    distillation_proc = run(["bash", str(cli), "print-distillation-workflow"], root)
+    require(distillation_proc.returncode == 0, "print-distillation-workflow failed", failures)
+    for token in ["Source Inventory", "Extraction Pass", "Reconciliation Pass", "Verification Pass", "conclusion", "data", "step", "resource", "pitfall"]:
+        require(token in distillation_proc.stdout, f"distillation workflow missing token: {token}", failures)
+
+    refined_proc = run(["bash", str(cli), "print-refined-document-template"], root)
+    require(refined_proc.returncode == 0, "print-refined-document-template failed", failures)
+    for token in ["结论速览", "踩坑与避坑指南", "待确认与缺口", "附录：来源与局限"]:
+        require(token in refined_proc.stdout, f"refined document template missing token: {token}", failures)
+
+    guards_proc = run(["bash", str(cli), "print-distillation-guardrails"], root)
+    require(guards_proc.returncode == 0, "print-distillation-guardrails failed", failures)
+    for token in ["No Hallucination", "Time Validity", "Privacy And Collaboration Boundaries", "[已脱敏]", "时效未知"]:
+        require(token in guards_proc.stdout, f"distillation guardrails missing token: {token}", failures)
+
+    mask_input = "api_key=sk-1234567890abcdef1234\\nAuthorization: Bearer abcdefghijklmnopQRST\\n"
+    mask_proc = subprocess.run(
+        [sys.executable, str(mask_helper)],
+        cwd=root,
+        input=mask_input,
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    require(mask_proc.returncode == 0, f"mask helper failed: {mask_proc.stderr}", failures)
+    require("[已脱敏]" in mask_proc.stdout, "mask helper did not mask candidate credentials", failures)
+    require("sk-1234567890abcdef1234" not in mask_proc.stdout, "mask helper leaked a candidate credential", failures)
 
     report_text = (root / report_template).read_text(encoding="utf-8")
     for token in [

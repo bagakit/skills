@@ -1,11 +1,12 @@
 ---
 name: bagakit-paperwork-technical-writing
-description: Use when you need to write or rewrite technical articles into publishable and executable outputs with objective quality gates and optional expert-forum validation.
+description: Use when technical collaboration material needs to be distilled into a concise, source-faithful brief, or when technical articles need publishable and executable outputs with objective quality gates. Trigger on 炼化、精炼、提炼、整理成技术文档、distill, $refine-doc, or $bagakit-refine-doc as well as article, RFC, and postmortem requests.
 ---
 
 # Bagakit Paperwork Technical Writing
 
-Deliver technical writing that is readable for publication and actionable for execution.
+Deliver technical collaboration documents that are concise and source-faithful,
+or readable for publication and actionable for execution.
 
 ## Layering
 
@@ -20,6 +21,11 @@ Use `bagakit-writing-core` for generic writing mechanics:
 - evidence architecture, source parentage, and counterevidence
 - rewrite-feedback and no-regression review primitives
 
+For the `distill` route, compose `bagakit-writing-intake` when available for
+source-material state, provenance, and privacy boundaries. Keep the route
+standalone-first when Intake is absent; do not make the adapter a hard
+dependency.
+
 This skill owns the technical article delivery envelope:
 
 - `article.md`
@@ -30,6 +36,13 @@ This skill owns the technical article delivery envelope:
 - controlled-technical activation for execution-bearing procedures and
   appendices, without applying procedure style to article rationale
 
+It also owns the concise technical-collaboration distillation route:
+
+- `refined.md` when a file artifact is explicitly requested;
+- source inventory, protected-facts reconciliation, and source-scope appendix;
+- compact topic-grouped output for chats, meeting notes, drafts, and incident
+  logs, without forcing those inputs through article-length gates.
+
 Standalone-first rule: if `bagakit-writing-core` is unavailable, continue with
 the bundled local references and checker, then record that the core composition
 was not available.
@@ -37,6 +50,23 @@ was not available.
 Technical-writing normally reaches `bagakit-writing-de-ai-tone` through core.
 The de-AI-tone technical profile may exempt precise technical terms, but it
 still flags PR inflation, vague authority, fake contrast, and chatbot artifacts.
+
+## Relationship To Refine-Doc
+
+`refine-doc` is the concise `distill` mode of this skill, not a second runtime
+skill or a separate source of truth. The relationship is:
+
+- `distill`: compress and reconcile raw technical collaboration material into a
+  source-faithful brief with a compact evidence appendix;
+- `article`: develop a publishable technical article and its execution handoff;
+- shared Core and de-AI-tone primitives: provide structure, evidence,
+  protected-span, semantic-preservation, and prose checks to both routes.
+
+Use the `distill` mode when the reader needs facts and actions quickly. Continue
+from a stable brief into the `article` mode only when publication or a full
+execution handoff is actually required. `$refine-doc` and `$bagakit-refine-doc`
+are trigger aliases for the `distill` mode; they do not create another install
+unit or delivery contract.
 
 ## Purpose
 
@@ -54,6 +84,9 @@ still flags PR inflation, vague authority, fake contrast, and chatbot artifacts.
 - You need to draft, rewrite, or polish a technical blog, RFC-style article, or engineering postmortem.
 - You need writing that is both externally readable and internally actionable.
 - You need a traceable writing loop with clear gates and revision evidence.
+- You need to distill fragmented technical collaboration material into a short
+  facts-and-actions brief, including when the user says `炼化`, `精炼`,
+  `提炼`, `distill`, `$refine-doc`, or `$bagakit-refine-doc`.
 
 ## When NOT to Use This Skill
 
@@ -73,30 +106,40 @@ still flags PR inflation, vague authority, fake contrast, and chatbot artifacts.
   - External references for evidence.
   - Prior audit feedback.
 
+For the distillation route, mixed pasted text, local files, cloud documents, or
+chat exports are valid source sets. Cloud and chat adapters remain optional host
+capabilities and are read-only unless the user separately authorizes a write.
+
 ## Output Discipline
 
 Follow `docs/specs/output-discipline.md` for writing deliverables.
 
 - settle reader, objective, and evidence shape before drafting high-stakes work
-- keep source evidence in `review_report.md` or `execution_appendix.md`, not as
-  hidden confidence in the article
+- keep source evidence in the brief appendix, `review_report.md`, or
+  `execution_appendix.md`, not as hidden confidence in the prose
 - use explicit gap notes when evidence is missing
 - make no-regression checks preserve baseline evidence classes, not just word
   count or style
 
 ## Output Routes and Default Mode
 
-- Deliverable archetype/type: technical-writing transformation skill (`source notes/draft -> publishable article + execution handoff`).
-- Action handoff output: `execution_appendix.md` with run steps, checks, and rollback notes.
-- Memory handoff output: `review_report.md` with change summary, quality evidence, and residual risk.
-- Default route behavior (no adapter): write all outputs locally in the active working directory and keep paths explicit in final response.
+- Deliverable archetype/type: technical-writing transformation skill with two
+  explicit routes: `distill` (`source fragments -> concise technical brief`)
+  and `article` (`source notes/draft -> publishable article + execution handoff`).
+- Distill route default: render Markdown in the current conversation. Write
+  `refined.md` only when the user requests a file or supplies a destination.
+- Distill route optional review output: `review_report.md` when the user needs
+  an auditable handoff; do not manufacture article outputs for a brief.
+- Article route action handoff: `execution_appendix.md` with run steps, checks, and rollback notes.
+- Article route memory handoff: `review_report.md` with change summary, quality evidence, and residual risk.
+- Article route default behavior (no adapter): write outputs locally in the active working directory and keep paths explicit in final response.
 - Adapter policy: optional adapter routes are allowed, but this skill is standalone-first and must work with no adapter.
 - First-draft default: article must already meet profile-level density checks (word floor, cases, evidence anchors).
-- Required outputs:
+- Article route required outputs:
   - `article.md`: publication-oriented main text.
   - `execution_appendix.md`: field-level checks, gates, and operational notes.
   - `review_report.md`: what changed, what improved, what remains.
-- Optional outputs:
+- Article route optional outputs:
   - `outline.md`: structured outline before drafting.
   - `forum_minutes.md`: when expert-forum review is enabled.
   - `review_packet.md`: when independent review, source parentage, or
@@ -117,15 +160,73 @@ Follow `docs/specs/output-discipline.md` for writing deliverables.
 - Internal process metadata and directives must not appear in `article.md`.
 - Execution fields (`discussion_clear`, `user_review_status`, claim/tool validation, handoff path) belong to `execution_appendix.md`.
 - Stage/gate tracking belongs to `review_report.md` (or response footer), not to publish copy.
+- The distill route is not a publishable article: do not apply article profile
+  word floors or H2-count gates to it. Apply the distillation guardrails and
+  the shared Core/de-AI-tone checks that fit the final artifact.
 
 ## Archive Gate (Completion Handoff)
 
-- Verify all required outputs exist and include concrete file paths in handoff.
-- Archive status can be `complete` only when hard gates pass and unresolved placeholders are zero.
-- Record both handoff directions explicitly: `action_handoff -> execution_appendix.md`, `memory_handoff -> review_report.md`.
-- If any hard gate fails, stop at review mode and deliver only diagnosis plus next deterministic fix.
+- Article route: verify all required outputs exist and include concrete file
+  paths in handoff. Archive status can be `complete` only when hard gates pass
+  and unresolved placeholders are zero. Record both handoff directions:
+  `action_handoff -> execution_appendix.md`, `memory_handoff -> review_report.md`.
+- Distill route: complete only when the brief's source scope, protected facts,
+  gaps, and masking review pass; a file path is required only when a file was
+  explicitly requested.
+- If a hard gate fails, stop at review mode and deliver only diagnosis plus the
+  next deterministic fix.
 
 ## Workflow
+
+0. Choose the route before drafting.
+- Use `distill` for a concise technical-collaboration brief from fragmented
+  chats, meeting notes, drafts, or incident logs.
+- Use `article` for a publishable technical article with execution handoff.
+- Do not force a distill brief through article word floors, H2-count gates, or
+  publication-only outputs.
+
+### Distill Route
+
+When the route is `distill`, read:
+
+- `references/distillation-workflow.md` for source inventory, extraction,
+  reconciliation, and verification;
+- `references/refined-document-template.md` for the compact output shape;
+- `references/distillation-guardrails.md` before handling internal or
+  sensitive material.
+
+Then:
+
+1. Inventory source type, reader, action, time range, count, omissions, and
+   provenance. For mixed sources, keep one logical or repo-relative pointer per
+   source and deduplicate only after comparison.
+2. Mark commands, configuration, URLs, metrics, dates, versions, IDs, owners,
+   errors, quotes, and meaningful caveats as protected. Preserve exact values;
+   replace credential values with `[已脱敏]` while retaining command or field
+   shape.
+3. Extract only five classes: `结论、判断`, `数据、指标`, `步骤、操作`,
+   `工具、资源`, and `踩坑、根因`. Drop process chatter. Keep unresolved items
+   when they affect a decision, action, or safety boundary and label them as
+   `待确认` or `待补证据`.
+4. Reorder by technical theme rather than source timeline. Surface conflicting
+   facts instead of silently selecting one, and preserve source parentage for
+   non-obvious claims.
+5. Render a conclusion-first brief with topic sections, a symptom → root cause
+   → fix table when useful, and an appendix stating source scope, time validity,
+   exclusions, and limitations.
+6. Recheck facts, units, sequence, causal direction, secret masking, and
+   time-sensitive claims. Run `python3 scripts/mask-secrets.py` when source
+   material may contain credentials, then review its candidate findings before
+   external delivery.
+
+The distill route does not perform new research, automatically write to a home
+directory, create a Feishu document, or send a message. Those are separate
+explicit operations owned by the relevant host skills.
+
+### Article Route
+
+When the route is `article`, continue with the article workflow below and its
+existing `article.md`, `execution_appendix.md`, and `review_report.md` contract.
 
 1. Define reader and objective.
 - Write one sentence for target reader, one sentence for decision/action expected after reading.
@@ -213,6 +314,10 @@ Follow `docs/specs/output-discipline.md` for writing deliverables.
 ## Quality Gates
 
 - Hard gates:
+  - Distill route: protected facts, source count/range, source parentage,
+    conflict/gap visibility, and required secret masking are preserved.
+  - Distill route: no unsupported metric, command, link, date, root cause, or
+    recommendation is introduced.
   - Exactly one H1.
   - H2 count in configured range (default 3~5).
   - No unresolved placeholders.
@@ -230,6 +335,10 @@ Follow `docs/specs/output-discipline.md` for writing deliverables.
   - Memory-anchor quality and ending recall closure are agent-reviewed warnings.
   - `brainstorm` sampling metadata completeness is warning-reviewed (object/size/window/review role).
   - Weighted score formula is for review/self-check guidance, not script-level pass/fail.
+
+Distill output is judged against the distillation contract, not article density
+floors. If the source boundary or a hard fact is unresolved, stop at a brief
+with an explicit gap instead of promoting it to a publishable conclusion.
 
 See details in `references/quality-gates.md`.
 
@@ -257,6 +366,7 @@ See details in `references/quality-gates.md`.
 ```bash
 python3 scripts/check-article.py --input <article.md> --strict --profile <brainstorm|protocol|infrastructure|general> --report <review_report.md>
 python3 scripts/check-article.py --input <article.md> --strict --profile <...> --baseline <previous.md> --report <review_report.md>
+python3 scripts/mask-secrets.py < source.md > masked.md
 ```
 
 ## References
@@ -264,6 +374,9 @@ python3 scripts/check-article.py --input <article.md> --strict --profile <...> -
 - `references/start-here.md`
 - `references/quality-gates.md`
 - `references/procedural-precision.md`
+- `references/distillation-workflow.md`
+- `references/refined-document-template.md`
+- `references/distillation-guardrails.md`
 - `references/writing-techniques.md`
 - `references/human-writing-patterns.md`
 - `references/markdown-formatting.md`
@@ -273,6 +386,7 @@ python3 scripts/check-article.py --input <article.md> --strict --profile <...> -
 - `references/tpl/article-template.md`
 - `references/tpl/execution-appendix-template.md`
 - `references/tpl/review-report-template.md`
+- `scripts/mask-secrets.py`
 
 ## `[[BAGAKIT]]` Footer (Non-Article Only)
 
@@ -281,5 +395,5 @@ python3 scripts/check-article.py --input <article.md> --strict --profile <...> -
 
 ```text
 [[BAGAKIT]]
-- PaperworkWriting: Stage=<outline|draft|review|publish>; Gate=<pass|fail>; Evidence=<report/refs>; Next=<next deterministic action>
+- PaperworkWriting: Mode=<distill|article>; Stage=<outline|draft|review|publish>; Gate=<pass|fail>; Evidence=<report/refs>; Next=<next deterministic action>
 ```

@@ -50,12 +50,19 @@ Commands:
                     Print the technical-writing review packet template.
   print-procedural-precision
                     Print the execution-bearing procedural precision guide.
+  print-distillation-workflow
+                    Print the concise technical-collaboration distillation workflow.
+  print-refined-document-template
+                    Print the neutral refined technical brief template.
+  print-distillation-guardrails
+                    Print fidelity, masking, time-validity, and read-only guardrails.
+  mask-secrets      Mask common credential shapes from standard input.
 EOF
 }
 
 case "${1:-}" in
   describe)
-    printf '%s\n' "bagakit-paperwork-technical-writing: technical article drafting and rewriting with article, appendix, and review gates."
+    printf '%s\n' "bagakit-paperwork-technical-writing: distill technical collaboration material or draft publishable articles with evidence and execution gates."
     ;;
   list-references)
     find "$skill_root/references" -type f | sed "s#^$skill_root/##" | sort
@@ -66,6 +73,10 @@ case "${1:-}" in
     test -f "$skill_root/references/quality-gates.md"
     test -f "$skill_root/references/procedural-precision.md"
     test -f "$skill_root/references/review-packet-template.md"
+    test -f "$skill_root/references/distillation-workflow.md"
+    test -f "$skill_root/references/refined-document-template.md"
+    test -f "$skill_root/references/distillation-guardrails.md"
+    test -f "$skill_root/scripts/mask-secrets.py"
     test -f "$skill_root/scripts/check-article.py"
     ;;
   check-article)
@@ -85,6 +96,18 @@ case "${1:-}" in
     ;;
   print-procedural-precision)
     cat "$skill_root/references/procedural-precision.md"
+    ;;
+  print-distillation-workflow)
+    cat "$skill_root/references/distillation-workflow.md"
+    ;;
+  print-refined-document-template)
+    cat "$skill_root/references/refined-document-template.md"
+    ;;
+  print-distillation-guardrails)
+    cat "$skill_root/references/distillation-guardrails.md"
+    ;;
+  mask-secrets)
+    exec python3 "$skill_root/scripts/mask-secrets.py"
     ;;
   ""|-h|--help|help)
     usage

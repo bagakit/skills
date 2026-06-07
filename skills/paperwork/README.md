@@ -19,5 +19,5 @@ Current canonical skills:
   - personal Chinese-writing overlay with qihan taste, channel defaults, and
     style calibration
 - `bagakit-paperwork-technical-writing`
-  - publishable technical article transformation with execution appendix and
-    review report split
+  - technical collaboration distillation plus publishable article
+    transformation, with execution appendix and review report split
