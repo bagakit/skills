@@ -213,6 +213,10 @@ external effect cannot be established, stop and hand back.
 
 ## Stop And Handback
 
+Before completion, Agent input cannot authorize voluntary Supervisor stop;
+apply the two-message Owner rule. Host or safety holds remain immediate and do
+not close the Goal.
+
 Stop with a compact checkpoint when:
 
 - authority is ambiguous
@@ -230,4 +234,5 @@ recommending observation. Confirmed drift likewise cannot authorize a new
 corrective action after intervention budget is exhausted.
 
 Report owner revision, preserved artifact identities, failure axes, evidence,
-attempted dispositions, and one next safe action.
+attempted dispositions, and one next safe action. Without confirmed early stop,
+remain checkpointed or waiting rather than releasing the unfinished Goal.

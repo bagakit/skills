@@ -22,13 +22,16 @@ Supervisor health is a vector, not a blended score:
 - `context_integrity`: decisive evidence is present, attributable, and not
   displaced or contradicted
 - `memory_fidelity`: the saved packet points faithfully to primary truth
-- `owner_freshness`: Owner revision and authority remain current
+- `owner_freshness`: Owner revision and authority remain current, and durable
+  supervision changes are reconciled into owner truth rather than left as
+  chat-only overrides
 - `goal_understanding`: the Supervisor's current interpretation of the user's
   real desired result is bound to primary evidence; authorized truth and
   unarticulated candidate outcomes are distinct, and decision-changing
   ambiguity is visible rather than filled by assumption
-- `outcome_ownership`: the control policy still advances material verified
-  progress and does not confuse ceremony, activity, or assurance waiting with
+- `outcome_ownership`: the control policy binds the next Goal-derived result
+  and boundary, advances material verified progress, and does not confuse
+  ceremony, activity, a delivered message, or resultless waiting with
   convergence
 - `goal_seeking_initiative`: the Supervisor keeps goal understanding upstream
   of optimization, then captures high-value permission-valid control
@@ -54,9 +57,9 @@ Supervisor health is a vector, not a blended score:
 - `report_admission`: startup establishes an event-driven Worker return channel
   for results, evidence, mismatches, blockers, decisions, and assigned verdicts
   without timer-based narration or repeated alignment ceremony
-- `executor_efficiency`: any claimed waste is supported by an ex-ante credible
-  alternative under the same hard constraints, rather than raw counts,
-  hindsight, or Supervisor method preference
+- `executor_efficiency`: the delivery deadline follows the AI team's measured
+  wall-clock critical path rather than summed human effort or avoidable idle,
+  and any claimed waste has an ex-ante credible same-constraint alternative
 - `attention_coherence`: one current control question owns a bounded evidence
   cone; unrelated leads are deferred and preemption is explicit
 - `reasoning_health`: diagnosis distinguishes evidence, inference, unknown, and
@@ -76,10 +79,14 @@ At every admission-sensitive boundary, check deterministically when the Host
 can expose the fact:
 
 - Owner ref, revision, and freshness evidence
+- any durable supervision constraint changed by the Owner and whether the Goal
+  or owner system now reflects it
 - current interpretation of the user's real desired result, authorized outcome,
   candidate outcomes with evidence and decision deadlines, and any material
   ambiguity that could change the control decision
 - Supervisor epoch, logical task, target attempt, and writer capability
+- current Supervisor session/terminal identity and the target session identity
+  for any interrupt, stop, cancel, fence, replacement, release, or close action
 - current candidate and reviewed artifact identities
 - open intervention and external-effect state
 - stale writer fence or release evidence
@@ -87,6 +94,11 @@ can expose the fact:
 - latest material outcome progress or the concrete predicate blocking it,
   including whether nonblocking assurance has unnecessarily occupied the
   Writer path
+- current delivery target, forecast confidence, unfinished critical path,
+  measured checkpoint and gate durations, and next calibration event
+- next Goal-derived product, decision-information, or blocker result; its
+  material event or maximum-staleness boundary; and the disposition if that
+  boundary has expired without any of the three
 - any suspected executor inefficiency, its changed-decision evidence, and the
   same-constraint alternative that would make it avoidable
 - before a topology change, the relevant roles' current authority, target,
@@ -121,6 +133,13 @@ Before a semantic intervention, perform a self-countercheck:
 
 This produces a competing hypothesis; it does not certify the Supervisor.
 
+Before a destructive or lifecycle control operation, perform an identity
+self-check: re-read the Host's current Supervisor session and target session
+binding, compare stable session/run identity plus terminal/handle/worktree, and
+reject the operation when the target is this Supervisor or comparison is
+unknown. Never recover from a failed lookup by trying another handle. A Host
+safety fence may still act through its own authenticated path.
+
 ## Compact-Safe Packet
 
 Persist a bounded orientation packet outside transient chat when continuity
@@ -131,8 +150,10 @@ Owner: <ref@revision + freshness evidence>
 Authorized outcome: <result + constraints + acceptance + resolution refs>
 Outcome candidates: <candidate id + evidence + expected value + path effect + decision deadline + status>
 Supervisor epoch: <identity>
-Supervisor binding: <active-run-unique visible name + Host controller identity>
+Supervisor binding: <active-run-unique visible name + Host controller identity + current session/terminal identity>
 User communication: <logical route + cadence + maximum staleness + language + explanation + emphasis + constraints + source revision + last report>
+Delivery clock: <wall-clock target + forecast confidence + critical-path evidence + next calibration event>
+Stop admission: <unfinished|complete + authenticated Owner route + first request + exact challenge + second confirmation + forced hold>
 Question: <one current control question + gated decision + stop condition>
 Target: <logical task + attempt/generation + writer capability>
 Artifact candidate: <artifact identity + accepted/reviewed identity>
@@ -148,7 +169,9 @@ The packet is an index, not authority. On restore, re-read primary Owner, Host,
 artifact, and external-effect truth; compare revisions and identities;
 invalidate stale judgments; then open a new Supervisor epoch before mutation.
 Restore only the one current control question. Do not replay deferred analysis
-unless its wake condition is now material.
+unless its wake condition is now material. A control issue already closed by
+current primary evidence must not re-enter the convergence frontier after
+compact merely because its history is prominent in the saved packet.
 
 ## Fresh Semantic Auditor
 

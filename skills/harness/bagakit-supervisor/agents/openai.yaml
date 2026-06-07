@@ -1,4 +1,4 @@
 interface:
   display_name: "Bagakit Supervisor"
-  short_description: "Own Agent convergence without takeover"
-  default_prompt: "Use $bagakit-supervisor to drive the current Owner outcome better and faster, use A2A for Worker control and A2U for result-first user updates after each review round, and request only evidence-bearing Worker reports without taking over implementation."
+  short_description: "Own delivery without taking implementation"
+  default_prompt: "Use $bagakit-supervisor to own the delivery judgment and Writer team, synthesize Owner input before routing, preserve aligned Worker attention by default, and drive the current outcome to strict proof."

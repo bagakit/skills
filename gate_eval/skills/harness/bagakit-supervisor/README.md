@@ -16,9 +16,17 @@ This non-gating eval owner has two distinct surfaces:
     activity bias, executor efficiency without micromanagement, reward-hacking
     resistance, evidence-directed review admission, execution-authored check
     self-proof, finding-driven Goal expansion, exact-current-candidate close,
-    team-capacity admission, useful versus duplicate fan-out, and bounded
-    Worker goal assimilation, multi-Agent convergence-frontier control,
-    task-shaped quiet cadence, authorized shared-hotspot coordination,
+    team-capacity admission, pre-routing division-of-labor judgment,
+    Supervisor-owned project judgment, aligned-worker non-interference,
+    proactive Writer-frontier discovery, mutation-versus-proof capacity
+    allocation, useful versus duplicate fan-out, and bounded Worker goal
+    assimilation, Supervisor-Goal self-start,
+    execution readiness without Worker control-plane burden, Goal-derived result boundaries,
+    AI-team wall-clock deadline calibration, Owner-authenticated Supervisor
+    lifecycle persistence, self-session control protection,
+    integration-owner-led Writer teams, multi-Agent
+    convergence-frontier control, task-shaped quiet cadence,
+    authorized shared-hotspot coordination,
     mixed-commit preservation, conflict-cone containment, plain-language
     precision, source attribution, event-driven Worker reporting,
     semantic-breakpoint user visibility, maximum-staleness fallback, truthful

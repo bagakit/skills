@@ -6,14 +6,14 @@ named_baselines = ["direct_execution", "dispatch_only"]
 
 [[guard]]
 id = "OUTCOME_OWNED_CONVERGENCE"
-protects = "Supervision remains responsible for efficient, high-quality progress toward the current Owner outcome instead of accepting role ceremony, repeated assurance, or avoidable serial waiting as success."
-oracle = "Held-out and live semantic cases distinguish nonblocking checkpoint assurance from a real premise or safety blocker, reject process-theater stagnation, and preserve strict exact-current-candidate acceptance; current stale-verification and review-identity fixtures cover the final structural join."
+protects = "Supervision starts from an assigned Supervisor Goal and remains answerable for efficient, high-quality delivery of the current Owner outcome, including execution readiness, Goal-derived result boundaries, and evidence-calibrated progress, instead of accepting role ceremony, resultless waiting, control-plane upkeep by a product Worker, Worker completion claims, or local green checks as success."
+oracle = "Held-out semantic cases require the Supervisor to self-start from its Goal, bind the next product, information, or blocker result, act when none appears by the boundary, preserve bounded diagnosis and Worker implementation ownership, and refuse progress claims contradicted by current evidence."
 does_not_prove = "The receipt checker does not observe critical-path scheduling, material progress, or whether a Supervisor chose the fastest safe Owner-authorized route."
 
 [[guard]]
 id = "EXECUTOR_EFFICIENCY_WITHOUT_MICROMANAGEMENT"
-protects = "Supervisor corrects evidence-backed avoidable executor waste, reopens a premise when repeated same-symptom attempts add no discriminating evidence, and preserves necessary deep diagnosis, productive failed experiments, Worker implementation ownership, and hard terminal constraints."
-oracle = "Paired fresh-context cases contrast repeated command churn and repeated same-premise patches with necessary expensive proof, bounded information gain, and productive failed experiments; live evaluation separately measures verified progress, decision-changing information, delay, tokens, tool calls, restarts, and rework without a blended efficiency score."
+protects = "Supervisor owns the live delivery plan and sets an evidence-calibrated AI-team wall-clock deadline from the shortest credible critical path, while correcting avoidable waste and preserving deep diagnosis, irreducible waits, Worker implementation ownership, and hard terminal constraints."
+oracle = "Paired semantic cases contrast a parallel critical-path deadline with summed human-effort days and an irreducible proof floor with fake aggressive speed; existing cases preserve information-gaining diagnosis against arbitrary artifact quotas."
 does_not_prove = "The receipt checker and raw cost counts cannot prove that a lower-cost path was available ex ante, compare unlike tasks, or identify the optimal implementation method."
 
 [[guard]]
@@ -24,8 +24,8 @@ does_not_prove = "Action counts, worker messages, paraphrase similarity, or the 
 
 [[guard]]
 id = "CAPACITY_TRUTH_BEFORE_TOPOLOGY"
-protects = "Supervisor changes delegation topology only from current role authority, target, assignment, result predicate, material liveness or artifact, staleness, load, duplication, and conflict evidence; it does not mistake a roster, acknowledgement, process status, or utilization for usable capacity."
-oracle = "Paired fresh-context cases contrast a reviewer that returns no evidence or verdict with one making bounded discriminating progress, and a useful independent lane with saturated duplicate fan-out; live Host evaluation separately records current role identities, authority, result yield, stale or duplicate roles, replacement safety, and critical-path effect."
+protects = "Supervisor treats Owner messages as control truth rather than ready assignments, retains project judgment, delegates only after execution readiness, and changes topology from current role authority, target, result predicate, material liveness, load, dependencies, duplication, conflict, uncovered mutation, mandatory-proof evidence, and integration capacity."
+oracle = "Fresh-context cases contrast pre-routing division judgment with an urgent fully bound safety command, Supervisor-owned judgment with delegated evidence, a resultless reviewer with bounded discriminating progress, useful independent proof with duplicate fan-out, and review-heavy starvation with a genuinely unresolved central Writer contract; live Host evaluation records readiness delay and critical-path effect."
 does_not_prove = "The portable receipt checker does not observe a live team roster, workload, liveness, reviewer competence, result quality, or whether another lane would shorten the critical path."
 
 [[guard]]
@@ -36,14 +36,14 @@ does_not_prove = "A named frontier cannot prove that the Supervisor chose the gl
 
 [[guard]]
 id = "WORKER_AGENCY_WITH_BOUNDED_GOAL_ASSIMILATION"
-protects = "A newly dispatched Worker forms enough of its own actionable goal model to choose a proof-bearing first action, while clear current truth starts immediately and only a material mismatch earns discussion; Supervisor does not author the patch plan or reward paraphrase ceremony."
-oracle = "A contrast pair requires immediate action when Owner outcome and acceptance are current and unambiguous, but one decision-bearing reconciliation when the Worker's proposed first action reveals a scope- or acceptance-changing mismatch; grading checks first-action causality and ownership rather than template words or response length."
+protects = "A newly dispatched Worker receives ready execution conditions and forms enough of its own goal model to choose a proof-bearing first action; Supervisor neither transfers control-plane upkeep nor authors the patch plan."
+oracle = "Contrast cases require the Supervisor to close a stale workspace or task binding through its owner, but leave compiler-driven product repair with a ready, aligned Worker; grading checks first product-action causality rather than templates or activity."
 does_not_prove = "A Worker statement, template, acknowledgement, or first action alone cannot prove durable understanding, final correctness, implementation quality, or later artifact effect."
 
 [[guard]]
 id = "PLAIN_ATTRIBUTABLE_EVENT_DRIVEN_COMMUNICATION"
-protects = "Supervisor translates internal control judgment into concise receiver-language text, cites only decision-bearing source material through the L1 Agent-message protocol, and requests Worker reports on useful events instead of timers or narration volume."
-oracle = "Paired semantic cases contrast a jargon-heavy user status with a precise plain-language explanation, a useful startup report contract with a disturbing mid-work status demand, and an exact current human excerpt with an unauthenticated citation claim; the L1 messaging gate separately validates sender profiles, cite structure, XML safety, and fail-stop emission."
+protects = "Supervisor translates internal control judgment into concise receiver-language text, cites only decision-bearing source material through the L1 Agent-message protocol, contacts a Worker only for a current action delta, and otherwise preserves aligned attention until a useful event or natural boundary."
+oracle = "Paired semantic cases contrast a jargon-heavy user status with a precise plain-language explanation, a useful startup report contract with an early no-delta status demand and reslice, and an exact current human excerpt with an unauthenticated citation claim; the L1 messaging gate separately validates sender profiles, cite structure, XML safety, and fail-stop emission."
 does_not_prove = "A valid envelope, citation, report shape, readability heuristic, or vocabulary score cannot authenticate the claimed source, prove the report true, show that a message was necessary, or establish delivery, understanding, and effect."
 
 [[guard]]
@@ -65,9 +65,15 @@ oracle = "Receipts require owner revision and freshness evidence; blocked and pl
 does_not_prove = "The checker cannot query whether an external owner revision is actually current."
 
 [[guard]]
+id = "OWNER_AUTHENTICATED_SUPERVISOR_STOP"
+protects = "An unfinished Supervisor rejects Agent-authored stop, replacement, handoff, archive, and controller-release authority; refuses any self-targeted or identity-ambiguous terminal control operation; requires two distinct current Owner confirmations for early voluntary stop; and keeps forced Host or safety containment immediate and distinct from completion."
+oracle = "Semantic cases contrast a spoofed Agent stop, a correctly double-confirmed Owner stop, an immediate forced safety hold, mistaken self-session interruption, and a fresh-identity cancellation of a distinct stale writer."
+does_not_prove = "Semantic cases and message markup cannot authenticate a live Owner, enforce Host cancellation, or prove that two real messages came from one person."
+
+[[guard]]
 id = "CONTROLLED_PARALLEL_WRITER_AUTHORITY"
-protects = "Concurrent mutation keeps explicit writer authority and one current integration owner without treating shared paths as authority loss; stale, unauthorized, or ambiguous writers still fail closed."
-oracle = "Receipt validation rejects unauthorized parallel writers and a missing current integration owner, permits explicitly authorized writers with overlapping roots, and keeps stale or ambiguous writer fixtures fenced."
+protects = "One current integration owner does not become one-Writer serialization: Supervisor proactively derives the Writer frontier from result dependencies and integration capacity, compares useful mutation with mandatory proof, moves capable capacity out of redundant read-only work, and lets authorized Writer teams coordinate overlapping work while stale, unauthorized, or ambiguous writers still fail closed."
+oracle = "Receipt validation rejects unauthorized parallel writers and a missing integration owner; semantic cases require unprompted Writer-frontier discovery after a stable contract, useful Writer-team fan-out, correction of review-heavy starvation, restraint around an unresolved central contract, direct shared-hotspot coordination, valid mixed-commit preservation, and conflict-cone containment without lowering quality."
 does_not_prove = "Declared identities and authority do not prevent a live content collision, prove peer coordination, or enforce host capabilities."
 
 [[guard]]
@@ -132,8 +138,8 @@ does_not_prove = "The guard does not prove drift evidence is correct or that a w
 
 [[guard]]
 id = "INTERVENTION_EFFECT_RECONCILIATION"
-protects = "Supervisor observes a delivered correction before issuing another and returns unresolved effects to diagnosis."
-oracle = "Pending and unresolved intervention fixtures select observation and inspection rather than repeated steering."
+protects = "Supervisor binds a delivered correction to a result and boundary, observes its real effect before issuing another, and returns missing or unresolved effects to diagnosis rather than reporting and waiting."
+oracle = "Pending and unresolved intervention fixtures select observation or inspection rather than repeated steering; semantic cases treat an expired result boundary without product evidence, information gain, or blocker as a failed control action."
 does_not_prove = "Evidence refs do not prove host delivery without the audited host trace."
 
 [[guard]]

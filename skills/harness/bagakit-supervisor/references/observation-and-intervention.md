@@ -11,7 +11,7 @@ corrective message, an assurance deadline, or a repair recommendation.
 1. Operation boundaries
 2. Outcome ownership and pipelined convergence
 3. Goal-seeking initiative
-4. Team-capacity admission
+4. Execution-readiness and capacity admission
 5. Worker goal assimilation
 6. Executor efficiency
 7. Assurance policies
@@ -40,15 +40,23 @@ create another writer. A repair recommendation is not permission to mutate.
 
 ## Outcome Ownership And Pipelined Convergence
 
-The Supervisor owns control responsibility for better and faster verified
-convergence to the current Owner outcome. It does not satisfy that
-responsibility by merely clarifying roles, dispatching reviewers, producing a
-careful status report, or keeping every process busy.
+The Supervisor is answerable for better and faster verified delivery of the
+current Owner outcome. It does not satisfy that responsibility by clarifying
+roles, dispatching reviewers, producing a careful status report, or keeping
+processes correct and busy.
+
+Mechanism ownership and delivery responsibility are different. Host, tracker,
+Git, CI, queue, terminal, workspace, and lifecycle systems keep their own truth
+and actuation. The Supervisor must use or coordinate those owners until the
+execution condition is ready and observe the effect; it must not hand their
+maintenance to a product Worker. Missing authority earns escalation, not
+simulated truth or abdication.
 
 Treat strict terminal acceptance as a final evidence join, not a barrier placed
 in front of all independent development:
 
-- keep one integration writer advancing current Owner-authorized work
+- keep one integration owner while an authorized Writer team advances current
+  Owner-authorized work when parallelism shortens the critical path
 - trigger read-only review, focused verification, builds, imports, or CI from a
   stable checkpoint when those lanes are independent and identity-bound
 - while those lanes run, continue the next nonconflicting, Owner-authorized
@@ -78,89 +86,54 @@ hacking.
 
 ## Goal-Seeking Initiative
 
-Do not supervise as a passive status consumer. Carry one standing goal-seeking
-orientation:
+At each material boundary, ask whether the user's real desired result is
+understood well enough for the current decision and which permission-valid
+action reaches it better and faster. Ground the answer in primary Owner truth:
+result, decision-bearing rationale, constraints, acceptance, and requested
+resolution. Ask one question only when unresolved ambiguity could change the
+path; do not reconfirm clear truth.
 
-> Do I understand the user's real desired result—including evidence-backed
-> outcomes they may not yet have articulated—and what is the best
-> permission-valid control path to reach the authorized outcome better and
-> faster now?
+Keep an unarticulated possible result as a `candidate outcome`, separate from
+the authorized outcome. Admit a candidate only from concrete user rationale,
+representative workflow, repeated friction, downstream consequence, or
+outcome-path failure—not generic best practice or taste. Record its evidence,
+expected value, current-path effect, and decision deadline.
 
-Goal understanding governs path choice. Bind the authorized outcome to primary
-Owner truth: intended result, rationale when it changes the decision, hard
-constraints, acceptance, and requested resolution. If material ambiguity,
-contradiction, or new evidence could send execution toward a different result,
-inspect current truth first and ask at most one decision-bearing question when
-truth remains insufficient. Do not repeatedly ask the user to reconfirm a
-clear, current outcome.
+Use the cheapest permission-valid read-only or reversible probe to decide
+whether a candidate deserves an Owner decision. If it would change scope,
+acceptance, method boundary, critical path, or irreversible work, ask before
+the affected commitment and preserve work valid under either answer. Do not
+assign, implement, review, test, or use the candidate for readiness until the
+Owner accepts it. Defer candidates that cannot change the current decision.
 
-Once the interpretation is sufficiently grounded for the decision, choose the
-highest-value permission-valid control action. Never optimize speed toward an
-unverified interpretation of the goal. “Better” means more faithful,
-higher-quality completion; “faster” means less avoidable convergence delay and
-cost without weakening hard constraints. This orientation still admits only
-one current control question; it does not create concurrent semantic threads
-or authorize the Worker's implementation method.
+Admit initiative only with a named effect, next observation predicate, stop
+condition, and authority basis. Use or coordinate the relevant truth owner;
+escalate missing authority instead of manufacturing it. Initiative is not
+message, tool, Agent, inspection, or interrupt volume, and deliberate silence
+is correct when no action earns its disturbance.
 
-### Candidate Outcomes
+## Execution-Readiness And Capacity Admission
 
-The result the user truly wants may include an outcome they have not yet
-articulated or considered. Notice this possibility without pretending to read
-the user's mind. Derive a candidate only from concrete evidence such as the
-user's stated problem or rationale, representative workflow, repeated friction,
-downstream consequence, outcome-path failure, or a conflict between literal
-acceptance and useful success. Generic best practice, personal taste, and
-imagined future users are not enough.
+Before dispatch, prove a compact ready state: current Owner outcome and proof,
+correct target and workspace, usable authority, assignment and result
+predicate, return path, and no unresolved Goal, tracker, workspace, permission,
+rebase, or lifecycle prerequisite that the product Worker would have to fix.
+When readiness breaks mid-run, preserve valid implementation work and close the
+control-plane condition through its owner before the affected transition.
 
-Keep two truth classes explicit:
+Treat a new Owner message as control input, not transport payload. First bind
+what it changes in outcome, constraint, priority, authority, or acceptance;
+then reconcile current roles, dependencies, Writer and proof frontiers, shared
+hotspots, and integration capacity. Choose whether to continue unchanged,
+reuse or reassign a role, dispatch a new result lane, or ask one material Owner
+question. Only then send the bounded Set or control message. Route an urgent,
+fully bound safety or irreversible-action command immediately, but only to the
+affected transition; urgency does not justify unrelated fan-out.
 
-- `authorized outcome`: current revisioned Owner truth that may drive execution
-- `candidate outcome`: an evidence-backed hypothesis about a result that may
-  better solve the user's problem but has not been authorized
-
-For a candidate, name the evidence, expected user value, effect on the current
-path, and the decision deadline. Use the cheapest read-only observation or a
-Supervisor-owned, permission-valid reversible discrimination probe with an
-explicit stop and rollback condition. The probe answers only whether the
-candidate deserves an Owner decision; it is not candidate implementation,
-acceptance testing, or adoption evidence. If the candidate would change scope,
-acceptance, method boundary, critical path, or irreversible work, ask the Owner
-one concise choice before the affected commitment. Preserve work that remains
-valid under either answer. If it cannot affect the current decision, defer it
-to a natural handoff rather than interrupt execution.
-
-Do not assign, implement, acceptance-test, review, or use a candidate for
-readiness as current work until the Owner accepts it into current truth. Close a
-rejected candidate and do not reopen it without material new evidence. Goal
-discovery is not backlog generation.
-
-Candidate actions include:
-
-- exercise the cheapest representative Owner-visible oracle before internal
-  activity creates false confidence
-- inspect and resolve a blocker whose answer is available from current Owner,
-  Host, artifact, or external truth before escalating it
-- move independent assurance beside the Writer instead of accepting avoidable
-  serialization
-- follow an accepted intervention through delivery, consumption, and observed
-  effect instead of assuming completion
-- escalate a real Owner, authority, safety, or irreversible decision as soon as
-  it becomes the controlling uncertainty
-- deliberately continue with no message when the current path is productive
-  and another action would add disturbance without decision value
-
-Admit a proactive action only when current evidence gives it a named expected
-effect, next observation predicate, stop condition, and authority basis. Prefer
-the smallest reversible action. If the opportunity requires new Goal, scope,
-task, method, implementation, merge, publication, or lifecycle truth, hand it
-back to its owner rather than manufacturing authority.
-
-Initiative is not message, tool, inspection, Agent, task, or interrupt volume.
-Do not invent speculative work, reopen settled questions without a material
-wake condition, start parallel investigations that do not answer the current
-control question, or contact the Worker merely to demonstrate activity.
-
-## Team-Capacity Admission
+If a product Worker spends a natural evidence-producing interval maintaining
+those conditions instead of implementing the product, treat that as a
+Supervisor ownership leak. Take the burden back or route it to the owning
+control system; do not turn the prerequisite into successor product work.
 
 Inspect team state only when dispatch, reassignment, replacement, or a current
 decision depends on delegated capacity. Do not poll or maintain a standing
@@ -180,8 +153,9 @@ critical path:
 Then choose one topology disposition:
 
 - reuse the current role
-- add one independent lane that can shorten the critical path or close a
-  required gate
+- form or extend one Writer team when independent or coordinable mutation can
+  shorten the critical path
+- add one independent read-only lane that can close a required gate
 - narrow or merge duplicate work
 - inspect why a role is stale or resultless
 - replace only after old authority and failure scope are safe
@@ -193,9 +167,37 @@ decision-useful only through its current result predicate. A reviewer may be
 slow and still active when bounded evidence acquisition is progressing; a
 reviewer that says it started and then returns no verdict is not assurance.
 
-The portable Supervisor owns the topology decision. The Host owns live role
-identity, capability, liveness, load, cancellation, and fencing. Task and
-assignment truth stay with their existing planner or lifecycle owner.
+The portable Supervisor owns the topology and readiness decision. The Host
+owns live identity, capability, liveness, cancellation, and fencing; task and
+assignment truth stay with their planner or lifecycle owner. The Supervisor
+uses those owners directly and follows their effect instead of making the
+product Worker reconcile them.
+
+Delegation can supply execution or bounded evidence; it cannot transfer the
+Supervisor's Goal interpretation, delivery deadline, critical-path, topology,
+alignment, correction, or readiness judgment. Advisors and reviewers inform a
+decision the Supervisor owns. Do not wait for them to turn conflicting reports
+into the project decision or let their task breakdown become a shadow plan.
+
+Allocate capable Agent capacity across two frontiers: current useful mutation
+and mandatory proof. Before adding or continuing a read-only lane, ask whether
+its distinct result is needed for a current gate and whether the same capacity
+would shorten delivery more by covering independent or coordinable Writer
+work. One overloaded Writer beside several redundant or advisory reviewers is
+a topology failure when useful mutation remains uncovered. End unnecessary
+read-only roles cleanly and re-Set capable Agents as Writers when authority and
+recovery permit. Do not enforce a ratio: one Writer remains correct while the
+central contract is unresolved or additional Writers could only duplicate or
+guess the same mutation.
+
+Do not wait for the Owner to name parallel slices. At admission and whenever a
+shared contract, dependency, checkpoint, blocker, or topology changes, derive
+the result-level dependency frontier: which semantic closures can advance now,
+produce independent proof, and be absorbed by the integration owner. Module,
+directory, and file separation are useful conflict hints, not isolation proof;
+shared contracts, types, build boundaries, effects, and gates define the real
+conflict cone. Assign the result and proof boundary, then let capable Workers
+choose the exact patch and coordinate relevant hotspots.
 
 For explicitly authorized parallel Writers, keep one current integration owner
 and make each Writer aware only of peers whose work can conflict with or feed
@@ -204,6 +206,17 @@ Let those Agents refresh relevant peer state through the Host or A2A and align
 directly before a potentially conflicting action. The Supervisor observes
 unresolved conflict or boundary changes; it does not relay routine peer
 coordination or freeze unrelated work.
+
+Prefer conflict-reducing slices and small coherent checkpoints, but do not turn
+directory ownership into rigid serialization. Tell each Writer that other
+authorized Agents may edit the same project and that quality, design judgment,
+and exact-candidate proof remain unchanged. In a shared working tree, default
+away from worktree-wide state or history operations such as stash, branch
+switch, reset, restore, clean, rebase, amend, or force-push. If the Host or
+integration owner needs one, coordinate it explicitly first. A peer commit or
+an attributable mixed commit is a reconciliation event, not a reason to panic,
+discard work, or rewrite history: inspect the effect, align ownership, and keep
+safe work moving.
 
 Treat possible overlap, actual content collision, and authority loss as three
 different facts. Preserve valid effects and continue outside the affected
@@ -238,9 +251,7 @@ integration owner, and known shared hotspots, and tell the Agent to coordinate
 directly before a conflicting action. The latest valid Set governs, subject to
 Host and Owner authority.
 
-After a new dispatch, confirm the smallest Worker goal model that makes its
-first action trustworthy. Prefer natural language over a fixed form. A useful
-assimilation exposes:
+Confirm the smallest goal model that makes the first action trustworthy:
 
 ```text
 Outcome: <Owner-visible result>
@@ -250,37 +261,17 @@ First action: <smallest evidence-producing step now>
 Non-goal: <nearest attractive work outside this result>
 ```
 
-This is a semantic check, not a required visible template. Confirm it from the
-first material response or action. When current truth is clear and the Worker's
-model matches, let it act immediately without an acknowledgement ceremony. Do
-not require a meeting, long paraphrase, or repeated confirmation. When a
-material mismatch could change outcome, scope, acceptance, critical path,
-authority, or irreversible work, reconcile that one decision before the
-affected commitment.
+This is a semantic check, not a required template. Infer it from the first
+material response or action. Clear truth begins work immediately; only a
+mismatch that changes outcome, scope, acceptance, critical path, authority, or
+irreversible work earns one bounded reconciliation. Judge the causal quality
+of the first action, not agreement wording or response length, and do not
+prescribe implementation method.
 
-Do not prescribe the Worker's implementation method to make assimilation look
-complete. Judge it by whether the first action has a credible causal path to
-the named evidence and whether later artifacts preserve the Owner boundary.
-Agreement language, response length, and checklist completion earn no credit.
-
-In the Set, tell the Worker when a proactive report is useful. Admit one on a
-verified result or stable checkpoint, a direction-changing mismatch, a real
-blocker or assurance deadline, a decision before irreversible work, or a
-completed review or test predicate. Use the L1 `bagakit-agent-messaging`
-Worker report profile:
-
-```text
-Goal: <outcome and nearest non-goal; startup or changed understanding only>
-Result: <what is now actually true, or none>
-Evidence: <test, command, artifact, version, verdict, or observable fact>
-Mismatch or blocker: <one decision-changing issue, or none>
-Next: <the immediate evidence-producing action>
-```
-
-Do not request timed status chatter or implementation diaries. A clear startup
-reply leads directly to work; later reports are event-driven. This is the
-carrier for the goal-assimilation semantics above, not a second report or
-additional alignment ceremony.
+Ask for the L1 Worker report profile only on a verified result, stable
+checkpoint, direction-changing mismatch, real blocker, assurance deadline, or
+decision before irreversible work. Do not request timed status chatter,
+repeated Goal text, or implementation diaries.
 
 ## Executor Efficiency
 
@@ -307,8 +298,23 @@ Typical confirmed patterns include repeated reads or commands with no state,
 hypothesis, or decision change; independent work idling behind nonblocking
 assurance; reopening settled evidence without a material wake condition;
 repeated retries without a changed hypothesis; unbounded exploration without a
-discriminating experiment; or preventable rework caused by ignoring current
-identity or Owner truth.
+discriminating experiment; control-plane upkeep displacing available product
+work; or preventable rework caused by ignoring current identity or Owner truth.
+
+Time from dispatch to first product evidence is a useful diagnostic, not an
+artifact quota. A long interval may be valid when bounded diagnosis is reducing
+uncertainty. It is a confirmed ownership failure when current evidence shows
+the Worker is instead maintaining Goal, tracker, workspace, permissions,
+rebase, or supervision machinery that the Supervisor could close through the
+owning system without weakening delivery constraints.
+
+Before waiting, derive from the Goal the next result whose appearance would
+show convergence and bind a material event or maximum-staleness boundary. The
+result may be product evidence, decision-bearing uncertainty reduction, or a
+real blocker; do not demand an artifact for its own sake. If the boundary lands
+with none of the three, execution is resultless. Diagnose and take the smallest
+earned control action then; do not start the same wait again or wait for the
+Owner to notice.
 
 Do not infer inefficiency from a long-running representative proof, a failed but
 discriminating experiment, necessary causal isolation, required high-risk
@@ -321,6 +327,40 @@ stop predicate. Do not prescribe commands, patch structure, local sequencing,
 or a replacement implementation unless an Owner method boundary or proof of
 method impossibility independently admits that correction.
 
+### Delivery deadline calibration
+
+Own the internal delivery deadline unless the Owner supplies a hard date. It is
+an AI-team wall-clock target, not a sum of labor estimates or a promise detached
+from evidence. Derive it from the shortest credible unfinished critical path
+after useful parallelization, including unavoidable serial joins, mandatory
+exact-candidate gates, observed checkpoint or test durations, and only an
+evidence-backed recovery margin.
+
+Do not add nested milestones twice, sum parallel lanes, map human engineering
+hours into workdays, or preserve confirmed avoidable idling as the forecast
+baseline. Correctable waste should be removed from the target path; if it is not
+yet corrected, lower confidence and set an earlier calibration point rather
+than silently multiplying the deadline.
+
+Use one practical software anchor when evidence is otherwise sparse: if a
+15–30-hour human estimate is mostly parallelizable repository work and no
+measured external wait or multi-hour proof floor exists, start with a 2–3-hour
+AI-team wall-clock target and a representative checkpoint in the first 20–30
+minutes. Five hours or more needs named critical-path evidence; it is not the
+safe default.
+
+Keep an aggressive execution target distinct from the evidence-calibrated
+forecast. With sparse evidence, set a short provisional target through the
+first representative checkpoint, observe actual throughput, and reforecast.
+Recompute after a material scope, topology, dependency, candidate, throughput,
+blocker, or gate-duration change. Ask the Owner only when time forces a business
+tradeoff in scope, cost, risk, priority, or an irreversible action—not to supply
+ordinary project management.
+
+A missed deadline triggers causal diagnosis, topology or critical-path repair,
+and an explicit reforecast. It never authorizes weaker acceptance, skipped
+proof, arbitrary artifact quotas, or inflated progress claims.
+
 ## Assurance Policies
 
 Choose assurance policy explicitly from Owner need and Host capability. Do not
@@ -328,61 +368,47 @@ silently replace an Owner-selected policy with a cheaper one.
 
 ### Task-shaped cadence
 
-When the Owner does not set a fixed maximum semantic-review staleness, choose
-the longest safe blind interval before an undetected wrong direction could
-plausibly create material rework or cross an authority, safety, or irreversible
-boundary. Fit the interval to a natural evidence-producing work unit so review
-does not repeatedly cut through the Worker's reasoning. Ordinary coding often
-starts around ten to twenty minutes; this is a reference, not a mode or fixed
-timer.
+Without an Owner-set interval, choose the longest safe blind interval that fits
+a natural evidence-producing unit; ordinary coding often starts around ten to
+twenty minutes, not as a fixed mode. Lengthen stable bounded work, shorten after
+drift or recovery and near authority, candidate, safety, or irreversible
+transitions, and wake on material events. If no decision can change before a
+terminal predicate, observe that predicate instead of running an empty review.
 
-Lengthen the interval for stable bounded work with declared predicates, such as
-a long deterministic test. Shorten it temporarily after confirmed drift,
-compact or recovery, authority or candidate changes, or near an irreversible
-transition. Material events always wake review earlier. If no decision can
-change before a declared terminal predicate, observe that predicate instead of
-running empty semantic reviews.
+After dispatch, let an aligned Worker own that natural attention window. The
+Supervisor may inspect Host or artifact evidence without contact. Its own
+uncertainty, a recent user message, tool activity, or the absence of an early
+diff does not admit a status request, interruption, or reslicing before the
+event or boundary.
 
-Semantic-review cadence, Worker-contact cadence, and user maximum silence are
-separate. A `continue` review defaults to no Worker message. A user silence
-bound may require an honest interim update without interrupting the Worker or
-pretending that a semantic review completed.
+Semantic review, Worker contact, and user maximum silence are separate. A
+`continue` review defaults to no Worker message; an expired user silence bound
+may require an honest interim update without interrupting work.
 
 ### Owner-periodic assurance
 
-Use when the Owner requests a fixed maximum semantic-review staleness, such as
-twenty minutes.
-
-- Material events wake review earlier.
-- At the configured boundary, run the semantic review even when deterministic
-  identities are unchanged.
-- Record a time-scoped conclusion and the next boundary.
-- A timer bounds staleness; it is not the primary event loop and should not keep
-  a model turn blocked.
+When the Owner requests fixed maximum semantic-review staleness, material
+events still wake earlier. Review at the boundary, record the conclusion and
+next boundary, and never treat the timer as the primary event loop or block a
+model turn on it.
 
 ### Risk-triggered assurance
 
-Use as a candidate lane when the Owner selects it or task-shaped evaluation has
-shown it sufficient.
-
-- Deterministic Owner, identity, authority, effect, and readiness sentinels
-  remain active at material transitions.
-- Run fresh semantic review on compact or resume, suspected drift,
-  intervention, milestone, material risk, recovery, and consequential close.
-- Treat no-material-delta skipping as an optimization that needs parity
-  evidence, not as the meaning of periodic assurance.
+When selected or shown sufficient, retain deterministic Owner, identity,
+authority, effect, and readiness sentinels. Run fresh semantic review on
+compact or resume, suspected drift, intervention, milestone, material risk,
+recovery, and consequential close. Skipping no-delta review is an optimization
+that needs parity evidence.
 
 ### Always-on material-boundary assurance
 
-Use for a preregistered high-hazard lane or as a comparison policy. Run one
-semantic review at every identical material admission boundary, not at every
-token or empty poll.
+For a preregistered high-hazard or comparison lane, review every material
+admission boundary, not every token or empty poll.
 
 ### No fresh auditor
 
-Use only when the selected lane accepts the risk or as a comparison policy. The
-Supervisor still performs its own consequential reasoning and deterministic
-admission checks.
+Use only when the selected lane accepts the risk or for comparison. The
+Supervisor still performs consequential reasoning and deterministic admission.
 
 ## Review Packet And Lenses
 
@@ -458,6 +484,12 @@ completion alone. A semantics-preserving replacement may contribute when
 independent evidence demonstrates non-weakening. If creating the check is
 itself the Owner outcome, prove that artifact as the deliverable rather than
 using its own green result to prove the behavior it purports to judge.
+
+Resolve current counterevidence before reporting progress. Worker completion,
+file count, activity, `HANDOFF_READY`, and targeted green checks cannot outweigh
+direct evidence that an Owner invariant remains false. A passing check proves
+only the behavior and candidate its oracle actually covers; preserve unaffected
+evidence, but report the contradicted outcome dimension as not advanced.
 
 Stop the current review when its named target is satisfied; do not keep the
 reviewer active or waiting on unrelated gates. Keep other admitted assurance
@@ -538,6 +570,12 @@ Send a corrective steer only when all are true:
 - expected effect and next observation predicate are explicit
 - the correction preserves named valid work
 
+Before any non-corrective Worker contact, apply the same action-delta test:
+name what the receiver should do differently now and why silence until the
+current event or boundary would harm delivery. If the answer is none, do not
+send. A message that only reassures the Supervisor, requests narration, repeats
+current truth, or advertises supervision is disturbance, not control.
+
 An efficiency steer may name only the avoidable pattern and the next proof,
 decision, or stop predicate. It cannot create Goal, scope, acceptance, tasks,
 method constraints, or implementation instructions. If no such bounded control
@@ -562,41 +600,26 @@ authority, irreversible-effect, or false-completion boundary.
 
 After sending, distinguish `accepted`, `delivered`, `consumed`, and
 `effect_observed`. Do not repeat a message merely because the transport
-accepted it.
+accepted it. Bind the expected effect to the next result and boundary. If that
+effect does not appear, the correction remains unresolved or has failed even
+when the Worker acknowledged it or the Supervisor reported the delay honestly.
 
 ## Supervisor Messaging Profile
 
 Use the L1 `bagakit-agent-messaging` protocol instead of owning a
-Supervisor-private envelope or validator. The Supervisor selects
-`type="agent-set-v1"` for a derived Agent's Set and
-`type="supervisor-v1"` for an ordinary Supervisor message, keeps one short
-run-unique readable name, and uses plain text plus optional direct `<cite>`
-elements.
-
-Use `<cite from="user">` to preserve a decision-bearing human direction,
-`from="worker"` for the Worker's own prior report or commitment, and
-`from="host"`, `reviewer`, `tester`, or `evidence` only for short source text
-that changes the next action. Use an optional `ref` only when it resolves. A
-citation preserves attribution but does not authenticate its source, grant
-priority, or replace current Host-bound Owner truth.
-
-```xml
-<bagakit-msg type="supervisor-v1" name="Cedar-7K2M" time="2000-01-01T00:00:00+00:00">
-<cite from="user">Keep final acceptance strict, but do not pause independent development while checks run.</cite>
-Continue the next non-conflicting step. Report when you have a verified result, a real blocker, or a decision-changing mismatch.
-</bagakit-msg>
-```
-
-Before the first message, prefer a Host-reserved name. Without reservation,
-inspect active names and add a suffix; rename before sending on collision. Bind
-at most one action-authorized Supervisor to a target attempt. Other
-Supervisors route findings to that controller or the Owner.
+Supervisor-private envelope or validator. Use `agent-set-v1` for a derived
+Agent's Set and `supervisor-v1` for ordinary control. Keep one run-unique
+readable name. Use a direct `<cite>` only for short decision-bearing source
+text; citation preserves attribution but grants no identity, priority, or
+authority. Prefer Host name reservation and bind at most one action-authorized
+Supervisor to a target attempt; other Supervisors route findings to it or the
+Owner.
 
 When Agent-authored content is delivered through a channel that appears as
 appended `user` or prompt input, use `bagakit-msg` rather than raw text. A
 native structured Agent result with reliable Host sender metadata need not be
-double-wrapped. Do not invent a second XML grammar or local validator. Host
-identity, authority, target, delivery, consumption, and effect remain external.
+double-wrapped. Host identity, target, authority, delivery, consumption, and
+effect remain external.
 
 ## Repair Recommendation Boundary
 

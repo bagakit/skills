@@ -24,6 +24,15 @@ A host adapter may provide:
 
 The skill must inspect available capabilities instead of assuming all exist.
 
+Before `cancel`, `fence`, replacement, release, or any equivalent terminal
+control, the adapter should expose in one fresh state read both the current
+Supervisor controller session/terminal identity and the requested target
+session/terminal identity, including their worktree or run binding when the
+Host has it. If the target matches the current Supervisor session, or identity
+comparison is unavailable or stale, reject the requested control operation
+instead of guessing from a handle, name, or task label. Host safety enforcement
+may still apply through a separate authenticated path.
+
 For user communication, the adapter should preserve the current logical route,
 cadence, maximum staleness, language, explanation level, emphasis, special
 constraints, source revision, and last admitted report state separately from
@@ -31,6 +40,12 @@ provider-local channel configuration. The Host owns user identity,
 authentication, credentials, concrete delivery, and readback. Do not claim
 delivery from invocation alone. A failed or unknown delivery does not erase the
 Supervisor's conclusion or silently authorize an unbound route.
+
+For unfinished voluntary stop, the Host should expose two distinct current
+Owner messages on one authenticated route, with the second bound to the exact
+Goal, controller, action, checkpoint, and consequence. Message text and markup
+are not authentication; without both receipts, do not release the controller.
+Keep forced Host or safety containment on a separate path from Owner closure.
 
 ## Required Topology Evidence
 

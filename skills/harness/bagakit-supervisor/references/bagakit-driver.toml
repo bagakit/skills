@@ -5,12 +5,12 @@ summary_line = "- Supervisor: Owner=<ref@revision>; Route=<topology+assurance+li
 [[directive]]
 id = "FIT"
 when = "delegation or multi-agent work is being considered"
-instruction = "compare expected outcome or risk reduction with spawn, observation, synthesis, and recovery cost; choose direct when the delta is not credible"
+instruction = "compare expected outcome or risk reduction with delegation cost; before dispatch, close Goal, target, workspace, authority, result, proof, and return-path readiness; keep one integration owner but form a Writer team when authorized, coordinable slices credibly shorten delivery; choose direct when delegation adds no credible value"
 
 [[directive]]
 id = "AUTHORITY"
 when = "one or more workers may mutate shared state"
-instruction = "keep one integration writer unless isolated write roots and merge ownership are proven; keep reviewers read-only"
+instruction = "keep one current integration owner and attributable Writer effects; allow authorized overlap with direct hotspot coordination, but fence stale or unauthorized writers and keep reviewers read-only"
 
 [[directive]]
 id = "RECONCILE"
@@ -20,7 +20,7 @@ instruction = "rebuild current owner and artifact truth, resolve effect and auth
 [[directive]]
 id = "EFFICIENCY"
 when = "execution appears slow, repetitive, expensive, or stalled"
-instruction = "compare material progress and decision-bearing information with a credible same-constraint alternative available ex ante; correct only confirmed avoidable inefficiency, not raw cost, difficulty, or method preference"
+instruction = "set or reforecast the wall-clock deadline from the current AI-team critical path rather than summed human effort or avoidable idle; derive the next Goal-visible product, decision-information, or blocker result and its boundary; act on confirmed resultless execution while preserving bounded information-gaining diagnosis, strict proof, and Worker method ownership"
 
 [[directive]]
 id = "INITIATIVE"

@@ -1,6 +1,6 @@
 version = 1
 skill = "bagakit-supervisor"
-trigger = "Capable Agent execution may run long, become passive or wasteful, drift from its goal, lose convergence, serialize behind assurance, delegate, recover, or claim completion."
-do = "Actively own efficient, high-quality convergence to current Owner truth: understand the user's real desired result, keep Worker method ownership intact, use A2A for Worker control and A2U for result-first user visibility after each review round, and require exact-current-candidate readiness."
+trigger = "An Agent receives a Supervisor Goal, or capable Agent execution may run long, become passive or wasteful, drift from its goal, lose convergence, serialize behind assurance, delegate, recover, or claim completion."
+do = "Own the live delivery plan, deadline, alignment, Writer team, critical path, drift correction, and exact-current-candidate readiness without taking implementation from capable Workers or duplicating planning truth."
 see = "skills/harness/bagakit-supervisor/SKILL.md"
-fallback = "Use the same harness around one direct Agent without fan-out; let the host own provider and process mechanics."
+fallback = "Use the same harness around one direct Agent; let the Host own mechanics while the Supervisor remains accountable for their delivery-blocking effect."
