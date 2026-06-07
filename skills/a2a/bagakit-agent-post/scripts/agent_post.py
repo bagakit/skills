@@ -17,6 +17,7 @@ from pathlib import Path
 
 IDENTITY_SCHEMA = "bagakit/a2a-identity/v1"
 MAIL_SCHEMA = "bagakit/a2a-mail/v1"
+USER_SCHEMA = "bagakit/a2a-user/v1"
 AGENT_ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
 
 SURFACE_TOML = """schema_version = 1
@@ -92,6 +93,32 @@ class Registry:
         fcntl.flock(handle, fcntl.LOCK_EX)
         return handle
 
+    def user_path(self) -> Path:
+        return self.surface / "user.json"
+
+    def load_user(self) -> dict | None:
+        if not self.user_path().exists():
+            return None
+        return json.loads(self.user_path().read_text(encoding="utf-8"))
+
+    def bootstrap_user(self) -> str:
+        """Create the user principal and return its plaintext token exactly once."""
+        token = secrets.token_urlsafe(24)
+        atomic_write(
+            self.user_path(),
+            json.dumps(
+                {"schema": USER_SCHEMA, "token_sha256": token_hash(token), "created_time": now()},
+                ensure_ascii=False,
+                indent=2,
+            )
+            + "\n",
+        )
+        return token
+
+    def verify_user_token(self, token: str) -> bool:
+        user = self.load_user()
+        return user is not None and user["token_sha256"] == token_hash(token)
+
     def identity_path(self, agent_id: str) -> Path:
         return self.agents_dir / f"{agent_id}.json"
 
@@ -141,6 +168,20 @@ class Registry:
             return None
         return record
 
+    def is_ancestor(self, candidate_id: str, agent_id: str) -> bool:
+        chain = self.chain_of(agent_id)
+        return chain is not None and any(item["agent_id"] == candidate_id for item in chain[1:])
+
+    def relation(self, sender_id: str, recipient_id: str) -> str:
+        """Immutable grant-tree position of the sender relative to the recipient."""
+        if sender_id == recipient_id:
+            return "self"
+        if self.is_ancestor(sender_id, recipient_id):
+            return "ancestor"
+        if self.is_ancestor(recipient_id, sender_id):
+            return "descendant"
+        return "peer"
+
     def descendants(self, agent_id: str) -> list[dict]:
         result = []
         frontier = {agent_id}
@@ -162,6 +203,13 @@ def new_identity(registry: Registry, agent_id: str, display_name: str, granted_b
     validate_display_name(display_name)
     if registry.load(agent_id) is not None:
         raise ValueError(f"agent id already registered: {agent_id}")
+    # One visible envelope name maps to one concurrently active identity, so a
+    # derived Agent cannot claim its controller's name. Revocation frees the name.
+    for record in registry.all_identities():
+        if record["status"] == "active" and record["display_name"] == display_name:
+            raise ValueError(
+                f"display name already in use by active identity: {record['agent_id']}"
+            )
     token = secrets.token_urlsafe(24)
     record = {
         "schema": IDENTITY_SCHEMA,
@@ -221,6 +269,13 @@ def envelope_name(envelope: str) -> str | None:
         return None
 
 
+def envelope_type(envelope: str) -> str | None:
+    try:
+        return ET.fromstring(envelope).attrib.get("type")
+    except ET.ParseError:
+        return None
+
+
 def cmd_register(registry: Registry, args: argparse.Namespace) -> int:
     # Validate all user input before materializing the first runtime surface.
     # A rejected first registration must leave the host untouched.
@@ -232,10 +287,22 @@ def cmd_register(registry: Registry, args: argparse.Namespace) -> int:
 
     registry.materialize()
     with registry.lock():
+        # The first registration bootstraps the user principal; every later
+        # root registration must present the user token, so a derived or
+        # unrelated process cannot mint new user-granted roots.
+        issued_user_token = None
+        if registry.load_user() is None:
+            issued_user_token = registry.bootstrap_user()
+        elif not args.user_token:
+            return fail("registering another root identity requires --user-token from the first registration")
+        elif not registry.verify_user_token(args.user_token):
+            return fail("user token is invalid")
         try:
             issued = new_identity(registry, args.agent_id, args.display_name, "user")
         except ValueError as error:
             return fail(str(error))
+    if issued_user_token is not None:
+        issued["user_token"] = issued_user_token
     print(json.dumps(issued, ensure_ascii=False, indent=2))
     return 0
 
@@ -264,7 +331,10 @@ def cmd_revoke(registry: Registry, args: argparse.Namespace) -> int:
         target = registry.load(args.agent_id)
         if target is None:
             return fail(f"unknown agent id: {args.agent_id}")
-        if not args.by_user:
+        if args.user_token:
+            if not registry.verify_user_token(args.user_token):
+                return fail("user token is invalid")
+        else:
             chain = registry.chain_of(args.agent_id) or []
             authorized = any(
                 registry.chain_valid(item["agent_id"])
@@ -272,9 +342,9 @@ def cmd_revoke(registry: Registry, args: argparse.Namespace) -> int:
                 for item in chain
             )
             if not authorized:
-                return fail("revocation requires --by-user or an active self or ancestor token")
+                return fail("revocation requires the user token or an active self or ancestor token")
         revoked = []
-        reason_root = f"revoked:{'user' if args.by_user else 'chain'}"
+        reason_root = f"revoked:{'user' if args.user_token else 'chain'}"
         for record in [target, *registry.descendants(args.agent_id)]:
             if record["status"] == "revoked":
                 continue
@@ -292,19 +362,23 @@ def cmd_revoke(registry: Registry, args: argparse.Namespace) -> int:
 def cmd_send(registry: Registry, args: argparse.Namespace) -> int:
     if not registry.surface.exists():
         return fail("no agent-post surface; run register first")
+    # Read the envelope before taking the registry lock so a stalled input
+    # pipe cannot hold the whole pipe's exclusive lock.
+    try:
+        envelope = sys.stdin.read() if args.envelope == "-" else Path(args.envelope).read_text(encoding="utf-8")
+    except OSError as error:
+        return fail(str(error), 2)
     with registry.lock():
         sender = registry.verify_token(args.as_id, args.token)
         if sender is None:
             return fail("sender identity, status, or token is invalid")
         if not registry.chain_valid(sender["agent_id"]):
             return fail("sender grant chain is not fully active")
+        if args.to == sender["agent_id"]:
+            return fail("sender and recipient are the same identity; self-addressed mail is rejected")
         recipient = registry.load(args.to)
         if recipient is None or not registry.chain_valid(recipient["agent_id"]):
             return fail(f"recipient is unknown or revoked: {args.to}")
-        try:
-            envelope = sys.stdin.read() if args.envelope == "-" else Path(args.envelope).read_text(encoding="utf-8")
-        except OSError as error:
-            return fail(str(error), 2)
         error, check_level = check_envelope(envelope)
         if error is not None:
             return fail(error)
@@ -312,6 +386,15 @@ def cmd_send(registry: Registry, args: argparse.Namespace) -> int:
         if name != sender["display_name"]:
             return fail(
                 f"envelope name {name!r} does not match sender display_name {sender['display_name']!r}"
+            )
+        sender_relation = registry.relation(sender["agent_id"], recipient["agent_id"])
+        # A Set defines the receiver's identity and assignment, so it may only
+        # flow down the derivation tree from a deriving controller; a derived
+        # Agent can never redefine or shut down its ancestors through the pipe.
+        if envelope_type(envelope) == "agent-set-v1" and sender_relation != "ancestor":
+            return fail(
+                "agent-set-v1 flows only from a deriving ancestor to its derived Agent; "
+                f"sender is {sender_relation} of the recipient"
             )
         inbox = registry.mail_dir / recipient["agent_id"] / "inbox"
         inbox.mkdir(parents=True, exist_ok=True)
@@ -337,6 +420,7 @@ def cmd_send(registry: Registry, args: argparse.Namespace) -> int:
             "sent_time": now(),
             "envelope_xml": envelope,
             "envelope_check": check_level,
+            "sender_relation": sender_relation,
             "dedup_key": args.dedup_key,
             "consumed_time": None,
         }
@@ -370,7 +454,8 @@ def cmd_recv(registry: Registry, args: argparse.Namespace) -> int:
         for record in records:
             print(
                 f"[agent-post] from={record['from']} to={record['to']} seq={record['seq']} "
-                f"sent={record['sent_time']} envelope_check={record['envelope_check']}"
+                f"sent={record['sent_time']} envelope_check={record['envelope_check']} "
+                f"sender_relation={record.get('sender_relation', 'unknown')}"
             )
             print(record["envelope_xml"])
             print()
@@ -424,6 +509,10 @@ def main() -> int:
     register = commands.add_parser("register", help="Register one user-granted root identity.")
     register.add_argument("--agent-id", required=True)
     register.add_argument("--display-name", required=True)
+    register.add_argument(
+        "--user-token",
+        help="User principal token issued by the first registration; required for every later root.",
+    )
 
     derive = commands.add_parser("derive", help="Derive one child identity from an active parent.")
     derive.add_argument("--parent", required=True)
@@ -434,7 +523,7 @@ def main() -> int:
     revoke = commands.add_parser("revoke", help="Revoke one identity and cascade to its descendants.")
     revoke.add_argument("--agent-id", required=True)
     authority = revoke.add_mutually_exclusive_group(required=True)
-    authority.add_argument("--by-user", action="store_true")
+    authority.add_argument("--user-token", help="User principal token issued by the first registration.")
     authority.add_argument("--auth-token", help="Token of the identity itself or an active ancestor.")
 
     send = commands.add_parser("send", help="Validate and post one envelope to one recipient inbox.")

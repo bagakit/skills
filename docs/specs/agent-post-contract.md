@@ -52,8 +52,13 @@ terminal history. The contract therefore claims exactly:
 Do not claim stronger guarantees. Hosts that need malice resistance must add
 per-Agent process isolation and credentials at the Host layer.
 
-Root registration asserts user authority but cannot authenticate the human;
-the host decides who may run `register`.
+The first registration bootstraps the user principal: it writes `user.json`
+(schema `bagakit/a2a-user/v1`, digest only) and returns a plaintext user token
+exactly once. Every later root registration and every user-authority
+revocation must present that token, so a derived or unrelated process cannot
+mint new user-granted roots or revoke a controller's tree. Bootstrap trust is
+the host's: whoever runs the first `register` becomes the user principal, and
+the pipe cannot authenticate the human behind it.
 
 ## Identity Record
 
@@ -79,6 +84,8 @@ Rules:
 - `display_name` is the exact `name` the Agent uses in its `bagakit-msg`
   envelopes; the pipe rejects an envelope whose `name` differs from the
   sender's registered `display_name`
+- `display_name` is unique among active identities, so a derived Agent cannot
+  register or derive its controller's visible name; revocation frees the name
 - `granted_by` is `user` for a root identity or the deriving Agent's
   `agent_id`
 - the plaintext token is returned exactly once at registration or derivation
@@ -95,7 +102,8 @@ Rules:
 
 Revocation is strict and cascading: revoking one identity revokes every
 identity whose grant chain passes through it. Revocation authority is the
-user, the identity itself, or any active ancestor presenting its token.
+user presenting the user token, or the identity itself or any active ancestor
+presenting its agent token.
 Revocation aligns with Supervisor attempt fencing: a replaced controller's
 derived identities do not survive it.
 
@@ -116,6 +124,7 @@ One record per accepted message at `mail/<recipient-id>/inbox/<seq>-<msg-id>.jso
   "sent_time": "<ISO-8601-with-timezone>",
   "envelope_xml": "<bagakit-msg ...>...</bagakit-msg>",
   "envelope_check": "full",
+  "sender_relation": "descendant",
   "dedup_key": null,
   "consumed_time": null
 }
@@ -132,6 +141,9 @@ Rules:
   record
 - a `send` that repeats an existing `dedup_key` for the same recipient returns
   the stored receipt and writes nothing
+- `sender_relation` records the sender's immutable grant-tree position
+  relative to the recipient at send time: `ancestor`, `descendant`, or `peer`;
+  derivation edges never change, so the stored value stays true
 - `consumed_time` is set only by the recipient acknowledging with its own
   token
 
@@ -140,17 +152,30 @@ this order, and must not create or mutate a mail record when any check fails:
 
 1. verify the sender token against the registered identity
 2. re-walk the sender's live grant chain and require every identity to be active
-3. resolve the recipient and require that identity to be active
+3. resolve the recipient, require an identity different from the sender, and
+   require its grant chain to be fully active; self-addressed mail is rejected
 4. validate the supplied `bagakit-msg` envelope with the sibling validator, or
    the documented minimal fallback when that validator is unavailable
 5. require the envelope `name` attribute to equal the sender's registered
    `display_name`
+6. when the envelope `type` is `agent-set-v1`, require the sender to be an
+   ancestor on the recipient's grant chain; a Set defines the receiver's
+   identity and assignment, so it flows only down the derivation tree from a
+   deriving controller, matching the Set profile rule in
+   `docs/specs/agent-message-contract.md`
 
-Only after all five checks pass may the pipe allocate a per-recipient sequence,
+Only after all six checks pass may the pipe allocate a per-recipient sequence,
 write the mail record, and return its delivery receipt. The order is part of
 the admission contract: token and chain failures must not be masked by an
 invalid recipient or envelope, and envelope validation must not run for an
 unauthorized sender.
+
+The Set-flow check is deliberately the only type-bound admission rule. Other
+profiles stay open in both directions: a report, review, or peer message from
+a descendant is delivered with `sender_relation` visible, and the receiver
+judges it as information, never as a command. Message text alone still cannot
+stop, reassign, or shut down the receiver, per the advisory boundary in
+`docs/specs/agent-message-contract.md`.
 
 Delivery and consumption are the two receipt axes this contract owns. Effect
 remains with the owning systems, per the Supervisor host-adapter contract.
@@ -161,7 +186,7 @@ When a bridge renders inbox content into a prompt-like channel, it must place
 the pipe attribution outside the envelope, for example:
 
 ```text
-[agent-post] from=cedar-fl4 to=cedar-7k2m seq=3 sent=2000-01-01T00:00:00+00:00 envelope_check=full
+[agent-post] from=cedar-fl4 to=cedar-7k2m seq=3 sent=2000-01-01T00:00:00+00:00 envelope_check=full sender_relation=descendant
 <bagakit-msg ...>...</bagakit-msg>
 ```
 
@@ -183,6 +208,7 @@ committed by default. Layout:
 .bagakit/agent-post/
 ├── surface.toml
 ├── lock
+├── user.json
 ├── agents/<agent-id>.json
 └── mail/<agent-id>/
     ├── seq
@@ -193,9 +219,9 @@ committed by default. Layout:
 
 The public entrypoint is `scripts/agent_post.py` in the skill payload:
 
-- `register --agent-id <id> --display-name <name>`
+- `register --agent-id <id> --display-name <name> [--user-token <token>]`
 - `derive --parent <id> --parent-token <token> --agent-id <id> --display-name <name>`
-- `revoke --agent-id <id> (--by-user | --auth-token <token>)`
+- `revoke --agent-id <id> (--user-token <token> | --auth-token <token>)`
 - `send --as <id> --token <token> --to <id> --envelope <path|-> [--dedup-key <key>]`
 - `recv --as <id> --token <token> [--all] [--render]`
 - `ack --as <id> --token <token> --msg <msg-id>`
