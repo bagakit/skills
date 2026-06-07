@@ -259,6 +259,10 @@ def check_envelope(envelope: str) -> tuple[str | None, str]:
         return f"envelope is not well-formed XML: {error}", "minimal"
     if parsed.tag != "bagakit-msg":
         return "envelope root element must be bagakit-msg", "minimal"
+    # A nested bagakit-msg element could smuggle a second forged envelope past
+    # the fallback check, so the minimal path rejects it outright.
+    if any(element.tag == "bagakit-msg" for element in parsed.iter() if element is not parsed):
+        return "envelope must not nest another bagakit-msg element", "minimal"
     return None, "minimal"
 
 
@@ -399,9 +403,12 @@ def cmd_send(registry: Registry, args: argparse.Namespace) -> int:
         inbox = registry.mail_dir / recipient["agent_id"] / "inbox"
         inbox.mkdir(parents=True, exist_ok=True)
         if args.dedup_key is not None:
+            # Dedup is scoped to (sender, recipient, key); a key-only match
+            # would let another sender squat a predictable key and silently
+            # suppress this sender's delivery.
             for existing in sorted(inbox.glob("*.json")):
                 record = json.loads(existing.read_text(encoding="utf-8"))
-                if record.get("dedup_key") == args.dedup_key:
+                if record.get("dedup_key") == args.dedup_key and record.get("from") == sender["agent_id"]:
                     print(json.dumps(
                         {"msg_id": record["msg_id"], "seq": record["seq"], "delivery": "duplicate",
                          "envelope_check": record["envelope_check"]},

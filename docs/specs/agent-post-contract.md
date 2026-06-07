@@ -136,11 +136,14 @@ Rules:
   recipient only
 - `envelope_check` is `full` when the sibling `bagakit-agent-messaging`
   validator accepted the envelope, or `minimal` when only local
-  well-formedness and root-tag checks ran because that skill is absent
+  well-formedness, root-tag, and no-nested-`bagakit-msg` checks ran because
+  that skill is absent
 - an invalid envelope is rejected before any mail write; fail-stop, no partial
   record
-- a `send` that repeats an existing `dedup_key` for the same recipient returns
-  the stored receipt and writes nothing
+- dedup is scoped per sender, recipient, and key: a `send` that repeats a
+  `dedup_key` the same sender already used for the same recipient returns the
+  stored receipt and writes nothing; a different sender reusing that key is a
+  new delivery, so one sender cannot squat a key to suppress another's mail
 - `sender_relation` records the sender's immutable grant-tree position
   relative to the recipient at send time: `ancestor`, `descendant`, or `peer`;
   derivation edges never change, so the stored value stays true
@@ -191,7 +194,9 @@ the pipe attribution outside the envelope, for example:
 ```
 
 The receiver's trust in the stamp equals its trust in the bridge, under the
-threat model above. The stamp never moves into the XML; the envelope stays
+threat model above. A bridge must not treat stamp-like lines inside envelope
+body text as attribution; only the stamp the bridge renders itself counts.
+The stamp never moves into the XML; the envelope stays
 recognition metadata, per `docs/specs/agent-message-contract.md`.
 
 ## Runtime Surface

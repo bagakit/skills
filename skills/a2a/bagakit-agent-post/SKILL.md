@@ -105,8 +105,10 @@ envelope `name` to registered `display_name` binding, then Set flow:
 `agent-set-v1` is accepted only from a deriving ancestor of the recipient, so
 a derived Agent can never redefine or shut down its controller through the
 pipe. Only after all checks pass does the pipe allocate the recipient sequence
-and write mail. A repeated dedup key returns the original delivery receipt
-without another write.
+and write mail. A dedup key is scoped to the sender-recipient pair: the same
+sender repeating a key to the same recipient gets the original delivery
+receipt without another write, while a different sender reusing that key is a
+new delivery.
 
 Receive unread records or render a prompt-like host stamp outside each raw
 envelope:
