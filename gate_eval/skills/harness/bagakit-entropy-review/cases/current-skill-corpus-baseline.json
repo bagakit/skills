@@ -1,0 +1,1402 @@
+{
+  "schema": "bagakit.entropy-review-skill-corpus-baseline/v1",
+  "snapshot": {
+    "as_of": "2026-08-25",
+    "git_head": "5851877ce1cd122f48b22a6cd5b40927272897dc",
+    "worktree_mode": "current_uncommitted_snapshot",
+    "corpus_count": 31,
+    "package_file_count": 512,
+    "corpus_manifest_sha256": "a26081732ab5f467199be0a8f3804de6bc5de232d0ab133faf1e3075a4af75bd",
+    "assessment_use": "diagnostic",
+    "evidence_coverage": "default-route",
+    "calibration_status": "uncalibrated",
+    "agreement_status": "overlap_and_e3_risk_reviews_observed",
+    "score_semantics": "attention_band is ordinal review priority, not quality, correctness, usefulness, maturity, or capability"
+  },
+  "method": {
+    "profile_dimensions": [
+      "meaning",
+      "structure",
+      "choice",
+      "coupling",
+      "proof"
+    ],
+    "bands": [
+      "E0",
+      "E1",
+      "E2",
+      "E3"
+    ],
+    "non_compensatory_gates": [
+      "G0",
+      "G1",
+      "G2"
+    ],
+    "official_records": "one independent reviewer per batch; overlap records do not replace official records without bounded adjudication",
+    "overlap_policy": "all six predeclared overlap items were calibrated; official records retained",
+    "e3_policy": "every initial E3 received independent risk-triggered review; supervisor was adjusted from E3 to E2",
+    "comparison_limit": "within-band ranking and family averages are forbidden"
+  },
+  "records": [
+    {
+      "skill": "bagakit-agent-messaging",
+      "family": "a2a",
+      "evidence_coverage": "default-route",
+      "profile": {
+        "meaning": "E0",
+        "structure": "E1",
+        "choice": "E1",
+        "coupling": "E1",
+        "proof": "E0"
+      },
+      "attention_band": "E1",
+      "gates": {
+        "G0": "pass",
+        "G1": "pass",
+        "G2": "n/a"
+      },
+      "support": "robust",
+      "disposition": "retain",
+      "preserve": "保留 prompt-like A2A 的可见 envelope、一次性 derived-Agent Set、短引用的非认证边界、事件驱动 Worker report，以及 Host 不提供原子校验时的 fail-stop shape validator。",
+      "smallest_safe_action": "无需改动；保持 wrapper 与 validator 的现有条件触发，并继续避免 startup acknowledgement、全员 roster、定时状态聊天或对 sender/authority/effect 的虚假证明。",
+      "evidence_refs": [
+        "skills/a2a/bagakit-agent-messaging/SKILL.md:16",
+        "skills/a2a/bagakit-agent-messaging/SKILL.md:27",
+        "skills/a2a/bagakit-agent-messaging/SKILL.md:40",
+        "skills/a2a/bagakit-agent-messaging/SKILL.md:58",
+        "skills/a2a/bagakit-agent-messaging/SKILL.md:87",
+        "skills/a2a/bagakit-agent-messaging/SKILL.md:91",
+        "skills/a2a/bagakit-agent-messaging/SKILL.md:118",
+        "skills/a2a/bagakit-agent-messaging/references/usage-guide.md:117",
+        "skills/a2a/bagakit-agent-messaging/scripts/agent_message_check.py:64"
+      ],
+      "commentary": "Frame: 评估 caller/Agent 完成一次具体 A2A exchange 的 L1 协议；保护可见 sender recognition、来源引用、清楚的 action、Host authority 边界和 malformed actuation 的 fail-stop。wrapper/native channel、message profile 和 citation source 的选择都改变真实协议状态，因此属于必要或局部 E1 choice。SKILL 与 use guide 有少量重复，但总路径短；Set 仅在派生、重大分工变化或恢复时重发，并明确禁止确认仪式和状态闲聊。validator 只在 Host 没有 atomic validated send 时使用，且明确不声称认证、交付或效果，所以 proof 为 E0。G2 不适用于 advisory diagnostic。",
+      "agreement": "n/a",
+      "calibration_status": "uncalibrated",
+      "source_batch": "audit-05"
+    },
+    {
+      "skill": "bagakit-agent-post",
+      "family": "a2a",
+      "evidence_coverage": "default-route",
+      "profile": {
+        "meaning": "E0",
+        "structure": "E1",
+        "choice": "E1",
+        "coupling": "E1",
+        "proof": "E0"
+      },
+      "attention_band": "E1",
+      "gates": {
+        "G0": "pass",
+        "G1": "pass",
+        "G2": "n/a"
+      },
+      "support": "robust",
+      "disposition": "retain",
+      "preserve": "保留 user principal 的一次性引导、token-gated root/derived identity、active display-name 唯一性、ordered fail-stop admission、sender relation、ancestor-only agent-set-v1 flow，以及 deduplication、consumption 与 cascade revoke receipts。",
+      "smallest_safe_action": "无需改动；继续让 Host 决定首次 register 的 bootstrap 权限与进程隔离，并保持 pipe 不声称认证人类、授予消息 authority 或证明现实效果。",
+      "evidence_refs": [
+        "docs/specs/agent-post-contract.md:55",
+        "docs/specs/agent-post-contract.md:87",
+        "docs/specs/agent-post-contract.md:144",
+        "docs/specs/agent-post-contract.md:155",
+        "skills/a2a/bagakit-agent-post/SKILL.md:51",
+        "skills/a2a/bagakit-agent-post/SKILL.md:81",
+        "skills/a2a/bagakit-agent-post/SKILL.md:102",
+        "skills/a2a/bagakit-agent-post/scripts/agent_post.py:290",
+        "skills/a2a/bagakit-agent-post/scripts/agent_post.py:365"
+      ],
+      "commentary": "Frame: 评估一个 Host-local identity registry 与 mail pipe 完成一次可归因 A2A delivery；保护 user/ancestor grant authority、display-name binding、ordered fail-stop admission、sender relation、receipt integrity 与 envelope unchanged。新增 user bootstrap、self-send rejection 和 Set-flow admission 都改变真实安全边界，但路径仍是一个连贯的 registry-to-mail route，因此结构与 choice 仅为局部 E1。Host 仍拥有 bootstrap、authentication、scheduling 与 effect，运行时不声称 malice resistance；当前直接 CLI 与 isolated gate 为 E0 proof。G2 不适用于 advisory corpus diagnostic。",
+      "agreement": "n/a",
+      "calibration_status": "uncalibrated",
+      "source_batch": "audit-07"
+    },
+    {
+      "skill": "bagakit-user-communication",
+      "family": "a2u",
+      "evidence_coverage": "default-route",
+      "profile": {
+        "meaning": "E0",
+        "structure": "E1",
+        "choice": "E1",
+        "coupling": "E0",
+        "proof": "E0"
+      },
+      "attention_band": "E1",
+      "gates": {
+        "G0": "pass",
+        "G1": "pass",
+        "G2": "pass"
+      },
+      "support": "robust",
+      "disposition": "retain",
+      "preserve": "Preserve the four-question admission model, the activity/progress/readiness/completion distinction, and the caller-versus-Host ownership split.",
+      "smallest_safe_action": "none",
+      "evidence_refs": [
+        "skills/a2u/bagakit-user-communication/SKILL.md",
+        "skills/a2u/bagakit-user-communication/agents/openai.yaml",
+        "skills/a2u/bagakit-user-communication/references/frontdoor-rule.toml",
+        "skills/a2u/bagakit-user-communication/references/user-communication-quality-contract.toml",
+        "docs/specs/user-communication-contract.md",
+        "gate_validation/skills/a2u/bagakit-user-communication/validation.toml",
+        "AGENTS.md"
+      ],
+      "commentary": "Frame: one Agent deciding whether and how to orient a human user; required outcomes are timely truthful updates and continuity, while transport authority and lifecycle truth remain protected. The default path is self-contained: four admission questions resolve distinct states, and the only direct gate is an explicitly limited structural check. The package intentionally has no runtime CLI or eval registration; absence is not treated as entropy or a quality judgment. No E2/E3 reduction is supported in the inspected window. This is diagnostic only, so G2 passes without creating a release or quality gate.",
+      "agreement": "mixed",
+      "calibration_status": "uncalibrated",
+      "source_batch": "audit-01"
+    },
+    {
+      "skill": "bagakit-codex-webpage-design",
+      "family": "design",
+      "evidence_coverage": "default-route",
+      "profile": {
+        "meaning": "E2",
+        "structure": "E3",
+        "choice": "E2",
+        "coupling": "E3",
+        "proof": "E3"
+      },
+      "attention_band": "E3",
+      "gates": {
+        "G0": "pass",
+        "G1": "pass",
+        "G2": "pass"
+      },
+      "support": "robust",
+      "disposition": "mixed",
+      "preserve": "Preserve reference provenance, stronger-reference preference, Image2 fallback and blocker semantics, host-stack reuse, design-token extraction, desktop/mobile browser evidence, interaction correctness, accessibility, and user-visible visual acceptance.",
+      "smallest_safe_action": "Collapse the common high-craft route into one pre-implementation design packet and one browser acceptance packet, retaining separate conditional evidence only for genuinely distinct risks such as asset provenance, spatial interaction, mobile state, accessibility, or independent review; make workflow-contract.toml the artifact-requirement owner.",
+      "evidence_refs": [
+        "skills/design/bagakit-codex-webpage-design/SKILL.md:28",
+        "skills/design/bagakit-codex-webpage-design/SKILL.md:53",
+        "skills/design/bagakit-codex-webpage-design/SKILL.md:207",
+        "skills/design/bagakit-codex-webpage-design/references/workflow-contract.toml:24",
+        "skills/design/bagakit-codex-webpage-design/references/workflow-contract.toml:246",
+        "skills/design/bagakit-codex-webpage-design/references/artifact-contract.md:500",
+        "skills/design/bagakit-codex-webpage-design/references/artifact-contract.md:532",
+        "skills/design/bagakit-codex-webpage-design/references/implementation-loop.md:600",
+        "gate_validation/skills/design/bagakit-codex-webpage-design/validation.toml:48"
+      ],
+      "commentary": "The skill protects real high-stakes endpoint failures, but the common high-craft route materializes many separate pre-code ledgers and then requires correlated completion documents for browser checks, affordances, behavior, bugs, full-page parity, micro parity, visual parity, judge scoring, aggregation, code review, and handoff. Much of this evidence can live in two coherent packets without losing the distinct source or failure. Requirement truth is repeated across SKILL.md, workflow-contract.toml, artifact-contract.md, implementation-loop.md, and the rubric; drift is already visible because reference-coverage-matrix and mvp-experiment-plan are blocking in artifact-contract.md but are not declared as corresponding stage/completion artifacts in the structured inventory. Counts only located suspicion; E3 follows from mandatory workflow fragmentation, correlated proof burden, and multi-owner synchronization on the actor's main route, not from artifact count alone.",
+      "agreement": "mixed",
+      "calibration_status": "uncalibrated",
+      "source_batch": "audit-06"
+    },
+    {
+      "skill": "bagakit-design-core",
+      "family": "design",
+      "evidence_coverage": "default-route",
+      "profile": {
+        "meaning": "E1",
+        "structure": "E3",
+        "choice": "E2",
+        "coupling": "E2",
+        "proof": "E3"
+      },
+      "attention_band": "E3",
+      "gates": {
+        "G0": "pass",
+        "G1": "pass",
+        "G2": "pass"
+      },
+      "support": "robust",
+      "disposition": "reduce",
+      "preserve": "Preserve evidence-before-taste, target-register selection, conditional product modeling, the structured design packet as task SSOT, and all three checkpoints for genuinely end-to-end design programs.",
+      "smallest_safe_action": "Add route-conditioned completion to the structured contract: a draft-only, plan-only, or result-only review should require its active checkpoint and available upstream evidence, while the full three-checkpoint chain remains mandatory only for an end-to-end design program.",
+      "evidence_refs": [
+        "skills/design/bagakit-design-core/SKILL.md",
+        "skills/design/bagakit-design-core/references/artifact-contract.md",
+        "skills/design/bagakit-design-core/references/design-core-contract.toml",
+        "skills/design/bagakit-design-core/references/brand-tonality.md",
+        "skills/design/bagakit-design-core/references/design-rule-system.md",
+        "skills/design/bagakit-design-core/references/frontdoor-rule.toml",
+        "skills/design/bagakit-design-core/references/skill-cli.toml",
+        "gate_validation/skills/design/bagakit-design-core/validation.toml",
+        "gate_eval/skills/design/bagakit-design-core/validation.toml"
+      ],
+      "commentary": "Frame: a design Agent may extract tonality, produce a packet, or review one draft, plan, or final result; protected obligations are evidence provenance, accessibility, implementation-owner boundaries, and review truth. The public trigger permits any one checkpoint, but the artifact contract makes ten files required and the structured contract blocks completion on design-read, target register, source evidence, rule coverage, packet, draft review, plan review, result review, and handoff. A final-result review can therefore be forced to manufacture missing earlier proof that cannot change the current decision. The layout gate also couples the runtime package to maintainer memory files outside the install unit. The recommended conditional route preserves requisite variety and the full-program assurance case, so G1 passes. Script internals were not needed for this contract-level finding.",
+      "agreement": "aligned",
+      "calibration_status": "uncalibrated",
+      "source_batch": "audit-01"
+    },
+    {
+      "skill": "bagakit-hitl-webutil-design",
+      "family": "design",
+      "evidence_coverage": "default-route",
+      "profile": {
+        "meaning": "E1",
+        "structure": "E3",
+        "choice": "E2",
+        "coupling": "E2",
+        "proof": "E2"
+      },
+      "attention_band": "E3",
+      "gates": {
+        "G0": "pass",
+        "G1": "pass",
+        "G2": "n/a"
+      },
+      "support": "medium",
+      "disposition": "mixed",
+      "preserve": "Preserve built-page delivery, desktop and mobile endpoint evidence, stable continuation identity, human-judgment reveal policy, and the boundary that page completion cannot imply mastery.",
+      "smallest_safe_action": "Make one crosswalk-selected design packet the sole default pre-handoff artifact, deriving operator, scene, mechanism, style, artifact, component, and hardening selections inside it while leaving judgment, adaptive-continuity, and browser-proof contracts conditional and intact.",
+      "evidence_refs": [
+        "skills/design/bagakit-hitl-webutil-design/SKILL.md:16",
+        "skills/design/bagakit-hitl-webutil-design/SKILL.md:65",
+        "skills/design/bagakit-hitl-webutil-design/SKILL.md:106",
+        "skills/design/bagakit-hitl-webutil-design/references/workflow-contract.toml:6",
+        "skills/design/bagakit-hitl-webutil-design/references/workflow-contract.toml:63",
+        "skills/design/bagakit-hitl-webutil-design/references/workflow-contract.toml:269"
+      ],
+      "commentary": "The trigger and ownership split are recoverable, and the route variety protects genuinely different HITL scenes. The default path nevertheless requires a crosswalk, a large workflow contract, category indexes, multiple selection decisions, and eight separately blocking stage artifacts before implementation; that recurring pre-handoff scaffold can dominate a simple matched-template page. Support is medium because the contract is direct structural evidence but no live page run was observed. Route-specific implementation references beyond the selected default path were not treated as capability evidence.",
+      "agreement": "mixed",
+      "calibration_status": "uncalibrated",
+      "source_batch": "audit-03"
+    },
+    {
+      "skill": "topdown-image2-sprite-pipeline",
+      "family": "gamemaker",
+      "evidence_coverage": "default-route",
+      "profile": {
+        "meaning": "E2",
+        "structure": "E3",
+        "choice": "E2",
+        "coupling": "E2",
+        "proof": "E1"
+      },
+      "attention_band": "E3",
+      "gates": {
+        "G0": "pass",
+        "G1": "pass",
+        "G2": "n/a"
+      },
+      "support": "robust",
+      "disposition": "reduce",
+      "preserve": "保留 image2 对角色像素的来源所有权、隔离工作区、可恢复 provenance、source-layout/technical/motion/visual 四类独立证据，以及集成前的人类视觉处置。",
+      "smallest_safe_action": "把 Round 5-15 的实验沉淀、冻结模型/guide/workflow/committee 协议迁到一个版本化 experiment reference 和机器可读 manifest；默认 SKILL 只留下通用 sprite 路径、一张进入 structural-control 的触发表，以及指向该实验路由的一跳链接。",
+      "evidence_refs": [
+        "skills/gamemaker/topdown-image2-sprite-pipeline/SKILL.md:8",
+        "skills/gamemaker/topdown-image2-sprite-pipeline/SKILL.md:12",
+        "skills/gamemaker/topdown-image2-sprite-pipeline/SKILL.md:26",
+        "skills/gamemaker/topdown-image2-sprite-pipeline/SKILL.md:38",
+        "skills/gamemaker/topdown-image2-sprite-pipeline/SKILL.md:96",
+        "skills/gamemaker/topdown-image2-sprite-pipeline/SKILL.md:142",
+        "skills/gamemaker/topdown-image2-sprite-pipeline/SKILL.md:207",
+        "skills/gamemaker/topdown-image2-sprite-pipeline/SKILL.md:266",
+        "skills/gamemaker/topdown-image2-sprite-pipeline/SKILL.md:299",
+        "skills/gamemaker/topdown-image2-sprite-pipeline/SKILL.md:314",
+        "skills/gamemaker/topdown-image2-sprite-pipeline/SKILL.md:341",
+        "skills/gamemaker/topdown-image2-sprite-pipeline/references/skill-cli.toml:27",
+        "gate_validation/skills/gamemaker/topdown-image2-sprite-pipeline/validation.toml:3",
+        "gate_eval/skills/gamemaker/topdown-image2-sprite-pipeline/validation.toml:3"
+      ],
+      "commentary": "Frame: primary actor is a game-asset operator producing a prototype-usable top-down raster package; protected obligations include genuine image-source provenance, runtime-layer separation, frame/layout correctness, visual semantics, reviewer independence, and approval before irreversible downloads or integration. The dominant avoidable burden is not check count: source layout, technical package checks, motion analysis, provenance, and visual review cover different failure classes and should remain. The default loaded path instead interleaves a general pipeline with fourteen rounds of research history and a highly specific Round 15 preregistration, copying exact model identities, guide routes, strengths, receipt fields, blind-review arms, and acceptance rules into prose that must stay synchronized with scripts and manifests. This makes the current generic action and the experimental continuation route costly to recover. Support is robust from direct source and gate declarations; scripts, reference bodies, generated images, and live reviewer outcomes were not re-executed.",
+      "agreement": "aligned",
+      "calibration_status": "uncalibrated",
+      "source_batch": "audit-04"
+    },
+    {
+      "skill": "bagakit-brainstorm",
+      "family": "harness",
+      "evidence_coverage": "default-route",
+      "profile": {
+        "meaning": "E2",
+        "structure": "E3",
+        "choice": "E3",
+        "coupling": "E3",
+        "proof": "E3"
+      },
+      "attention_band": "E3",
+      "gates": {
+        "G0": "pass",
+        "G1": "pass",
+        "G2": "n/a"
+      },
+      "support": "robust",
+      "disposition": "reduce",
+      "preserve": "保留原始讨论与派生结论分层、真正不同的方案、重大争议的收敛、执行真值导出前的用户批准，以及可追溯的交接目的地。",
+      "smallest_safe_action": "把 expert forum 及其逐专家检索、交叉评分和逐轮原始记录改成由高风险、实质争议或显式用户要求触发的路线；默认路线只保留聚焦 intake、不同方案与一个决策交接包，实际导出或执行前仍要求批准。",
+      "evidence_refs": [
+        "skills/harness/bagakit-brainstorm/SKILL.md:131",
+        "skills/harness/bagakit-brainstorm/SKILL.md:140",
+        "skills/harness/bagakit-brainstorm/SKILL.md:152",
+        "skills/harness/bagakit-brainstorm/SKILL.md:324",
+        "skills/harness/bagakit-brainstorm/references/decision-quality-contract.toml:22",
+        "skills/harness/bagakit-brainstorm/references/tpl/expert_forum.md:61",
+        "skills/harness/bagakit-brainstorm/references/tpl/raw_discussion_log.md:13",
+        "skills/harness/bagakit-brainstorm/scripts/bagakit-brainstorm.py:690",
+        "skills/harness/bagakit-brainstorm/scripts/bagakit-brainstorm.py:1026",
+        "skills/harness/bagakit-brainstorm/scripts/bagakit-brainstorm.py:1712"
+      ],
+      "commentary": "Frame: 评估 installable skill 的默认 Markdown-to-decision/handoff 路线；主 actor 是执行一次普通 brainstorm 的 Agent。必要性底线包括来源忠实、不同方案、重大争议收敛、批准与交接追踪。当前默认完成路径却强制四阶段、raw log、expert forum、archive 和批准；脚本进一步硬要求至少三位专家、逐专家 URL/日期/authority、交叉评分，以及每个 QA bundle 的大量同步字段。decision-quality contract 又把 distinct-expert-stances 限定为 expert-forum route，说明轻量路线在语义上被承认却没有默认完成通道。这里的 E3 是系统性任务/同步/证明负担，不是对 brainstorm 能力或产出质量的判断。G2 不适用，因为本批次只作 advisory diagnostic，不作 release gate 或同档排序。",
+      "agreement": "aligned",
+      "calibration_status": "uncalibrated",
+      "source_batch": "audit-05"
+    },
+    {
+      "skill": "bagakit-consensus-ledger",
+      "family": "harness",
+      "evidence_coverage": "default-route",
+      "profile": {
+        "meaning": "E0",
+        "structure": "E0",
+        "choice": "E1",
+        "coupling": "E0",
+        "proof": "E0"
+      },
+      "attention_band": "E1",
+      "gates": {
+        "G0": "pass",
+        "G1": "pass",
+        "G2": "n/a"
+      },
+      "support": "robust",
+      "disposition": "retain",
+      "preserve": "保留 epistemic class 与 lifecycle status 分离、owner-run 优先嵌入、tool-neutral evidence requirements、compact user excerpt，以及只推广 accepted snapshot 而非整个工作账本。",
+      "smallest_safe_action": "none；保持当前渐进披露，只有在真实使用反复误判 owner placement 时再补一个 placement example，当前不应增加新路由或校验。",
+      "evidence_refs": [
+        "skills/harness/bagakit-consensus-ledger/SKILL.md:11",
+        "skills/harness/bagakit-consensus-ledger/SKILL.md:15",
+        "skills/harness/bagakit-consensus-ledger/SKILL.md:32",
+        "skills/harness/bagakit-consensus-ledger/SKILL.md:47",
+        "skills/harness/bagakit-consensus-ledger/SKILL.md:57",
+        "skills/harness/bagakit-consensus-ledger/references/frontdoor-rule.toml:3",
+        "skills/harness/bagakit-consensus-ledger/references/frontdoor-rule.toml:6",
+        "skills/harness/bagakit-consensus-ledger/references/skill-cli.toml:8",
+        "gate_validation/skills/harness/bagakit-consensus-ledger/validation.toml:3",
+        "gate_validation/skills/harness/bagakit-consensus-ledger/validation.toml:45"
+      ],
+      "commentary": "Frame: primary actor is a peer workflow that needs recoverable shared understanding; required result is a task-local ledger and handoff snapshot, with epistemic honesty, owner authority, provenance, and promotion boundaries protected. The default path is compact, sends field detail to one conditional protocol, and cleanly separates what evidence is needed from who produces it. The only contained choice is embedded owner placement versus standalone fallback, and both the trigger and exact paths are explicit across SKILL/frontdoor/CLI. Layout proof and lifecycle smoke prove different things; no extra eval stack is present. Support is robust from the complete default route, but no live Spark/Grill adoption trace was inspected. The shorter counterfactual would lose the epistemic/status distinction or owner placement, so retain.",
+      "agreement": "n/a",
+      "calibration_status": "uncalibrated",
+      "source_batch": "audit-04"
+    },
+    {
+      "skill": "bagakit-entropy-review",
+      "family": "harness",
+      "evidence_coverage": "default-route",
+      "profile": {
+        "meaning": "E0",
+        "structure": "E1",
+        "choice": "E0",
+        "coupling": "E1",
+        "proof": "E1"
+      },
+      "attention_band": "E1",
+      "gates": {
+        "G0": "pass",
+        "G1": "pass",
+        "G2": "pass"
+      },
+      "support": "medium",
+      "disposition": "retain",
+      "preserve": "Preserve the purpose-conditioned frame, necessity floor, five non-aggregated dimensions, three non-compensatory gates, check-to-evidence-to-decision classification, smallest-counterfactual rule, support/agreement/calibration separation, and exactly-one-pass self-review stop.",
+      "smallest_safe_action": "None on current evidence; keep artifact-specific lenses conditional and stop after this single self-review pass rather than adding another self-certification layer.",
+      "evidence_refs": [
+        "skills/harness/bagakit-entropy-review/SKILL.md:14",
+        "skills/harness/bagakit-entropy-review/SKILL.md:39",
+        "skills/harness/bagakit-entropy-review/SKILL.md:91",
+        "skills/harness/bagakit-entropy-review/SKILL.md:118",
+        "skills/harness/bagakit-entropy-review/SKILL.md:137",
+        "skills/harness/bagakit-entropy-review/SKILL.md:176",
+        "skills/harness/bagakit-entropy-review/references/review-contract.json:1",
+        "gate_validation/skills/harness/bagakit-entropy-review/validation.toml:55",
+        "gate_eval/skills/harness/bagakit-entropy-review/suite.ts:43"
+      ],
+      "commentary": "This is exactly one self-pass. The mandatory route members map to distinct decisions or protected failures: frame controls validity and authority, necessity floor protects required complexity, profile localizes burden, gates prevent compensation, counterfactual selection chooses the smallest safe action, and the stop rule prevents recursive review. The skill/JSON/spec representations serve agent, machine, and repository-authority consumers; their synchronization is contained E1 coupling, not yet a material duplicate. The protected shorter-skill countercase is independent endpoint proof: deleting the necessity floor or G1 could label component and user-visible acceptance checks as duplicate ceremony even when they catch different failures. No second pass, certification, agreement claim, or calibration upgrade is justified.",
+      "agreement": "disputed",
+      "calibration_status": "uncalibrated",
+      "source_batch": "audit-06"
+    },
+    {
+      "skill": "bagakit-feature-tracker",
+      "family": "harness",
+      "evidence_coverage": "default-route",
+      "profile": {
+        "meaning": "E0",
+        "structure": "E1",
+        "choice": "E1",
+        "coupling": "E1",
+        "proof": "E2"
+      },
+      "attention_band": "E2",
+      "gates": {
+        "G0": "pass",
+        "G1": "pass",
+        "G2": "pass"
+      },
+      "support": "robust",
+      "disposition": "reduce",
+      "preserve": "Preserve the small JSON source of truth, reviewed-plan authority, explicit workspace and Task transitions, receipt freshness, concurrency serialization, guarded repair, lossless closeout, and their distinct state-machine proofs.",
+      "smallest_safe_action": "Narrow the blocking layout suite to the installable skill boundary and its registration: stop requiring eval result-directory scaffolding and every individual validation implementation file as runtime-layout evidence; let their owning suite registrations prove test availability and behavior.",
+      "evidence_refs": [
+        "skills/harness/bagakit-feature-tracker/SKILL.md",
+        "skills/harness/bagakit-feature-tracker/references/frontdoor-rule.toml",
+        "skills/harness/bagakit-feature-tracker/references/skill-cli.toml",
+        "gate_validation/skills/harness/bagakit-feature-tracker/validation.toml",
+        "gate_eval/skills/harness/bagakit-feature-tracker/validation.toml",
+        "gate_eval/skills/harness/bagakit-feature-tracker/suite.ts"
+      ],
+      "commentary": "Frame: an Owner or Supervisor maintaining durable Feature identity from reviewed plan through workspace, Task evidence, and archive/discard; protected obligations include authority, recovery, worktree safety, atomic state, and receipt binding. The golden path and low-frequency separation keep actor choice contained, and the many runtime suites describe materially different corruption, concurrency, Goal, repair, and closeout failures, so their count is not an entropy score. The material proof finding is narrower: the structural layout gate treats maintainer-only eval result folders and the full list of test scripts as required runtime-layout evidence. That release-blocking oracle can be smaller without weakening any public state-machine proof. G2 passes only for advisory optimization.",
+      "agreement": "n/a",
+      "calibration_status": "uncalibrated",
+      "source_batch": "audit-02"
+    },
+    {
+      "skill": "bagakit-flow-runner",
+      "family": "harness",
+      "evidence_coverage": "default-route",
+      "profile": {
+        "meaning": "E0",
+        "structure": "E1",
+        "choice": "E1",
+        "coupling": "E1",
+        "proof": "E1"
+      },
+      "attention_band": "E1",
+      "gates": {
+        "G0": "pass",
+        "G1": "pass",
+        "G2": "pass"
+      },
+      "support": "robust",
+      "disposition": "retain",
+      "preserve": "Preserve the runner-local versus tracker-owned truth split, fail-closed activation, next-action and resume projections, mutation receipts, checkpoint receipts, and explicit archive authority.",
+      "smallest_safe_action": "none",
+      "evidence_refs": [
+        "skills/harness/bagakit-flow-runner/SKILL.md",
+        "skills/harness/bagakit-flow-runner/references/frontdoor-rule.toml",
+        "skills/harness/bagakit-flow-runner/references/skill-cli.toml",
+        "skills/harness/bagakit-flow-runner/references/tpl/loop-recipe-template.json",
+        "skills/harness/bagakit-flow-runner/references/tpl/runner-policy-template.json",
+        "docs/specs/flow-runner-contract.md",
+        "gate_validation/skills/harness/bagakit-flow-runner/validation.toml",
+        "gate_eval/skills/harness/bagakit-flow-runner/validation.toml"
+      ],
+      "commentary": "Frame: a host runs one bounded execution session over normalized work-item truth; protected obligations are source authority, recovery, snapshot safety, durable mutation evidence, and closeout ownership. The command and state surfaces are numerous, but the inspected contract maps them to distinct lifecycle, incident, projection, recovery, or authority states. The default structural, wording-contract, smoke, and regression suites protect different propositions; the non-gating eval covers next-action usefulness. Some local navigation friction remains, but no concrete smaller form was found that preserves the same recovery and authority semantics. Counts were used only to locate questions, not to choose the band.",
+      "agreement": "n/a",
+      "calibration_status": "uncalibrated",
+      "source_batch": "audit-01"
+    },
+    {
+      "skill": "bagakit-grill",
+      "family": "harness",
+      "evidence_coverage": "default-route",
+      "profile": {
+        "meaning": "E2",
+        "structure": "E1",
+        "choice": "E1",
+        "coupling": "E2",
+        "proof": "E1"
+      },
+      "attention_band": "E2",
+      "gates": {
+        "G0": "pass",
+        "G1": "pass",
+        "G2": "n/a"
+      },
+      "support": "robust",
+      "disposition": "reduce",
+      "preserve": "Preserve evidence-route classification, one decision-bearing user question at a time, visible alternative or premise correction, protected-goal continuity, and explicit user authority at convergence.",
+      "smallest_safe_action": "Make the embedded consensus ledger opt-in when recoverable shared-understanding state is actually required; keep grill-run.json and its generated brief as the default route, and retain ledger synchronization unchanged once that option is activated.",
+      "evidence_refs": [
+        "skills/harness/bagakit-grill/SKILL.md:20",
+        "skills/harness/bagakit-grill/SKILL.md:25",
+        "skills/harness/bagakit-grill/SKILL.md:28",
+        "skills/harness/bagakit-grill/SKILL.md:61",
+        "skills/harness/bagakit-grill/references/grill-run-contract.md:3",
+        "skills/harness/bagakit-grill/references/grill-run-contract.md:27",
+        "skills/harness/bagakit-grill/references/grill-run-contract.md:33",
+        "skills/harness/bagakit-grill/references/grill-run-contract.md:151"
+      ],
+      "commentary": "The skill says the consensus ledger is for recoverable shared understanding, but init creates it by default and requires every planned question, evidence requirement, answer, and evidence attachment to synchronize between the authoritative Grill run and the ledger. That is a direct, recurring change-propagation path with a visible smaller default. The five resolution routes and option-surface rule are requisite variety rather than route overload. Support is robust because both the entrypoint and run contract state the overlap and default behavior explicitly.",
+      "agreement": "n/a",
+      "calibration_status": "uncalibrated",
+      "source_batch": "audit-03"
+    },
+    {
+      "skill": "bagakit-living-knowledge",
+      "family": "harness",
+      "evidence_coverage": "default-route",
+      "profile": {
+        "meaning": "E1",
+        "structure": "E2",
+        "choice": "E1",
+        "coupling": "E1",
+        "proof": "E2"
+      },
+      "attention_band": "E2",
+      "gates": {
+        "G0": "pass",
+        "G1": "pass",
+        "G2": "pass"
+      },
+      "support": "robust",
+      "disposition": "reduce",
+      "preserve": "Preserve the researcher/selector/evolver ownership split, repo-relative and low-leakage publication rules, managed bootstrap, progressive system pages, and runtime smoke coverage for apply, recall, ingest, and doctor.",
+      "smallest_safe_action": "Retire the migration-specific retired-filename blacklist from the default layout suite, while keeping generic install-boundary exclusions and the public runtime smoke and structured substrate-alignment checks.",
+      "evidence_refs": [
+        "skills/harness/bagakit-living-knowledge/SKILL.md",
+        "skills/harness/bagakit-living-knowledge/references/substrate-contract.toml",
+        "skills/harness/bagakit-living-knowledge/references/frontdoor-rule.toml",
+        "skills/harness/bagakit-living-knowledge/references/skill-cli.toml",
+        "docs/specs/living-knowledge-system.md",
+        "gate_validation/skills/harness/bagakit-living-knowledge/validation.toml",
+        "gate_eval/skills/harness/bagakit-living-knowledge/validation.toml",
+        "AGENTS.md"
+      ],
+      "commentary": "Frame: a repository operator scaffolds, recalls, and publishes shared checked-in knowledge; protected obligations are authority, path safety, privacy leakage prevention, and peer-runtime separation. Current boundaries are clear, but successor history, removed mechanisms, peer ownership, and hygiene examples recur across the always-loaded skill and the stable spec, creating material navigation cost. More concretely, the release-default layout gate preserves a long list of exact retired legacy filenames in addition to current install-boundary checks; those names prove migration shape rather than public behavior and make obsolete history a continuing proof obligation. Removing only those exact legacy negatives leaves generic leakage boundaries, runtime smoke, and structured alignment intact, so G1 passes. No deeper script inspection was required.",
+      "agreement": "n/a",
+      "calibration_status": "uncalibrated",
+      "source_batch": "audit-01"
+    },
+    {
+      "skill": "bagakit-project-chronicle",
+      "family": "harness",
+      "evidence_coverage": "default-route",
+      "profile": {
+        "meaning": "E0",
+        "structure": "E1",
+        "choice": "E1",
+        "coupling": "E1",
+        "proof": "E1"
+      },
+      "attention_band": "E1",
+      "gates": {
+        "G0": "pass",
+        "G1": "pass",
+        "G2": "pass"
+      },
+      "support": "medium",
+      "disposition": "retain",
+      "preserve": "Preserve the bounded adapter-relative census, one source-bound card per included session, evidence-backed generation lineage, functional cast mapping, readable chronicle plus separate evolution ledger, contradiction/privacy handling, and explicit non-promotion boundary.",
+      "smallest_safe_action": "No reduction is supported in the inspected default route; keep source-adapter and editorial detail conditional and do not split the coherent census-card-lineage-review chain further.",
+      "evidence_refs": [
+        "skills/harness/bagakit-project-chronicle/SKILL.md:8",
+        "skills/harness/bagakit-project-chronicle/SKILL.md:23",
+        "skills/harness/bagakit-project-chronicle/SKILL.md:62",
+        "skills/harness/bagakit-project-chronicle/SKILL.md:176",
+        "skills/harness/bagakit-project-chronicle/references/output-contract.md:12",
+        "skills/harness/bagakit-project-chronicle/references/output-contract.md:37",
+        "skills/harness/bagakit-project-chronicle/references/output-contract.md:69",
+        "skills/harness/bagakit-project-chronicle/references/output-contract.md:105",
+        "gate_validation/skills/harness/bagakit-project-chronicle/validation.toml:66"
+      ],
+      "commentary": "The artifact set creates contained navigation and synchronization work, but each main member protects a distinct failure: census bounds completeness, cards preserve source parentage, lineage represents capability change, cast audits literary roles, the chronicle serves readers, the ledger serves harness reuse, and review carries acceptance. The dual output is not duplicate truth because the contract explicitly permits different detail and tone while requiring material consistency. Final structured validation and editorial gates also make distinct claims and explicitly disclaim literary excellence or global session completeness. No live chronicle trace or reader outcome was inspected, so this is a default-route entropy diagnosis rather than a quality certification.",
+      "agreement": "n/a",
+      "calibration_status": "uncalibrated",
+      "source_batch": "audit-06"
+    },
+    {
+      "skill": "bagakit-researcher",
+      "family": "harness",
+      "evidence_coverage": "default-route",
+      "profile": {
+        "meaning": "E1",
+        "structure": "E2",
+        "choice": "E1",
+        "coupling": "E2",
+        "proof": "E1"
+      },
+      "attention_band": "E2",
+      "gates": {
+        "G0": "pass",
+        "G1": "pass",
+        "G2": "n/a"
+      },
+      "support": "robust",
+      "disposition": "mixed",
+      "preserve": "Preserve the charter-to-source-to-claim chain, provider and promotion boundaries, route ladder, conditional wiki maintenance duty, and warning-first quality and drift checks.",
+      "smallest_safe_action": "Move the full numbered command cookbook out of SKILL.md into the existing workspace reference or generated CLI help, leaving only the route ladder, semantic flow, conditional wiki duty, and one discoverable operator entry command on the always-loaded path.",
+      "evidence_refs": [
+        "skills/harness/bagakit-researcher/SKILL.md:42",
+        "skills/harness/bagakit-researcher/SKILL.md:91",
+        "skills/harness/bagakit-researcher/SKILL.md:133",
+        "skills/harness/bagakit-researcher/SKILL.md:205",
+        "skills/harness/bagakit-researcher/SKILL.md:232",
+        "skills/harness/bagakit-researcher/SKILL.md:469"
+      ],
+      "commentary": "The evidence stages are distinct and should not be collapsed merely because there are many artifacts. Material avoidable burden comes from repeating the fourteen-step semantic flow as a fourteen-part flag-level CLI tutorial on the always-loaded path, plus repo-level document assumptions despite the stated standalone posture. The wiki closeout has a meaningful trigger and is not counted as duplicate proof when the wiki was actually read. Direct entrypoint evidence and a concrete move/defer counterfactual make support robust.",
+      "agreement": "aligned",
+      "calibration_status": "uncalibrated",
+      "source_batch": "audit-03"
+    },
+    {
+      "skill": "bagakit-set-loop-goal",
+      "family": "harness",
+      "evidence_coverage": "default-route",
+      "profile": {
+        "meaning": "E0",
+        "structure": "E1",
+        "choice": "E1",
+        "coupling": "E1",
+        "proof": "E2"
+      },
+      "attention_band": "E2",
+      "gates": {
+        "G0": "pass",
+        "G1": "pass",
+        "G2": "pass"
+      },
+      "support": "robust",
+      "disposition": "reduce",
+      "preserve": "Preserve Feature Tracker ownership, terminal/frontier closure semantics, smallest-Feature admission, revision-guarded writes, owner-receipt binding, the fixed host wrapper, authored/bound/activated separation, and the prohibition on a separate Goal runtime.",
+      "smallest_safe_action": "Remove the SKILL.md line-count ceiling from the blocking contract checker without replacing it with another prose-size gate; retain structured surface, command, owner-dependency, convergence, and public-runtime checks.",
+      "evidence_refs": [
+        "skills/harness/bagakit-set-loop-goal/SKILL.md:11",
+        "skills/harness/bagakit-set-loop-goal/SKILL.md:21",
+        "skills/harness/bagakit-set-loop-goal/SKILL.md:57",
+        "skills/harness/bagakit-set-loop-goal/references/convergence-contract.md:42",
+        "skills/harness/bagakit-set-loop-goal/references/goal-file-contract.md:62",
+        "skills/harness/bagakit-set-loop-goal/references/goal-file-contract.md:186",
+        "gate_validation/skills/harness/bagakit-set-loop-goal/validation.toml:54",
+        "gate_validation/skills/harness/bagakit-set-loop-goal/check-set-loop-goal-contract.py:37"
+      ],
+      "commentary": "The user route is compact and its choices represent requisite variety: terminal versus frontier, four compatible closure kinds, revision safety, and host activation protect different states. The material avoidable burden is proof policy, not workflow: a release-blocking checker rejects SKILL.md above 110 lines. That count neither proves activation clarity nor identifies unnecessary burden, and it can block a necessary clarification while admitting concise ambiguity. Existing structured command/surface alignment and runtime smoke already protect owned behavior, so deleting only the size assertion lowers false-positive maintenance burden without weakening a protected outcome.",
+      "agreement": "aligned",
+      "calibration_status": "uncalibrated",
+      "source_batch": "audit-06"
+    },
+    {
+      "skill": "bagakit-skill-evolver",
+      "family": "harness",
+      "evidence_coverage": "default-route",
+      "profile": {
+        "meaning": "E1",
+        "structure": "E2",
+        "choice": "E2",
+        "coupling": "E1",
+        "proof": "E1"
+      },
+      "attention_band": "E2",
+      "gates": {
+        "G0": "pass",
+        "G1": "pass",
+        "G2": "n/a"
+      },
+      "support": "robust",
+      "disposition": "reduce",
+      "preserve": "保留长生命周期主题门槛、topic.json 单一事实源、原子/idempotent mutation、弱 researcher refs、显式 route/acceptance/proof，以及 promotion 与 archive 的 fail-closed 边界。",
+      "smallest_safe_action": "把 intake 命令目录、mutation retry、session-review bridge 和 skill-promotion 细则合并到一个 operator-protocol reference；SKILL 只保留六步常用 steward 路径和异常时的一跳路由，并将 operator 不可用时的直接 JSON 编辑改为显式 handback。",
+      "evidence_refs": [
+        "skills/harness/bagakit-skill-evolver/SKILL.md:11",
+        "skills/harness/bagakit-skill-evolver/SKILL.md:26",
+        "skills/harness/bagakit-skill-evolver/SKILL.md:68",
+        "skills/harness/bagakit-skill-evolver/SKILL.md:83",
+        "skills/harness/bagakit-skill-evolver/SKILL.md:96",
+        "skills/harness/bagakit-skill-evolver/SKILL.md:128",
+        "skills/harness/bagakit-skill-evolver/SKILL.md:143",
+        "skills/harness/bagakit-skill-evolver/SKILL.md:198",
+        "skills/harness/bagakit-skill-evolver/SKILL.md:227",
+        "skills/harness/bagakit-skill-evolver/SKILL.md:237",
+        "skills/harness/bagakit-skill-evolver/SKILL.md:250",
+        "skills/harness/bagakit-skill-evolver/SKILL.md:262",
+        "skills/harness/bagakit-skill-evolver/references/skill-cli.toml:12",
+        "gate_validation/skills/harness/bagakit-skill-evolver/validation.toml:65",
+        "gate_validation/skills/harness/bagakit-skill-evolver/validation.toml:88",
+        "gate_validation/skills/harness/bagakit-skill-evolver/validation.toml:111",
+        "gate_eval/skills/harness/bagakit-skill-evolver/validation.toml:3"
+      ],
+      "commentary": "Frame: primary actor is a repository steward preserving multi-session evolution decisions; required outcomes are durable candidate/decision memory and safe promotion, with authority, canonical state, concurrency, recovery, and landing evidence protected. Trigger and ownership are clear, but the default path explains the same system through memory/decision planes, four layers, a ten-step flow, a command taxonomy, transaction rules, bridge rules, promotion rules, and a manual-edit fallback. The CLI manifest exposes many legitimate state transitions; this review does not infer duplication from their number or recommend deleting runtime commands. The material burden is that conditional operator semantics and a second mutation route are always loaded instead of being reached from the common steward path. Direct layout/state/lifecycle/concurrency/eval checks protect distinct propositions, so proof remains E1. Support is robust for the disclosure and route finding, while command-level behavioral overlap remains uninspected.",
+      "agreement": "n/a",
+      "calibration_status": "uncalibrated",
+      "source_batch": "audit-04"
+    },
+    {
+      "skill": "bagakit-skill-selector",
+      "family": "harness",
+      "evidence_coverage": "default-route",
+      "profile": {
+        "meaning": "E2",
+        "structure": "E3",
+        "choice": "E2",
+        "coupling": "E3",
+        "proof": "E2"
+      },
+      "attention_band": "E3",
+      "gates": {
+        "G0": "pass",
+        "G1": "pass",
+        "G2": "pass"
+      },
+      "support": "robust",
+      "disposition": "mixed",
+      "preserve": "Preserve mandatory preflight for non-trivial Bagakit work, the routine direct-execute minimal receipt, visible/available/selected separation, transaction and replay safety, explicit optional composition, and the no-automatic-Evolver boundary.",
+      "smallest_safe_action": "Make the always-loaded path a minimal preflight-and-close route, move the extended command cookbook, recipe mechanics, telemetry, ranking, and Evolver bridge detail behind conditional references or CLI help, and align the policy contract's allowed outcomes with the task record's typed preflight decisions.",
+      "evidence_refs": [
+        "skills/harness/bagakit-skill-selector/SKILL.md:29",
+        "skills/harness/bagakit-skill-selector/SKILL.md:157",
+        "skills/harness/bagakit-skill-selector/SKILL.md:229",
+        "skills/harness/bagakit-skill-selector/SKILL.md:294",
+        "skills/harness/bagakit-skill-selector/SKILL.md:469",
+        "skills/harness/bagakit-skill-selector/references/policy-contract.toml:17",
+        "skills/harness/bagakit-skill-selector/references/skill-usage-file-spec.md:208",
+        "skills/harness/bagakit-skill-selector/references/skill-cli.toml:12",
+        "gate_validation/skills/harness/bagakit-skill-selector/validation.toml:3"
+      ],
+      "commentary": "For the common task of deciding whether and how to use skills before implementation, the loaded protocol combines policy, positioning, scope, composition, output schema, a large command cookbook, eleven workflow rules, and repository-evolution handoff semantics even though the protected routine route is init/preflight/direct_execute/close. The same policy is synchronized across SKILL.md, several shared specs, policy-contract.toml, a long field spec, templates, recipes, CLI metadata, and seven default blocking suites. There is also a concrete vocabulary discontinuity: policy-contract.toml names use_selected_skill/compose_skills/research_or_discovery_first while the task record and public route use compare_then_execute/compose_then_execute/review_loop. Counts only located these inspection points; the E3 ratings follow from default-path domination and change propagation, not file or line volume. Recipe variety and full episodes remain necessary when comparison, composition, retry, or reusable learning is actually activated.",
+      "agreement": "disputed",
+      "calibration_status": "uncalibrated",
+      "source_batch": "audit-06"
+    },
+    {
+      "skill": "bagakit-spark",
+      "family": "harness",
+      "evidence_coverage": "default-route",
+      "profile": {
+        "meaning": "E2",
+        "structure": "E3",
+        "choice": "E3",
+        "coupling": "E3",
+        "proof": "E3"
+      },
+      "attention_band": "E3",
+      "gates": {
+        "G0": "pass",
+        "G1": "pass",
+        "G2": "n/a"
+      },
+      "support": "robust",
+      "disposition": "reduce",
+      "preserve": "保留决策改变型提问、先判定证据路由、用户目标与接受权、必要时的研究和可恢复共识；这些分别保护讨论质量、事实依据与后续执行授权。",
+      "smallest_safe_action": "把 stress-test、MVP/thought-experiment、quiet-room、独立复评和 skill-evolution 规则移到一个按风险与交付意图触发的高保证参考路由；默认 SKILL 只保留 Frame -> route -> Ask -> Reflect -> Synthesize、停止条件和一跳 peer handoff。",
+      "evidence_refs": [
+        "skills/harness/bagakit-spark/SKILL.md:14",
+        "skills/harness/bagakit-spark/SKILL.md:57",
+        "skills/harness/bagakit-spark/SKILL.md:90",
+        "skills/harness/bagakit-spark/SKILL.md:131",
+        "skills/harness/bagakit-spark/SKILL.md:170",
+        "skills/harness/bagakit-spark/SKILL.md:201",
+        "skills/harness/bagakit-spark/SKILL.md:250",
+        "skills/harness/bagakit-spark/SKILL.md:291",
+        "skills/harness/bagakit-spark/SKILL.md:336",
+        "skills/harness/bagakit-spark/SKILL.md:395",
+        "skills/harness/bagakit-spark/SKILL.md:472",
+        "skills/harness/bagakit-spark/references/skill-cli.toml:8",
+        "gate_validation/skills/harness/bagakit-spark/validation.toml:51",
+        "gate_eval/skills/harness/bagakit-spark/validation.toml:3"
+      ],
+      "commentary": "Frame: primary actor is an Agent running a deep user discussion; required result is a decision-changing, evidence-aware dialogue with user-authorized synthesis, and protected obligations are user goal authority, accepted snapshots, evidence provenance, and recoverable shared understanding. The always-loaded path repeatedly expands the common dialogue into plan stress testing, research sufficiency adjudication, feedback taxonomy, trajectory checks, realization eval, quiet-room execution, satisfaction audits, skill mutation, and a 22-field output surface. Those routes protect consequential cases, but no early stakes selector limits them, so low-risk thinking sessions inherit irrelevant decisions, peer coordination, and independent-proof ceremony. The support is robust because the obligations recur directly across the core loop, integration sections, acceptance rules, and output shape; conditional reference bodies and live dialogue outcomes were not inspected. G2 is not activated because this is an advisory diagnostic, not a release gate or cross-skill ranking.",
+      "agreement": "aligned",
+      "calibration_status": "uncalibrated",
+      "source_batch": "audit-04"
+    },
+    {
+      "skill": "bagakit-supervisor",
+      "family": "harness",
+      "evidence_coverage": "default-route",
+      "profile": {
+        "meaning": "E1",
+        "structure": "E2",
+        "choice": "E1",
+        "coupling": "E1",
+        "proof": "E1"
+      },
+      "attention_band": "E2",
+      "gates": {
+        "G0": "pass",
+        "G1": "pass",
+        "G2": "n/a"
+      },
+      "support": "medium",
+      "disposition": "reduce",
+      "preserve": "Preserve current Owner authority, Worker method ownership, effect follow-through, exact-current-candidate proof, and the distinction between Host-owned mechanisms and Supervisor accountability for their delivery effect.",
+      "smallest_safe_action": "Collapse the repeated execution-readiness, one-control-question, evidence-join, and effect-follow-through statements into one normative control card on the loaded path, leaving the long observation reference for genuinely conditional multi-Agent, assurance, and repair cases.",
+      "evidence_refs": [
+        ".tmp/artifact-entropy-review/skill-inventory.md",
+        "skills/harness/bagakit-supervisor/SKILL.md",
+        "skills/harness/bagakit-supervisor/agents/openai.yaml",
+        "skills/harness/bagakit-supervisor/references/frontdoor-rule.toml",
+        "skills/harness/bagakit-supervisor/references/skill-cli.toml",
+        "skills/harness/bagakit-supervisor/references/observation-and-intervention.md",
+        "gate_validation/skills/harness/bagakit-supervisor/validation.toml",
+        "gate_eval/skills/harness/bagakit-supervisor/validation.toml"
+      ],
+      "commentary": "ADJUSTED_FROM_E3_TO_E2 after an independent risk-triggered review of the latest frozen candidate. lower_to_e2",
+      "agreement": "mixed",
+      "calibration_status": "uncalibrated",
+      "source_batch": "e3-review-paperwork"
+    },
+    {
+      "skill": "bagakit-explain",
+      "family": "human-improvement",
+      "evidence_coverage": "default-route",
+      "profile": {
+        "meaning": "E0",
+        "structure": "E0",
+        "choice": "E0",
+        "coupling": "E0",
+        "proof": "E0"
+      },
+      "attention_band": "E0",
+      "gates": {
+        "G0": "pass",
+        "G1": "pass",
+        "G2": "pass"
+      },
+      "support": "robust",
+      "disposition": "retain",
+      "preserve": "Preserve the stable whole-system map, causal and changed-case test, static-first accessible milestone, motion necessity test, reduced-motion state, desktop/mobile evidence, and explicit no-mastery boundary.",
+      "smallest_safe_action": "None; stop. The static verification and conditional motion re-verification protect different endpoint failures, and no smaller route was found in the inspected window without losing one of those outcomes.",
+      "evidence_refs": [
+        "skills/human-improvement/bagakit-explain/SKILL.md",
+        "skills/human-improvement/bagakit-explain/references/frontdoor-rule.toml",
+        "skills/human-improvement/bagakit-explain/references/skill-cli.toml",
+        "skills/human-improvement/bagakit-explain/scripts/bagakit-explain-cli.sh",
+        "gate_validation/skills/human-improvement/bagakit-explain/validation.toml"
+      ],
+      "commentary": "Frame: an Agent building a responsive visual HTML explanation for a newcomer; protected outcomes are correct identifiers, causal understanding, accessibility, user language, and honest limits on learner mastery. The short entrypoint is regular rather than underspecified for its semantic role. Static-first delivery and a separate conditional motion pass are requisite variety: the first protects an inspectable accessible endpoint, while the second is activated only when time or state change carries meaning and must prove no regression. The layout gate is structural boundary proof and does not claim visual or learning quality. No reduction is supported. G2 passes only for this advisory retain decision.",
+      "agreement": "n/a",
+      "calibration_status": "uncalibrated",
+      "source_batch": "audit-02"
+    },
+    {
+      "skill": "bagakit-mastery-learning",
+      "family": "human-improvement",
+      "evidence_coverage": "default-route",
+      "profile": {
+        "meaning": "E1",
+        "structure": "E2",
+        "choice": "E1",
+        "coupling": "E2",
+        "proof": "E1"
+      },
+      "attention_band": "E2",
+      "gates": {
+        "G0": "pass",
+        "G1": "pass",
+        "G2": "n/a"
+      },
+      "support": "medium",
+      "disposition": "reduce",
+      "preserve": "保留 bounded mastery contract、首次盲诊断、source/capability coverage 分离、能力对齐的证据任务、提示缺陷归因、无辅助 transfer、延迟 re-entry 和诚实的 mastery 状态。",
+      "smallest_safe_action": "把 built_page 的 Writing Core -> HITL design -> webpage implementation -> desktop/mobile browser 验证编排收敛为一个 selector recipe 或 `hitl-course-handoff` 合约；SKILL 只声明触发条件、唯一 mastery packet 和必须返回的 endpoint receipt。",
+      "evidence_refs": [
+        "skills/human-improvement/bagakit-mastery-learning/SKILL.md:8",
+        "skills/human-improvement/bagakit-mastery-learning/SKILL.md:15",
+        "skills/human-improvement/bagakit-mastery-learning/SKILL.md:27",
+        "skills/human-improvement/bagakit-mastery-learning/SKILL.md:35",
+        "skills/human-improvement/bagakit-mastery-learning/SKILL.md:57",
+        "skills/human-improvement/bagakit-mastery-learning/SKILL.md:80",
+        "skills/human-improvement/bagakit-mastery-learning/SKILL.md:98",
+        "skills/human-improvement/bagakit-mastery-learning/SKILL.md:119",
+        "skills/human-improvement/bagakit-mastery-learning/SKILL.md:137",
+        "skills/human-improvement/bagakit-mastery-learning/SKILL.md:170",
+        "skills/human-improvement/bagakit-mastery-learning/SKILL.md:191",
+        "skills/human-improvement/bagakit-mastery-learning/SKILL.md:221",
+        "gate_validation/skills/human-improvement/bagakit-mastery-learning/validation.toml:54"
+      ],
+      "commentary": "Frame: primary actor is a course-authoring Agent and the task is to produce or resume a bounded learning path whose learner can demonstrate independent transfer; protected obligations are source closure, diagnostic blindness, learner fairness, semantic preservation, history, accessibility/privacy constraints, and honest claims. The core learning spine is coherent. Material burden appears when interactive delivery makes this skill restate and supervise the full downstream chain across Writing Core, de-AI-tone, HITL design, webpage implementation, desktop/mobile browser proof, and adaptive page round trips; the same chain recurs in invocation, operating spine, reference routing, and composition boundaries. Those downstream stages protect distinct failures, so the action is one-hop ownership, not removal of copy, semantic, or endpoint checks. Support is medium because peer skill bodies, a real generated course, and learner outcomes were outside this evidence window; the recommendation only changes choreography, not mastery evidence.",
+      "agreement": "n/a",
+      "calibration_status": "uncalibrated",
+      "source_batch": "audit-04"
+    },
+    {
+      "skill": "bagakit-daily-media-production",
+      "family": "media-production",
+      "evidence_coverage": "default-route",
+      "profile": {
+        "meaning": "E1",
+        "structure": "E2",
+        "choice": "E1",
+        "coupling": "E2",
+        "proof": "E2"
+      },
+      "attention_band": "E2",
+      "gates": {
+        "G0": "pass",
+        "G1": "pass",
+        "G2": "pass"
+      },
+      "support": "robust",
+      "disposition": "reduce",
+      "preserve": "Preserve explicit side-effect authorization, source provenance, no-publish behavior, secret guards, receipt-based peer ownership, separate deployment and notification status, and proof for every stage that is actually in scope.",
+      "smallest_safe_action": "Make run validation stage-aware from the brief: require ledgers and evidence only for activated stages, allow one explicit not_applicable archive entry for inactive asset, webpage, deployment, or notification stages, and stop requiring dummy files or an asset row when that stage is out of scope.",
+      "evidence_refs": [
+        "skills/media-production/bagakit-daily-media-production/SKILL.md",
+        "skills/media-production/bagakit-daily-media-production/references/frontdoor-rule.toml",
+        "skills/media-production/bagakit-daily-media-production/references/skill-cli.toml",
+        "skills/media-production/bagakit-daily-media-production/references/runbook.md",
+        "skills/media-production/bagakit-daily-media-production/references/run-artifacts.md",
+        "skills/media-production/bagakit-daily-media-production/references/adapter-matrix.md",
+        "skills/media-production/bagakit-daily-media-production/scripts/bagakit-daily-media-production-cli.sh",
+        "gate_validation/skills/media-production/bagakit-daily-media-production/validation.toml",
+        "gate_eval/skills/media-production/bagakit-daily-media-production/suite.ts"
+      ],
+      "commentary": "Frame: an Agent operating a recurring multi-stage research-to-publication run; protected outcomes are provenance, safe publication, recoverability, adapter boundaries, and truthful stage status. The full workflow genuinely needs several stages, so the 13-stage spine is not failed by size. Avoidable burden appears when plan and runtime contracts project every stage into seven required files even when adapters are none or a stage is out of scope; validate-run requires all seven and requires an asset row before considering scope. The non-gating suite also replays much of init-run and validate-run already exercised by the release smoke, while the paired-agent dataset is only shape-checked. Scope-driven proof is the smaller counterfactual; no-publish and leak checks remain boundary proof. G2 passes only for advisory optimization.",
+      "agreement": "n/a",
+      "calibration_status": "uncalibrated",
+      "source_batch": "audit-02"
+    },
+    {
+      "skill": "bagakit-paperwork-technical-writing",
+      "family": "paperwork",
+      "evidence_coverage": "default-route",
+      "profile": {
+        "meaning": "E2",
+        "structure": "E3",
+        "choice": "E2",
+        "coupling": "E3",
+        "proof": "E3"
+      },
+      "attention_band": "E3",
+      "gates": {
+        "G0": "pass",
+        "G1": "pass",
+        "G2": "n/a"
+      },
+      "support": "robust",
+      "disposition": "reduce",
+      "preserve": "保留 publish narrative 与 execution appendix 的边界、占位符和内部指令泄漏阻断、来源与反证记录，以及重写时不丢关键证据义务。",
+      "smallest_safe_action": "把 hard gate 收缩为完成态、发布边界和明确的证据义务；将 profile 字数/案例/图表、H2 数量、短命题、anchor loop、长句比例、short-break 密度和 45% 压缩阈值统一降为按读者与风险选择的 advisory review，由 owner 决定是否阻断。",
+      "evidence_refs": [
+        "skills/paperwork/bagakit-paperwork-technical-writing/SKILL.md:10",
+        "skills/paperwork/bagakit-paperwork-technical-writing/SKILL.md:85",
+        "skills/paperwork/bagakit-paperwork-technical-writing/SKILL.md:126",
+        "skills/paperwork/bagakit-paperwork-technical-writing/SKILL.md:173",
+        "skills/paperwork/bagakit-paperwork-technical-writing/references/start-here.md:21",
+        "skills/paperwork/bagakit-paperwork-technical-writing/references/quality-gates.md:8",
+        "skills/paperwork/bagakit-paperwork-technical-writing/references/agent-gate-rubric.md:21",
+        "skills/paperwork/bagakit-paperwork-technical-writing/scripts/check-article.py:95",
+        "skills/paperwork/bagakit-paperwork-technical-writing/scripts/check-article.py:455",
+        "skills/paperwork/bagakit-paperwork-technical-writing/scripts/check-article.py:891"
+      ],
+      "commentary": "Frame: 评估 Agent 从一个技术来源产出可发布文章与可执行交接的默认路线；保护发布/执行分层、证据保真、来源 parentage 与回归可见性。默认路线同时耦合 writing-core、de-AI-tone、本地 fallback、outline、article、appendix、review report、baseline 和 agent gate。最关键的是 proof path：脚本把 profile 词数、case marker、Mermaid/full sample、每个 H2 首句不超过 16 units、开中结尾短 anchor、长句比例、短句密度，以及高内容 baseline 的 45% 压缩阈值设为 error；随后仍要八维评分、加权自检、P1/P2/P3 和 warning 决策记录。部分指标可作诊断，但与发布风险没有稳定的一一对应，且 profile 选择会改变阻断结果，形成系统性 E3 proof/coordination burden。G2 不适用于 advisory diagnostic；本结论不替代编辑质量判断。",
+      "agreement": "aligned",
+      "calibration_status": "uncalibrated",
+      "source_batch": "audit-05"
+    },
+    {
+      "skill": "bagakit-writing-core",
+      "family": "paperwork",
+      "evidence_coverage": "default-route",
+      "profile": {
+        "meaning": "E2",
+        "structure": "E3",
+        "choice": "E2",
+        "coupling": "E1",
+        "proof": "E3"
+      },
+      "attention_band": "E3",
+      "gates": {
+        "G0": "pass",
+        "G1": "pass",
+        "G2": "pass"
+      },
+      "support": "robust",
+      "disposition": "reduce",
+      "preserve": "Preserve route-before-draft, foundation sufficiency, evidence and sample boundaries, no-regression comparison, protected spans, and the distinction between script diagnostics and human judgment.",
+      "smallest_safe_action": "Make blind and three-role audience-panel review explicitly risk-triggered rather than default for every longform review; use one integrated review packet by default and open independent panels only when their evidence can change publication, acceptance, or a high-stakes unresolved claim.",
+      "evidence_refs": [
+        "skills/paperwork/bagakit-writing-core/SKILL.md",
+        "skills/paperwork/bagakit-writing-core/references/workflow/OPERATING_SURFACE_MATRIX.md",
+        "skills/paperwork/bagakit-writing-core/references/workflow/SCENARIO_ROUTER.md",
+        "skills/paperwork/bagakit-writing-core/references/workflow/SOP_LANES.md",
+        "skills/paperwork/bagakit-writing-core/references/writing/NARRATIVE_ANGLE_SELECTION.md",
+        "skills/paperwork/bagakit-writing-core/references/writing/NARRATIVE_ANGLE_REVIEW_HEURISTIC.md",
+        "skills/paperwork/bagakit-writing-core/references/writing/AI_SMELLS.md",
+        "skills/paperwork/bagakit-writing-core/references/review/QA_HARD_METRICS.md",
+        "skills/paperwork/bagakit-writing-core/references/review/LONGFORM_RUBRIC.md",
+        "skills/paperwork/bagakit-writing-core/references/skill-cli.toml",
+        "gate_validation/skills/paperwork/bagakit-writing-core/validation.toml",
+        "gate_eval/skills/paperwork/bagakit-writing-core/validation.toml"
+      ],
+      "commentary": "Frame: a writing Agent routes, drafts, rewrites, or reviews generic prose; required outcomes are task fitness, semantic preservation, evidence calibration, and audience clarity. The matrix provides useful conditional branches, but the non-trivial drafting path still layers scenario router, SOP lane, route memo, narrative-angle selection, angle heuristic, voice, structure, and sometimes evidence architecture before drafting. The publishable path then adds mandatory de-AI-tone, lint, inventory comparison when rewriting, hard metrics, rubric, and anti-rationalization review. Most materially, LONGFORM_RUBRIC makes a three-role audience panel with comparison articles the default for every article review and adds a separate blind-review route; this proof cannot always change an owned acceptance decision and can dominate the writing task. The proposed trigger retains independent review for high-stakes or unresolved cases, so G1 passes. Script internals were not needed to support this workflow-level conclusion.",
+      "agreement": "disputed",
+      "calibration_status": "uncalibrated",
+      "source_batch": "audit-01"
+    },
+    {
+      "skill": "bagakit-writing-de-ai-tone",
+      "family": "paperwork",
+      "evidence_coverage": "default-route",
+      "profile": {
+        "meaning": "E0",
+        "structure": "E1",
+        "choice": "E0",
+        "coupling": "E1",
+        "proof": "E2"
+      },
+      "attention_band": "E2",
+      "gates": {
+        "G0": "pass",
+        "G1": "pass",
+        "G2": "pass"
+      },
+      "support": "robust",
+      "disposition": "reduce",
+      "preserve": "Preserve detect versus rewrite semantics, protected-span and evidence-gap guards, scene-sensitive exceptions, minimal-edit judgment, the second-pass audit, and the direct runtime contract suite.",
+      "smallest_safe_action": "Remove deterministic CLI-code and core-dispatch replay from the non-gating eval where the release validation already proves the same propositions; retain dataset integrity checks and use the eval budget for an actual scored rewrite run or human/model outcome receipt.",
+      "evidence_refs": [
+        "skills/paperwork/bagakit-writing-de-ai-tone/SKILL.md",
+        "skills/paperwork/bagakit-writing-de-ai-tone/references/frontdoor-rule.toml",
+        "skills/paperwork/bagakit-writing-de-ai-tone/references/skill-cli.toml",
+        "skills/paperwork/bagakit-writing-de-ai-tone/references/protected-spans.md",
+        "skills/paperwork/bagakit-writing-de-ai-tone/references/rewrite-protocol.md",
+        "skills/paperwork/bagakit-writing-de-ai-tone/references/patterns.md",
+        "gate_validation/skills/paperwork/bagakit-writing-de-ai-tone/validation.toml",
+        "gate_validation/skills/paperwork/bagakit-writing-de-ai-tone/check-writing-de-ai-tone.py",
+        "gate_eval/skills/paperwork/bagakit-writing-de-ai-tone/validation.toml",
+        "gate_eval/skills/paperwork/bagakit-writing-de-ai-tone/suite.ts",
+        "gate_eval/skills/paperwork/bagakit-writing-de-ai-tone/cases/ai-tone-rewrite-eval-dataset.json"
+      ],
+      "commentary": "Frame: an Agent detecting or rewriting AI-toned prose while preserving facts, sources, commands, owners, and useful voice. The loaded route is compact and the language/profile/scene choices protect real reader and precision states. The material burden is proof duplication: the release contract suite already exercises representative AI-tone codes, technical exemptions, protected spans, conflict-bait behavior, and writing-core dispatch; the non-gating eval repeats those same CLI propositions before merely verifying that a qualitative dataset has the intended fields. Dataset coverage is useful advisory infrastructure, but replay through the same mechanism cannot independently establish rewrite quality. G2 passes only for advisory optimization.",
+      "agreement": "n/a",
+      "calibration_status": "uncalibrated",
+      "source_batch": "audit-02"
+    },
+    {
+      "skill": "bagakit-writing-intake",
+      "family": "paperwork",
+      "evidence_coverage": "default-route",
+      "profile": {
+        "meaning": "E2",
+        "structure": "E2",
+        "choice": "E1",
+        "coupling": "E2",
+        "proof": "E2"
+      },
+      "attention_band": "E2",
+      "gates": {
+        "G0": "pass",
+        "G1": "pass",
+        "G2": "n/a"
+      },
+      "support": "robust",
+      "disposition": "reduce",
+      "preserve": "Preserve the no-final-prose boundary, privacy and retention rules, protected spans, evidence-linked claims, confidence honesty, and explicit next-owner handoff.",
+      "smallest_safe_action": "Replace the all-lanes required packet with a route-projected schema: keep a small invariant envelope for task, evidence, privacy, protected spans, and handoff, then require only the profile, feedback, or risk sections activated by the selected intake lane.",
+      "evidence_refs": [
+        "skills/paperwork/bagakit-writing-intake/SKILL.md:37",
+        "skills/paperwork/bagakit-writing-intake/SKILL.md:49",
+        "skills/paperwork/bagakit-writing-intake/SKILL.md:70",
+        "skills/paperwork/bagakit-writing-intake/references/intake-packet-contract.md:11",
+        "skills/paperwork/bagakit-writing-intake/references/intake-packet-contract.md:95",
+        "skills/paperwork/bagakit-writing-intake/references/intake-packet-contract.md:137"
+      ],
+      "commentary": "Every intake lane currently emits the same wide packet, including profile, strengths, frictions, style, Core-risk, and rewrite-feedback sections even when most are inactive; evidence and confidence also repeat across ledger, dimension, and aggregate levels. A lane-projected packet preserves traceability while removing empty-state and handoff burden. The mini example additionally points to a non-existent workflow reference, which can misdirect downstream navigation but is secondary to the schema finding. Support is robust from the normative required shape and evidence rules.",
+      "agreement": "n/a",
+      "calibration_status": "uncalibrated",
+      "source_batch": "audit-03"
+    },
+    {
+      "skill": "qihan-writing",
+      "family": "paperwork",
+      "evidence_coverage": "default-route",
+      "profile": {
+        "meaning": "E1",
+        "structure": "E2",
+        "choice": "E2",
+        "coupling": "E2",
+        "proof": "E3"
+      },
+      "attention_band": "E3",
+      "gates": {
+        "G0": "pass",
+        "G1": "pass",
+        "G2": "pass"
+      },
+      "support": "robust",
+      "disposition": "reduce",
+      "preserve": "Preserve the qihan-specific voice overlay, author-intent and evidence boundaries, the distinction between foundation gaps and latent judgment, information-loss protection, low-cost lint signals, and genuinely independent review when publication stakes justify it.",
+      "smallest_safe_action": "Change the audience panel from an every-article publish-blocking ritual to a risk-triggered proof route: keep one audience check on the ordinary review path, expand to three independent roles only for an owner-declared public or high-stakes release, and make a missing comparison article advisory unless it can change the accept-or-revise decision.",
+      "evidence_refs": [
+        "skills/paperwork/qihan-writing/SKILL.md",
+        "skills/paperwork/qihan-writing/references/frontdoor-rule.toml",
+        "skills/paperwork/qihan-writing/references/skill-cli.toml",
+        "skills/paperwork/qihan-writing/references/workflow/OPERATING_SURFACE_MATRIX.md",
+        "skills/paperwork/qihan-writing/references/workflow/SCENARIO_ROUTER.md",
+        "skills/paperwork/qihan-writing/references/workflow/SOP_LANES.md",
+        "skills/paperwork/qihan-writing/references/review/QA_HARD_METRICS.md",
+        "skills/paperwork/qihan-writing/references/review/LONGFORM_RUBRIC.md",
+        "skills/paperwork/qihan-writing/references/review/AUDIENCE_PANEL_REVIEW.md",
+        "gate_validation/skills/paperwork/qihan-writing/validation.toml"
+      ],
+      "commentary": "Frame: an Agent drafting or reviewing non-trivial qihan-style technical longform; protected outcomes are author voice, evidence integrity, reader comprehension, and owner publication acceptance. The route vocabulary is recoverable, but operating-surface, scenario, lane, route memo, narrative angle, and angle review repeat similar decisions across mandatory one-hop documents. The strongest finding is proof burden: every article review requires three quiet-room roles, each must find an external comparison article, and absence of that comparison itself blocks publication even when it supplies no distinct failure or decision delta. That is systemic duplicate ceremony, not a claim that human review is unnecessary. The single registered runtime lint suite is not the source of the E3 band. G2 passes only for this advisory diagnosis; publication authority remains with the owner.",
+      "agreement": "aligned",
+      "calibration_status": "uncalibrated",
+      "source_batch": "audit-02"
+    },
+    {
+      "skill": "bagakit-coding-agent-principles",
+      "family": "swe",
+      "evidence_coverage": "default-route",
+      "profile": {
+        "meaning": "E0",
+        "structure": "E1",
+        "choice": "E1",
+        "coupling": "E1",
+        "proof": "E0"
+      },
+      "attention_band": "E1",
+      "gates": {
+        "G0": "pass",
+        "G1": "pass",
+        "G2": "n/a"
+      },
+      "support": "robust",
+      "disposition": "retain",
+      "preserve": "保留单一 meta-principle、可压缩 gate、project-native proof-first ladder、按风险触发的 reference/reviewer 路线，以及最小充分 oracle 的 stop rule。",
+      "smallest_safe_action": "无需改动；继续保持 studies 与双 reviewer 为条件路线，不要把 scorecard 或 serial review 升级为每个非平凡实现的默认仪式。",
+      "evidence_refs": [
+        "skills/swe/bagakit-coding-agent-principles/SKILL.md:11",
+        "skills/swe/bagakit-coding-agent-principles/SKILL.md:43",
+        "skills/swe/bagakit-coding-agent-principles/SKILL.md:63",
+        "skills/swe/bagakit-coding-agent-principles/SKILL.md:87",
+        "skills/swe/bagakit-coding-agent-principles/SKILL.md:94",
+        "skills/swe/bagakit-coding-agent-principles/references/principle-gate.md:11",
+        "skills/swe/bagakit-coding-agent-principles/references/decision-ladder.md:41",
+        "skills/swe/bagakit-coding-agent-principles/references/review-packet.md:3"
+      ],
+      "commentary": "Frame: 评估编码 Agent 在非平凡实现决策上应用的 cross-cutting principle layer；保护用户目标、owner boundary、长期可维护的最小 vertical slice 与公共行为证明。默认路径只有一个可压缩 gate 和一条 ladder；更详细的 gate、相邻 discipline 路由、studies 及两位 serial reviewers 都有明确触发条件，且 proof rule 明确要求最小充分 oracle。局部 E1 来自相邻 level 选择、跨 workflow re-entry 和风险 reviewer handoff，但这些分支对应真实不同状态，未见可删除后仍保留同一结果的 material smaller form。attention E1 不是能力加分。G2 不适用于 advisory diagnostic。",
+      "agreement": "n/a",
+      "calibration_status": "uncalibrated",
+      "source_batch": "audit-05"
+    },
+    {
+      "skill": "bagakit-git-message-craft",
+      "family": "swe",
+      "evidence_coverage": "default-route",
+      "profile": {
+        "meaning": "E2",
+        "structure": "E2",
+        "choice": "E1",
+        "coupling": "E2",
+        "proof": "E2"
+      },
+      "attention_band": "E2",
+      "gates": {
+        "G0": "pass",
+        "G1": "pass",
+        "G2": "n/a"
+      },
+      "support": "robust",
+      "disposition": "reduce",
+      "preserve": "保留 draft/commit/MR 的授权边界、基于意图的拆分、凭据和绝对路径防泄漏、占位符拒绝，以及对仓库本地约定的发现。",
+      "smallest_safe_action": "把 `Principle`、精确 GFM 标题、每条 `path:line` 和固定 delta/fact 形状从所有 review-quality commit 的通用硬门槛降为可选的 Bagakit provenance profile；通用 hard lint 只保留可验证的 subject、未完成态和敏感信息/路径边界。",
+      "evidence_refs": [
+        "skills/swe/bagakit-git-message-craft/SKILL.md:12",
+        "skills/swe/bagakit-git-message-craft/SKILL.md:71",
+        "skills/swe/bagakit-git-message-craft/SKILL.md:181",
+        "skills/swe/bagakit-git-message-craft/SKILL.md:242",
+        "skills/swe/bagakit-git-message-craft/SKILL.md:386",
+        "skills/swe/bagakit-git-message-craft/references/commit-message-spec-guide.md:25",
+        "skills/swe/bagakit-git-message-craft/references/meta-schema.md:42",
+        "skills/swe/bagakit-git-message-craft/scripts/bagakit-git-message-craft.py:1230"
+      ],
+      "commentary": "Frame: 评估一个 Agent 为已理解的变更起草或提交可脱离聊天阅读的 Git 信息；保护回滚边界、仓库语义、用户授权与防泄漏。两种 surface 和 compact/expanded 选择都改变真实行为，因此 choice 仅为局部 E1。材料负担来自三处：同一 commit contract 在总是加载的 SKILL、guide 和 meta-schema 中重复；执行路线先建 session、再 lint/commit/archive；linter 将本地 principle、精确标题、行号引用和固定 1-3/1-5 形状与凭据/路径安全放在同一 hard-fail 层。后者不能仅因消息清楚而豁免，存在明确更小的两级 lint。E2 只表示需优先减负，不评价 Git 文案质量。G2 不适用于 advisory diagnostic。",
+      "agreement": "n/a",
+      "calibration_status": "uncalibrated",
+      "source_batch": "audit-05"
+    }
+  ],
+  "portfolio": {
+    "band_counts": {
+      "E0": 1,
+      "E1": 7,
+      "E2": 12,
+      "E3": 10
+    },
+    "disposition_counts": {
+      "mixed": 4,
+      "reduce": 18,
+      "retain": 8
+    },
+    "agreement_counts": {
+      "aligned": 8,
+      "disputed": 3,
+      "mixed": 4,
+      "n/a": 15
+    },
+    "dimension_counts": {
+      "meaning": {
+        "E0": 11,
+        "E1": 9,
+        "E2": 10
+      },
+      "structure": {
+        "E0": 2,
+        "E1": 10,
+        "E2": 9,
+        "E3": 9
+      },
+      "choice": {
+        "E0": 3,
+        "E1": 16,
+        "E2": 9,
+        "E3": 2
+      },
+      "coupling": {
+        "E0": 3,
+        "E1": 12,
+        "E2": 10,
+        "E3": 5
+      },
+      "proof": {
+        "E0": 5,
+        "E1": 9,
+        "E2": 9,
+        "E3": 7
+      }
+    },
+    "priority_queue": [
+      {
+        "skill": "design/bagakit-codex-webpage-design",
+        "support": "robust",
+        "disposition": "mixed",
+        "smallest_safe_action": "Collapse the common high-craft route into one pre-implementation design packet and one browser acceptance packet, retaining separate conditional evidence only for genuinely distinct risks such as asset provenance, spatial interaction, mobile state, accessibility, or independent review; make workflow-contract.toml the artifact-requirement owner.",
+        "agreement": "mixed"
+      },
+      {
+        "skill": "design/bagakit-design-core",
+        "support": "robust",
+        "disposition": "reduce",
+        "smallest_safe_action": "Add route-conditioned completion to the structured contract: a draft-only, plan-only, or result-only review should require its active checkpoint and available upstream evidence, while the full three-checkpoint chain remains mandatory only for an end-to-end design program.",
+        "agreement": "aligned"
+      },
+      {
+        "skill": "gamemaker/topdown-image2-sprite-pipeline",
+        "support": "robust",
+        "disposition": "reduce",
+        "smallest_safe_action": "把 Round 5-15 的实验沉淀、冻结模型/guide/workflow/committee 协议迁到一个版本化 experiment reference 和机器可读 manifest；默认 SKILL 只留下通用 sprite 路径、一张进入 structural-control 的触发表，以及指向该实验路由的一跳链接。",
+        "agreement": "aligned"
+      },
+      {
+        "skill": "harness/bagakit-brainstorm",
+        "support": "robust",
+        "disposition": "reduce",
+        "smallest_safe_action": "把 expert forum 及其逐专家检索、交叉评分和逐轮原始记录改成由高风险、实质争议或显式用户要求触发的路线；默认路线只保留聚焦 intake、不同方案与一个决策交接包，实际导出或执行前仍要求批准。",
+        "agreement": "aligned"
+      },
+      {
+        "skill": "harness/bagakit-skill-selector",
+        "support": "robust",
+        "disposition": "mixed",
+        "smallest_safe_action": "Make the always-loaded path a minimal preflight-and-close route, move the extended command cookbook, recipe mechanics, telemetry, ranking, and Evolver bridge detail behind conditional references or CLI help, and align the policy contract's allowed outcomes with the task record's typed preflight decisions.",
+        "agreement": "disputed"
+      },
+      {
+        "skill": "harness/bagakit-spark",
+        "support": "robust",
+        "disposition": "reduce",
+        "smallest_safe_action": "把 stress-test、MVP/thought-experiment、quiet-room、独立复评和 skill-evolution 规则移到一个按风险与交付意图触发的高保证参考路由；默认 SKILL 只保留 Frame -> route -> Ask -> Reflect -> Synthesize、停止条件和一跳 peer handoff。",
+        "agreement": "aligned"
+      },
+      {
+        "skill": "paperwork/bagakit-paperwork-technical-writing",
+        "support": "robust",
+        "disposition": "reduce",
+        "smallest_safe_action": "把 hard gate 收缩为完成态、发布边界和明确的证据义务；将 profile 字数/案例/图表、H2 数量、短命题、anchor loop、长句比例、short-break 密度和 45% 压缩阈值统一降为按读者与风险选择的 advisory review，由 owner 决定是否阻断。",
+        "agreement": "aligned"
+      },
+      {
+        "skill": "paperwork/bagakit-writing-core",
+        "support": "robust",
+        "disposition": "reduce",
+        "smallest_safe_action": "Make blind and three-role audience-panel review explicitly risk-triggered rather than default for every longform review; use one integrated review packet by default and open independent panels only when their evidence can change publication, acceptance, or a high-stakes unresolved claim.",
+        "agreement": "disputed"
+      },
+      {
+        "skill": "paperwork/qihan-writing",
+        "support": "robust",
+        "disposition": "reduce",
+        "smallest_safe_action": "Change the audience panel from an every-article publish-blocking ritual to a risk-triggered proof route: keep one audience check on the ordinary review path, expand to three independent roles only for an owner-declared public or high-stakes release, and make a missing comparison article advisory unless it can change the accept-or-revise decision.",
+        "agreement": "aligned"
+      },
+      {
+        "skill": "design/bagakit-hitl-webutil-design",
+        "support": "medium",
+        "disposition": "mixed",
+        "smallest_safe_action": "Make one crosswalk-selected design packet the sole default pre-handoff artifact, deriving operator, scene, mechanism, style, artifact, component, and hardening selections inside it while leaving judgment, adaptive-continuity, and browser-proof contracts conditional and intact.",
+        "agreement": "mixed"
+      }
+    ],
+    "recurring_findings": [
+      "high-assurance forums, panels, checkpoints, or proof stages applied to ordinary routes without risk activation",
+      "large command cookbooks or historical experiment protocols on the always-loaded skill path",
+      "the same route, vocabulary, or policy repeated across SKILL, references, metadata, and validation surfaces",
+      "blocking checks that prove file layout, wording, or correlated replay rather than a distinct public behavior or decision",
+      "all-lanes packets and completion contracts that require inactive route fields or artifacts"
+    ],
+    "protected_complexity": [
+      "Owner authority, user acceptance, safety, security, irreversibility, and compliance",
+      "distinct research, evidence, learning, design, and execution states that change the action",
+      "independent endpoint proof, provenance, observability, containment, recovery, and no-regression evidence",
+      "progressive disclosure and specialized peer boundaries when they reduce rather than shift total burden"
+    ]
+  },
+  "calibration": {
+    "overlap_path": ".tmp/artifact-entropy-review/overlap-calibration.json",
+    "overlap_summary": {
+      "total_items": 6,
+      "aligned": 2,
+      "mixed": 1,
+      "disputed": 3,
+      "recommended_record_sources": {
+        "official": 6,
+        "overlap": 0,
+        "adjusted": 0
+      },
+      "bounded_adjudications": [
+        "bagakit-writing-core",
+        "bagakit-entropy-review",
+        "bagakit-skill-selector"
+      ],
+      "validity_note": "Agreement measures assessor convergence only; it does not establish construct validity, outcome calibration, artifact quality, or correctness."
+    },
+    "e3_review_paths": [
+      ".tmp/artifact-entropy-review/e3-review-design.json",
+      ".tmp/artifact-entropy-review/e3-review-harness.json",
+      ".tmp/artifact-entropy-review/e3-review-paperwork.json"
+    ],
+    "adjustments": [
+      {
+        "skill": "harness/bagakit-supervisor",
+        "from": "E3/mixed",
+        "to": "E2/reduce",
+        "reason": "independent review of the latest frozen candidate found material but not dominating default-route burden; conditional assurance references remain protected"
+      }
+    ],
+    "validity_note": "agreement and risk review measure reviewer convergence only; the construct remains outcome-uncalibrated"
+  },
+  "fragment_receipts": [
+    {
+      "batch": "audit-01",
+      "path": ".tmp/artifact-entropy-review/audit-01.json",
+      "sha256": "6e1ef2a04bc7117cb0c86e1db92648dd24c4544506ea3057eb55a07f26fd50aa",
+      "source_snapshot_manifest_sha256": "225dbf671373ed74a2688821b2e51d0e67597db412aa365f1b6616c142ff1333"
+    },
+    {
+      "batch": "audit-02",
+      "path": ".tmp/artifact-entropy-review/audit-02.json",
+      "sha256": "7e1f7f5395cb79afb50e0e5ce6bb3fa32a289e45425d15da7d9b5b31fcdff89b",
+      "source_snapshot_manifest_sha256": "225dbf671373ed74a2688821b2e51d0e67597db412aa365f1b6616c142ff1333"
+    },
+    {
+      "batch": "audit-03",
+      "path": ".tmp/artifact-entropy-review/audit-03.json",
+      "sha256": "fd71693870c823ff7f0e66093a3e662532142adc395b41b25522f4f20d0f83d5",
+      "source_snapshot_manifest_sha256": "225dbf671373ed74a2688821b2e51d0e67597db412aa365f1b6616c142ff1333"
+    },
+    {
+      "batch": "audit-04",
+      "path": ".tmp/artifact-entropy-review/audit-04.json",
+      "sha256": "b996dd9a03eac4dfd806078e98572f910a42e2620b0b0fe79ddc5c7ae713ab98",
+      "source_snapshot_manifest_sha256": "225dbf671373ed74a2688821b2e51d0e67597db412aa365f1b6616c142ff1333"
+    },
+    {
+      "batch": "audit-05",
+      "path": ".tmp/artifact-entropy-review/audit-05.json",
+      "sha256": "7bb6418a969c0ae02cace708815416c53a223b92c6b97957b86213ff527bd4ac",
+      "source_snapshot_manifest_sha256": "225dbf671373ed74a2688821b2e51d0e67597db412aa365f1b6616c142ff1333"
+    },
+    {
+      "batch": "audit-06",
+      "path": ".tmp/artifact-entropy-review/audit-06.json",
+      "sha256": "20915f970cda6b4590dd5c91e1f917f603ebd9dcedf24f16c58b899e33bf8898",
+      "source_snapshot_manifest_sha256": "225dbf671373ed74a2688821b2e51d0e67597db412aa365f1b6616c142ff1333"
+    }
+  ]
+}

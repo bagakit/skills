@@ -1,0 +1,53 @@
+{
+  "schema": "bagakit.entropy-review-forward-cases/v1",
+  "cases": [
+    {
+      "id": "duplicate-wording-checks",
+      "object_type": "validation_stack",
+      "situation": "Two blocking wording linters use the same phrase inventory and error model; either result leads to the same action.",
+      "expected": "Classify the second path as duplicate-ceremony and recommend consolidation without weakening an owned boundary proof.",
+      "focus": ["proof", "correlated-evidence", "decision-value"],
+      "expected_disposition": "reduce"
+    },
+    {
+      "id": "independent-endpoint-proof",
+      "object_type": "project",
+      "situation": "Unit tests prove component behavior, while one end-to-end test proves the irreversible user-visible property at the final consumer.",
+      "expected": "Retain the smallest endpoint proof because component success does not entail endpoint acceptance.",
+      "focus": ["proof", "endpoint-correctness", "preservation"],
+      "expected_disposition": "retain"
+    },
+    {
+      "id": "short-ambiguous-skill",
+      "object_type": "skill",
+      "situation": "A very short skill omits its owner boundary and leaves two materially different routes under the same trigger.",
+      "expected": "Do not reward brevity; add or clarify the smallest route and ownership distinction that removes greater downstream uncertainty.",
+      "focus": ["meaning", "choice", "increase-with-evidence"],
+      "expected_disposition": "increase-with-evidence"
+    },
+    {
+      "id": "coherent-combined-route",
+      "object_type": "skill",
+      "situation": "Two related reversible tasks share the same evidence and output; splitting them would duplicate context and add a handoff.",
+      "expected": "Preserve the cohesive combined route unless behavior evidence shows actual competition.",
+      "focus": ["structure", "coupling", "counterfactual"],
+      "expected_disposition": "retain"
+    },
+    {
+      "id": "unknown-reader-and-obligation",
+      "object_type": "article",
+      "situation": "A reviewer sees repeated warnings but the intended reader, legal obligation, and risk owner are unknown.",
+      "expected": "Abstain from deduplication because the missing frame could reverse the preservation decision.",
+      "focus": ["frame", "meaning", "authority"],
+      "expected_disposition": "abstain"
+    },
+    {
+      "id": "requisite-variety-branch",
+      "object_type": "project",
+      "situation": "Two branches look structurally similar but respond to different externally observable hazards.",
+      "expected": "Retain the distinction or require domain evidence that the hazards can safely share one response.",
+      "focus": ["choice", "requisite-variety", "preservation"],
+      "expected_disposition": "retain"
+    }
+  ]
+}

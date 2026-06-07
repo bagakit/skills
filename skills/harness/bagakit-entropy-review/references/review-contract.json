@@ -1,0 +1,125 @@
+{
+  "version": 1,
+  "contract_id": "bagakit-artifact-entropy-review-v1",
+  "construct": "avoidable decision, coordination, navigation, change, and proof burden above a purpose-conditioned necessity floor",
+  "unit": "ordinal attention profile",
+  "calibration_default": "uncalibrated",
+  "runtime_surface": "none",
+  "non_claims": [
+    "literal Shannon entropy or semantic bits",
+    "overall artifact quality, correctness, usefulness, maturity, or capability",
+    "equal intervals or percentage improvement",
+    "cross-task total ordering",
+    "domain correctness or owner acceptance"
+  ],
+  "required_frame": [
+    "artifact",
+    "object_type",
+    "primary_actor_and_task",
+    "required_outcomes",
+    "protected_obligations",
+    "assessment_use",
+    "evidence_window"
+  ],
+  "optional_frame": ["baseline"],
+  "dimensions": [
+    {
+      "id": "meaning",
+      "question": "How much avoidable interpretation work is required to recover purpose, terms, ownership, or intended action?"
+    },
+    {
+      "id": "structure",
+      "question": "How much avoidable navigation, layering, disclosure timing, or fragmentation stands between the actor and the task?"
+    },
+    {
+      "id": "choice",
+      "question": "How many avoidable routes, modes, exceptions, or local judgments must be resolved?"
+    },
+    {
+      "id": "coupling",
+      "question": "How much avoidable synchronization, dependency, handoff, or change propagation follows one commitment?"
+    },
+    {
+      "id": "proof",
+      "question": "How much validation, review, or evidence work exceeds the current decision risk and owned acceptance boundary?"
+    }
+  ],
+  "bands": [
+    {
+      "id": "E0",
+      "label": "necessary_or_clear",
+      "meaning": "inspected with no material avoidable burden; apparent complexity is necessary or removal loses a required outcome"
+    },
+    {
+      "id": "E1",
+      "label": "contained",
+      "meaning": "localized understandable burden that does not materially obstruct the task or propagate across the artifact"
+    },
+    {
+      "id": "E2",
+      "label": "material",
+      "meaning": "direct evidence of avoidable task, error, coordination, or maintenance cost with a concrete smaller form"
+    },
+    {
+      "id": "E3",
+      "label": "dominating_or_systemic",
+      "meaning": "recurring avoidable burden controls the task, obscures authority, propagates across boundaries, or forces irrelevant proof"
+    }
+  ],
+  "gates": [
+    {
+      "id": "G0",
+      "label": "frame",
+      "statuses": ["pass", "fail", "unknown", "n/a"],
+      "failure_action": "abstain"
+    },
+    {
+      "id": "G1",
+      "label": "preservation",
+      "statuses": ["pass", "fail", "unknown", "n/a"],
+      "failure_action": "retain_or_review"
+    },
+    {
+      "id": "G2",
+      "label": "decision_authority",
+      "statuses": ["pass", "fail", "unknown", "n/a"],
+      "failure_action": "advisory_or_incomparable"
+    }
+  ],
+  "dispositions": [
+    "retain",
+    "reduce",
+    "review",
+    "increase-with-evidence",
+    "mixed",
+    "abstain"
+  ],
+  "finding_support": ["limited", "medium", "robust"],
+  "agreement": ["n/a", "aligned", "mixed", "disputed"],
+  "calibration_status": ["uncalibrated", "agreement_observed", "outcome_calibrated"],
+  "counterfactual_actions": [
+    "preserve",
+    "delete_or_merge",
+    "move_or_defer",
+    "derive_or_script",
+    "add_or_clarify"
+  ],
+  "validation_dispositions": [
+    "boundary-proof",
+    "incremental-proof",
+    "advisory",
+    "duplicate-ceremony",
+    "unresolved"
+  ],
+  "comparison": {
+    "requires_same_frame": true,
+    "requires_same_evidence_window": true,
+    "dominance_rule": "no worse on every active common dimension and lower on at least one, with acceptable gates",
+    "otherwise": "incomparable"
+  },
+  "self_review": {
+    "passes": 1,
+    "may_upgrade_calibration": false,
+    "stop": "another pass would not change a user-facing action, artifact, or verification decision"
+  }
+}

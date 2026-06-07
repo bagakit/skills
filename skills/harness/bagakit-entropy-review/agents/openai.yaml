@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bagakit Entropy Review"
+  short_description: "Review avoidable artifact and validation burden"
+  default_prompt: "Use $bagakit-entropy-review to identify unnecessary entropy, preserve required complexity, and recommend the smallest safe change."

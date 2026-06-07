@@ -1,0 +1,75 @@
+version = 2
+
+[[suite]]
+id = "bagakit-entropy-review-layout"
+owner = "skills/harness/bagakit-entropy-review"
+description = "Require the installable entropy-review skill, stable structured contract, discovery declarations, shared spec, validation, and non-gating eval slice."
+default = true
+proof_mode = "structural"
+protects = ["one standalone, profile-first artifact entropy review surface with explicit non-claims, no persistent runtime requirement, and separate validation/eval ownership"]
+oracle = ["filesystem checks require the public skill, structured contract, artifact lenses, CLI and frontdoor declarations, stable spec, validation registration, and owner-local eval registration"]
+exercised_surface = ["skills/harness/bagakit-entropy-review", "docs/specs/artifact-entropy-review-contract.md", "gate_validation/skills/harness/bagakit-entropy-review", "gate_eval/skills/harness/bagakit-entropy-review"]
+proves = ["The canonical installable source and repository-owned structural proof and measurement surfaces exist."]
+does_not_prove = ["Layout does not prove that an Agent identifies real avoidable burden, preserves domain correctness, produces calibrated ratings, or improves an artifact."]
+validation_class = "structure"
+groups = ["skills", "harness", "entropy-review", "structure"]
+
+[suite.runner]
+kind = "fs"
+required_dirs = [
+  "skills/harness/bagakit-entropy-review",
+  "skills/harness/bagakit-entropy-review/agents",
+  "skills/harness/bagakit-entropy-review/references",
+  "skills/harness/bagakit-entropy-review/scripts",
+  "gate_validation/skills/harness/bagakit-entropy-review",
+  "gate_eval/skills/harness/bagakit-entropy-review",
+  "gate_eval/skills/harness/bagakit-entropy-review/cases",
+]
+required_files = [
+  "docs/specs/artifact-entropy-review-contract.md",
+  "skills/harness/bagakit-entropy-review/SKILL.md",
+  "skills/harness/bagakit-entropy-review/agents/openai.yaml",
+  "skills/harness/bagakit-entropy-review/references/artifact-lenses.md",
+  "skills/harness/bagakit-entropy-review/references/frontdoor-rule.toml",
+  "skills/harness/bagakit-entropy-review/references/review-contract.json",
+  "skills/harness/bagakit-entropy-review/references/skill-cli.toml",
+  "skills/harness/bagakit-entropy-review/scripts/bagakit-entropy-review-cli.sh",
+  "gate_validation/skills/harness/bagakit-entropy-review/check-entropy-review.sh",
+  "gate_validation/skills/harness/bagakit-entropy-review/validation.toml",
+  "gate_eval/skills/harness/bagakit-entropy-review/README.md",
+  "gate_eval/skills/harness/bagakit-entropy-review/cases/current-skill-corpus-inventory.json",
+  "gate_eval/skills/harness/bagakit-entropy-review/cases/current-skill-corpus-baseline.json",
+  "gate_eval/skills/harness/bagakit-entropy-review/cases/current-skill-corpus-review.md",
+  "gate_eval/skills/harness/bagakit-entropy-review/cases/forward-cases.json",
+  "gate_eval/skills/harness/bagakit-entropy-review/cases/forward-test-receipt.md",
+  "gate_eval/skills/harness/bagakit-entropy-review/suite.ts",
+  "gate_eval/skills/harness/bagakit-entropy-review/validation.toml",
+]
+forbidden_paths = [
+  "skills/harness/bagakit-entropy-review/SKILL_PAYLOAD.json",
+  "skills/harness/bagakit-entropy-review/AGENTS.md",
+  "skills/harness/bagakit-entropy-review/Makefile",
+  "skills/harness/bagakit-entropy-review/docs",
+  "skills/harness/bagakit-entropy-review/gate",
+  "skills/harness/bagakit-entropy-review/scripts_dev",
+]
+
+[[suite]]
+id = "bagakit-entropy-review-contract"
+owner = "skills/harness/bagakit-entropy-review"
+description = "Exercise the public CLI and structured contract invariants without grading semantic review quality."
+default = true
+proof_mode = "runtime"
+protects = ["public entropy-review contract identity, five-dimension profile, four ordinal bands, three non-compensatory gates, and single-pass self-review boundary"]
+oracle = ["the skill-owned CLI parses the JSON contract through the language standard library and checks the exact public dimension, band, gate, and self-pass identities; the repo-owned smoke exercises all declared commands"]
+exercised_surface = ["skills/harness/bagakit-entropy-review/scripts/bagakit-entropy-review-cli.sh", "skills/harness/bagakit-entropy-review/references/review-contract.json"]
+proves = ["The public inspection commands execute and the stable structured review vocabulary remains parseable and internally aligned."]
+does_not_prove = ["The smoke does not prove correct ratings, evidence support, domain preservation, model behavior, calibration, or corpus commentary quality."]
+validation_class = "contract"
+groups = ["skills", "harness", "entropy-review", "contract", "runtime"]
+timeout_seconds = 60
+
+[suite.runner]
+kind = "bash_script"
+script = "gate_validation/skills/harness/bagakit-entropy-review/check-entropy-review.sh"
+args = ["--root", "{repo_root}"]

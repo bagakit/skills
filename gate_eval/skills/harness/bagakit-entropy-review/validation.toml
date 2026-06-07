@@ -1,0 +1,29 @@
+version = 2
+
+[[suite]]
+id = "bagakit-entropy-review-baseline-eval"
+owner = "gate_eval/skills/harness/bagakit-entropy-review"
+description = "Preserve serious entropy-review countercases and the uncalibrated current-skill-corpus baseline packet."
+default = true
+proof_mode = "runtime"
+protects = ["necessity-before-reduction countercases, profile-first corpus records, attention-band non-ranking semantics, and complete frozen-corpus coverage"]
+oracle = ["dev/eval invokes the skill-owned suite, which validates required declarative forward-case anchors and compares the structured corpus baseline with an independent inventory plus live skill discovery"]
+exercised_surface = ["gate_eval/skills/harness/bagakit-entropy-review/cases/forward-cases.json", "gate_eval/skills/harness/bagakit-entropy-review/cases/current-skill-corpus-inventory.json", "gate_eval/skills/harness/bagakit-entropy-review/cases/current-skill-corpus-baseline.json"]
+proves = ["The registered non-gating cases and baseline packet have the declared structural coverage and vocabulary."]
+does_not_prove = ["The eval does not prove semantic rating accuracy, inter-rater agreement, outcome calibration, artifact quality, or that proposed reductions preserve behavior."]
+timeout_seconds = 120
+validation_class = "quality"
+groups = ["skills", "harness", "entropy-review", "eval", "baseline"]
+
+[suite.runner]
+kind = "executable"
+command = "{node}"
+args = [
+  "--experimental-strip-types",
+  "dev/eval/src/cli.ts",
+  "run",
+  "--root",
+  "{repo_root}",
+  "--suite",
+  "gate_eval/skills/harness/bagakit-entropy-review/suite.ts",
+]

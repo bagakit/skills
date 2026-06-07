@@ -1,0 +1,20 @@
+version = 1
+skill = "bagakit-entropy-review"
+cli_id = "bagakit-entropy-review"
+entrypoint = "scripts/bagakit-entropy-review-cli.sh"
+runner = "shell"
+usage = "sh scripts/bagakit-entropy-review-cli.sh <command>"
+summary = "Inspect and validate the entropy-review skill contract."
+surface_refs = []
+
+[[command]]
+name = "describe"
+summary = "Print the operational entropy-review definition."
+
+[[command]]
+name = "list-references"
+summary = "List the review references shipped with the skill."
+
+[[command]]
+name = "validate"
+summary = "Validate the skill-owned public contract files."

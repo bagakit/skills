@@ -1,0 +1,6 @@
+version = 1
+skill = "bagakit-entropy-review"
+trigger = "A skill, project, article, plan, validation stack, or other authored artifact needs review for unnecessary entropy, over-validation, duplicated truth, route overload, or a safer simplification."
+do = "Bind the actor, task, protected obligations, and evidence window; profile avoidable meaning, structure, choice, coupling, and proof burden; then recommend the smallest safe action or abstain."
+see = "skills/harness/bagakit-entropy-review/SKILL.md"
+fallback = "Use the same necessity-before-reduction test in prose and keep domain correctness and owner acceptance with their owning workflow."
