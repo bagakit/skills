@@ -139,6 +139,13 @@ authentication, delivery, or consumption. On a richer Host with native
 authenticated messaging, choose that native channel or this pipe for an
 exchange rather than dual-writing both.
 
+Controlling behaviors such as `bagakit-supervisor` may adopt this pipe as
+their host-local delivery route for derived-Agent Sets and Worker reports:
+the grant chain gives each derived Agent an identity, and the delivery and
+consumption receipts feed the caller's own delivery, consumption, and effect
+tracking. The calling behavior still owns why a message is sent and what
+effect resolves it.
+
 ## CLI and failure behavior
 
 The single entrypoint is `scripts/agent_post.py`. It accepts `--root` and

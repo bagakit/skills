@@ -621,6 +621,14 @@ native structured Agent result with reliable Host sender metadata need not be
 double-wrapped. Host identity, target, authority, delivery, consumption, and
 effect remain external.
 
+When the Host lacks a native authenticated channel, host-local multi-Agent
+delivery may use `bagakit-agent-post` as the identity-bound send, receive, and
+acknowledgement route: it binds each sender to a registered identity, keeps the
+envelope unchanged, and returns delivery and consumption receipts the
+Supervisor can read against the three state axes. Choose that pipe or the
+Host's native channel for an exchange, not both; authority and effect
+resolution stay with the Host either way.
+
 ## Repair Recommendation Boundary
 
 Portable `repair_recommended` contains:

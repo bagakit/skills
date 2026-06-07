@@ -54,17 +54,20 @@ Install split:
 - skill identity should come directly from the directory protocol under
   `skills/<family>/<skill-id>/` with `SKILL.md`
 
-## Transition Rule
+## Steady-State Rule
 
-During migration:
+The submodule-hub cutover is complete; the `repo-legacy-cut` backbone gate
+protects the cut and `mem/migration/` keeps the history. Keep these
+prohibitions permanently:
 
-- do not add new gitlinks or submodules
-- do not recreate the `projects/` indirection model
-- do not add new architecture that depends on sibling workspace repos being the
-  hidden source of truth
-- prefer changing this repo first when setting future structure, metadata, or
-  validation rules
-- do not keep compatibility-only entrypoints in the design baseline
+- no gitlinks or submodules
+- no `projects/` indirection model
+- no architecture that treats sibling workspace repos as a hidden source of
+ truth
+- no compatibility-only entrypoints in the design baseline
+
+This repo stays the first place to set structure, metadata, and validation
+rules.
 
 ## Engineering Principles
 

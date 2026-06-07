@@ -1,0 +1,47 @@
+version = 2
+
+[[suite]]
+id = "bagakit-coding-agent-principles-layout"
+owner = "skills/swe/bagakit-coding-agent-principles"
+description = "Require the installable principle-layer skill surface and keep maintainer-only or legacy payload out of bagakit-coding-agent-principles."
+default = true
+proof_mode = "structural"
+protects = ["bagakit-coding-agent-principles installable runtime layout: entrypoint, CLI, structured references, discovery declarations, and exclusion of maintainer-only payload"]
+oracle = ["fs runner checks the required skill entrypoint, script, reference, study, and agent-declaration files plus forbidden payload paths"]
+exercised_surface = ["skills/swe/bagakit-coding-agent-principles runtime directory", "gate_validation/skills/swe/bagakit-coding-agent-principles registration"]
+proves = ["The canonical installable principle-layer skill source and its repo-owned gate registration exist with the declared payload boundary."]
+does_not_prove = ["Layout does not prove that an Agent applies the decision ladder, gate discipline, or verdict policy correctly, nor any runtime or semantic quality."]
+validation_class = "structure"
+groups = ["skills", "swe", "coding-agent-principles", "structure"]
+
+[suite.runner]
+kind = "fs"
+required_dirs = [
+  "skills/swe/bagakit-coding-agent-principles",
+  "skills/swe/bagakit-coding-agent-principles/agents",
+  "skills/swe/bagakit-coding-agent-principles/references",
+  "skills/swe/bagakit-coding-agent-principles/scripts",
+  "skills/swe/bagakit-coding-agent-principles/studies",
+  "gate_validation/skills/swe/bagakit-coding-agent-principles",
+]
+required_files = [
+  "skills/swe/bagakit-coding-agent-principles/SKILL.md",
+  "skills/swe/bagakit-coding-agent-principles/agents/openai.yaml",
+  "skills/swe/bagakit-coding-agent-principles/references/coding-layer-scorecard.md",
+  "skills/swe/bagakit-coding-agent-principles/references/decision-ladder.md",
+  "skills/swe/bagakit-coding-agent-principles/references/frontdoor-rule.toml",
+  "skills/swe/bagakit-coding-agent-principles/references/level-router-scorecard.md",
+  "skills/swe/bagakit-coding-agent-principles/references/principle-gate.md",
+  "skills/swe/bagakit-coding-agent-principles/references/review-packet.md",
+  "skills/swe/bagakit-coding-agent-principles/references/skill-cli.toml",
+  "skills/swe/bagakit-coding-agent-principles/references/verdict-policy.md",
+  "skills/swe/bagakit-coding-agent-principles/scripts/bagakit-coding-agent-principles.sh",
+  "gate_validation/skills/swe/bagakit-coding-agent-principles/validation.toml",
+]
+forbidden_paths = [
+  "skills/swe/bagakit-coding-agent-principles/SKILL_PAYLOAD.json",
+  "skills/swe/bagakit-coding-agent-principles/AGENTS.md",
+  "skills/swe/bagakit-coding-agent-principles/docs",
+  "skills/swe/bagakit-coding-agent-principles/gate",
+  "skills/swe/bagakit-coding-agent-principles/scripts_dev",
+]
