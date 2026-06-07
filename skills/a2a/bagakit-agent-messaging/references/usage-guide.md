@@ -1,14 +1,21 @@
-# Agent Message Use Guide
+# Agent Message Usage Guide
+
+Technique and admission judgment that the shape validator cannot check.
+
+Authority split: the stable grammar, profiles, ownership, and non-proof
+boundary live in `docs/specs/agent-message-contract.md` in the canonical
+repository; the operating workflow lives in `SKILL.md`. When this guide and
+the spec disagree, the spec wins.
 
 ## Contents
 
-1. Plain-language rule
-2. Message anatomy
-3. Citation admission
+1. Plain-language technique
+2. Citation admission
+3. Conflict coordination advice
 4. Worker report admission
 5. Host boundary
 
-## Plain-Language Rule
+## Plain-Language Technique
 
 Write for the receiver, not for the harness implementation.
 
@@ -28,45 +35,22 @@ Do not remove exact command names, version identifiers, failing gates, or API
 terms needed to act. Explain an unfamiliar necessary term once instead of
 replacing it with vague language.
 
-## Message Anatomy
-
-The root is always:
+Do not compress several findings, file lists, role changes, and actions into
+one paragraph. Split unrelated outcomes into separate exchanges. For one
+outcome, prefer a few short lines with localized plain-text labels such as
+`Result`, `Action`, `Boundary`, and `Reply`; they are writing aids, not
+protocol fields. Put long manifests, logs, and supporting detail in a
+receiver-resolvable artifact or reference and keep the decision delta in the
+message.
 
 ```xml
-<bagakit-msg type="<message-profile>" name="<run-unique-readable-name>" time="<ISO-8601-with-timezone>">
-<optional cites and plain text>
+<bagakit-msg type="supervisor-v1" name="Cedar-7K2M" time="2000-01-01T00:00:00+00:00">
+Result: The focused checks pass on the current version.
+Action: Stage only the current task candidate.
+Boundary: Do not continue analysis or edit code.
+Reply: Return the staged manifest or one real blocker.
 </bagakit-msg>
 ```
-
-Supported message profiles are `agent-v1`, `agent-set-v1`, `supervisor-v1`,
-`worker-v1`, `reviewer-v1`, `tester-v1`, `auditor-v1`, and `researcher-v1`.
-
-The body may contain plain text and direct `<cite>` children. No other nested
-element is allowed. Keep one message focused on one outcome or decision.
-
-## Derived-Agent Set
-
-Before an Agent derived by any mechanism acts, send it an `agent-set-v1`
-message. Inherit context; never inherit authority. The latest valid Set governs
-that Agent's local identity, assignment, material action boundaries, return
-path, and A2A messaging convention, subject to current Host and Owner
-authority.
-
-Write the Set body in concise natural language. Include what is useful: who the
-Agent is, what result it should produce, material action boundaries, where the
-result returns, and how it sends A2A messages. Do not turn these suggestions
-into required fields, headings, ordering, or validation keywords.
-
-For authorized multi-Agent work, include only directly relevant collaborators,
-the current integration owner, and known shared hotspots or handoff boundaries.
-Tell the Agent to refresh relevant peer state through a Host capability or A2A
-before a potentially conflicting action, coordinate routine overlap directly,
-and report an unresolved conflict or material boundary change. This is local
-awareness, not a static roster or mandatory alignment ceremony.
-
-Let an aligned Agent act immediately. Re-send only on derivation, a material
-assignment or boundary change, or recovery when the Set is missing. Do not
-build a static full-team roster into the message.
 
 ## Citation Admission
 
@@ -96,6 +80,21 @@ A citation is attributed content inside an Agent-authored message. It does not
 authenticate a user, Host, reviewer, test, or artifact. It never outranks
 current Host-authenticated Owner truth.
 
+## Conflict Coordination Advice (Advisory)
+
+This section is optional guidance, not part of the L1 grammar, authority model,
+or validation gate. When a possible shared-file, shared-contract, or candidate
+collision appears, an Agent should preserve valid work, pause only its own
+next conflicting or irreversible action, state the concrete overlap to the
+affected peer, and suggest coordination. It should not command the peer to
+stop, hand off, cancel, release authority, or abandon work through message
+text alone. The current integration owner or Host decides any action-bearing
+hold, fence, cancellation, or lifecycle transition.
+
+Do not add an authority, priority, stop, or conflict field to the envelope to
+encode this advice. A message can describe a conflict or recommend a hold
+without proving that the conflict exists or granting the sender control.
+
 ## Worker Report Admission
 
 Request a Worker report only when it can change a decision, close a gate,
@@ -104,11 +103,11 @@ poll merely to show supervision activity.
 
 At startup, ask for the Worker's `Goal`, its nearest attractive non-goal when
 useful, and first evidence-producing `Next` step. Afterwards, `Goal` is
-repeated only when understanding changed. `Result`
-must describe a new externally relevant fact, not time spent or files read.
-`Evidence` binds the result to a command, test, artifact, version, verdict, or
-observable state. `Mismatch or blocker` contains at most one issue that can
-change direction. `Next` names the immediate action, not a long plan.
+repeated only when understanding changed. `Result` must describe a new
+externally relevant fact, not time spent or files read. `Evidence` binds the
+result to a command, test, artifact, version, verdict, or observable state.
+`Mismatch or blocker` contains at most one issue that can change direction.
+`Next` names the immediate action, not a long plan.
 
 The Worker may wrap the report in a `worker-v1` envelope using
 `assets/worker-report.template.xml`. The labels are a semantic profile rather

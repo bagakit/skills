@@ -1,4 +1,6 @@
 <bagakit-msg type="supervisor-v1" name="Cedar-7K2M" time="2000-01-01T00:00:00+00:00">
 <cite from="user">Keep final acceptance strict, but do not pause independent development while checks run.</cite>
-Continue the next non-conflicting step. When there is a verified result or a real blocker, report it with evidence and your next action.
+Result: Final acceptance stays strict; independent development may continue.
+Action: Continue the next non-conflicting step.
+Reply: Report a verified result or real blocker with evidence and the next action.
 </bagakit-msg>

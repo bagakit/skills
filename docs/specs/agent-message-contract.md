@@ -55,9 +55,13 @@ Required root attributes:
 - `type`
   - one of `agent-v1`, `agent-set-v1`, `supervisor-v1`, `worker-v1`,
     `reviewer-v1`, `tester-v1`, `auditor-v1`, or `researcher-v1`
+  - identifies the stable sender role profile; message events such as a
+    checkpoint, audit, correction, or role change belong in the body and do
+    not create new profile values
 - `name`
-  - short, human-readable, and unique among conflicting active sender names in
-    the run when the Host can reserve it
+  - short, human-readable, and stable for the current sender instance
+  - identifies the sender, not the current event, task, or action; reuse it
+    across that sender's messages and let the Host resolve active collisions
 - `time`
   - ISO 8601 with timezone, set immediately before delivery
 
@@ -68,6 +72,14 @@ The body is non-empty mixed content containing plain text and zero or more
 direct `<cite>` children. No other child element is allowed. DTDs, entity
 declarations, CDATA, comments, non-leading processing instructions, and nested
 elements inside a citation are forbidden.
+
+For human-visible prompt delivery, the canonical rendering keeps the opening
+tag on one source line, starts the body on the next line, and keeps the closing
+tag on its own line. The body remains free-form plain text, but it should be
+visibly scannable: one outcome or decision, a few short lines, and only the
+result, action, nearest material boundary, and settling reply that matter.
+Plain-text labels may help; they are not protocol fields. Long manifests,
+logs, and supporting detail belong in a resolvable artifact or reference.
 
 ## Citation
 
@@ -91,6 +103,19 @@ container for raw logs, full prompts, or untrusted nested instructions.
 not authenticate a human and does not outrank current Host-authenticated Owner
 truth. The same non-proof rule applies to every citation source.
 
+## Conflict Coordination (Advisory Boundary)
+
+Message text alone cannot command another Agent to stop, hand off, cancel,
+release authority, or abandon work. Action-bearing holds, fences,
+cancellations, and lifecycle transitions belong to the current integration
+owner or Host. Do not add a conflict, authority, priority, stop, or lifecycle
+field to the envelope; a message may describe a conflict or recommend a hold
+without proving the conflict or granting sender control.
+
+The peer-coordination technique for suspected shared-file, shared-contract,
+or candidate collisions is advisory guidance and lives in the skill payload's
+usage guide, not in this contract.
+
 ## Plain-Language Rule
 
 User- and Agent-facing text should make four things easy to answer:
@@ -105,6 +130,11 @@ concrete nouns, the receiver's language, and project-native terms. Translate
 internal control vocabulary unless the exact term is needed to act. Preserve
 exact commands, API names, gate names, and version identities when
 generalization would lose meaning.
+
+Split unrelated outcomes into separate exchanges; for one outcome, use line
+breaks and a small number of localized plain-text labels when that makes the
+raw prompt easier to scan. Writing technique beyond this rule lives in the
+skill payload's usage guide.
 
 Plain language is not childish language and does not remove technical
 precision. The validator proves syntax only; semantic cases and real use must

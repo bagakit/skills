@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate or emit one portable Bagakit Agent message envelope."""
+"""Compose, validate, or emit one portable Bagakit Agent message envelope."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ import re
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
+from xml.sax.saxutils import escape, quoteattr
 
 
 ROOT_ATTRIBUTES = {"type", "name", "time"}
@@ -107,13 +108,60 @@ def validate(text: str) -> list[dict[str, str]]:
     return issues
 
 
+def compose(args: argparse.Namespace, parser: argparse.ArgumentParser) -> str:
+    cite_froms = args.cite_from or []
+    cite_texts = args.cite_text or []
+    cite_refs = args.cite_ref or []
+    if len(cite_froms) != len(cite_texts):
+        parser.error("--cite-from and --cite-text must be given the same number of times")
+    if cite_refs and len(cite_refs) != len(cite_froms):
+        parser.error("--cite-ref must be omitted or given once per citation (use '' for no ref)")
+    if not args.body:
+        parser.error("--compose requires at least one --body line of Agent-authored plain text")
+    time_value = args.time or dt.datetime.now().astimezone().isoformat(timespec="seconds")
+    lines = [
+        f"<bagakit-msg type={quoteattr(args.type)} name={quoteattr(args.name)} time={quoteattr(time_value)}>"
+    ]
+    for index, (source, cite_text) in enumerate(zip(cite_froms, cite_texts)):
+        ref = cite_refs[index] if cite_refs else ""
+        ref_attribute = f" ref={quoteattr(ref)}" if ref else ""
+        lines.append(f"<cite from={quoteattr(source)}{ref_attribute}>{escape(cite_text)}</cite>")
+    lines.extend(escape(part) for part in args.body)
+    lines.append("</bagakit-msg>")
+    return "\n".join(lines) + "\n"
+
+
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Validate one Bagakit Agent message envelope.")
-    parser.add_argument("--input", required=True, help="Path to one bagakit-msg XML file, or - for stdin.")
+    parser = argparse.ArgumentParser(description="Compose or validate one Bagakit Agent message envelope.")
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--input", help="Path to one bagakit-msg XML file, or - for stdin.")
+    mode.add_argument("--compose", action="store_true", help="Compose an envelope from parts and emit it only when it validates.")
     output = parser.add_mutually_exclusive_group()
     output.add_argument("--json", action="store_true", help="Emit structured validation JSON.")
     output.add_argument("--emit", action="store_true", help="Emit the exact input only when it is valid.")
+    parser.add_argument("--type", help="Compose: message profile, for example supervisor-v1.")
+    parser.add_argument("--name", help="Compose: short stable sender-instance name.")
+    parser.add_argument("--time", help="Compose: ISO 8601 timestamp with timezone; defaults to now.")
+    parser.add_argument("--cite-from", action="append", help="Compose: citation source; repeatable, paired with --cite-text.")
+    parser.add_argument("--cite-text", action="append", help="Compose: exact citation excerpt; repeatable, escaped automatically.")
+    parser.add_argument("--cite-ref", action="append", help="Compose: optional resolvable reference per citation; use '' for none.")
+    parser.add_argument("--body", action="append", help="Compose: one plain-text body line; repeatable, escaped automatically.")
     args = parser.parse_args()
+
+    if args.compose:
+        if args.json or args.emit:
+            parser.error("--compose does not combine with --json or --emit")
+        if not args.type or not args.name:
+            parser.error("--compose requires --type and --name")
+        text = compose(args, parser)
+        issues = validate(text)
+        if issues:
+            for item in issues:
+                print(f"{item['code']}: {item['path']} {item['message']}", file=sys.stderr)
+            return 1
+        sys.stdout.write(text)
+        return 0
+
     try:
         text = sys.stdin.read() if args.input == "-" else Path(args.input).read_text(encoding="utf-8")
     except OSError as error:

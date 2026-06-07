@@ -116,7 +116,57 @@ def main() -> int:
     assert rejected.stdout == ""
     assert "xml.parse" in rejected.stderr
 
-    print("ok: bagakit-agent-messaging checks passed (16 shape cases, 2 fail-stop emission cases)")
+    composed = subprocess.run(
+        [
+            "python3", str(cli), "--compose",
+            "--type", "supervisor-v1",
+            "--name", "Cedar-7K2M",
+            "--time", "2026-01-01T00:00:00+00:00",
+            "--cite-from", "user",
+            "--cite-text", 'Keep A & B <strict> while "checks" run.',
+            "--body", "Result: builds A & B pass.",
+            "--body", "Action: continue the next non-conflicting step.",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert composed.returncode == 0, composed.stderr
+    composed_status, composed_codes = run_json(cli, composed.stdout)
+    assert composed_status == 0, composed_codes
+    assert 'Keep A &amp; B &lt;strict&gt;' in composed.stdout
+
+    composed_invalid = subprocess.run(
+        [
+            "python3", str(cli), "--compose",
+            "--type", "owner-v1",
+            "--name", "Fake",
+            "--body", "Act.",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert composed_invalid.returncode == 1
+    assert composed_invalid.stdout == ""
+    assert "type.invalid" in composed_invalid.stderr
+
+    composed_bodyless = subprocess.run(
+        [
+            "python3", str(cli), "--compose",
+            "--type", "supervisor-v1",
+            "--name", "Cedar-7K2M",
+            "--cite-from", "user",
+            "--cite-text", "do X",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert composed_bodyless.returncode == 2
+    assert composed_bodyless.stdout == ""
+
+    print("ok: bagakit-agent-messaging checks passed (16 shape cases, 2 fail-stop emission cases, 3 compose cases)")
     return 0
 
 

@@ -33,7 +33,7 @@ required_files = [
   "skills/a2a/bagakit-agent-messaging/agents/openai.yaml",
   "skills/a2a/bagakit-agent-messaging/assets/agent-message.template.xml",
   "skills/a2a/bagakit-agent-messaging/assets/worker-report.template.xml",
-  "skills/a2a/bagakit-agent-messaging/references/agent-message-contract.md",
+  "skills/a2a/bagakit-agent-messaging/references/usage-guide.md",
   "skills/a2a/bagakit-agent-messaging/references/frontdoor-rule.toml",
   "skills/a2a/bagakit-agent-messaging/references/skill-cli.toml",
   "skills/a2a/bagakit-agent-messaging/scripts/agent_message_check.py",
@@ -50,11 +50,11 @@ forbidden_paths = [
 [[suite]]
 id = "bagakit-agent-messaging-runtime"
 owner = "skills/a2a/bagakit-agent-messaging"
-description = "Exercise generic Agent sender profiles, direct citations, forbidden nested markup, required identity metadata, XML safety, and fail-stop exact emission."
+description = "Exercise generic Agent sender profiles, direct citations, forbidden nested markup, required identity metadata, XML safety, fail-stop exact emission, and fail-stop escaped composition."
 default = true
 proof_mode = "runtime"
 protects = ["compact source-attributable Agent messages without visible self-asserted authority or malformed actuation payloads"]
-oracle = ["public CLI cases validate both Agent and Worker templates, mixed cite content, exact issue codes, unsafe XML rejection, and zero invalid stdout on emit"]
+oracle = ["public CLI cases validate both Agent and Worker templates, mixed cite content, exact issue codes, unsafe XML rejection, zero invalid stdout on emit, and compose round-trips that escape raw text and refuse invalid parts"]
 exercised_surface = ["scripts/agent_message_check.py public CLI", "bagakit-msg Agent profiles", "cite source attribution"]
 proves = ["The validator enforces its declared visible XML grammar and fail-stop emission behavior."]
 does_not_prove = ["The validator does not authenticate a sender or citation, grant authority, grade plain language, prove delivery or effect, or show that a message was necessary."]
